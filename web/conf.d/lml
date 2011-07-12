@@ -2,14 +2,13 @@
 #	a UUID to the LML scripts. If this is disabled then the default pxelinux configuration
 #	will be used instead
 
-
 <Location /boot>
 RewriteEngine	on
 # do not rewrite if the requested file actually exists. Allows putting special configuration
 # for special hosts into pxelinux.cfg/<UUID> and LML will not be used for those hosts
 RewriteCond	%{REQUEST_FILENAME} !-f
 # rewrite requests for non-existant UUID-based pxelinux configs to go to pxelinux.pl
-RewriteRule	pxelinux.cfg/(.*-.*-.*-.*)$ lml/pxelinux.pl?uuid=$1
+RewriteRule pxelinux.cfg/([^-]{8}-.*-.*-.*)$ lml/pxelinux.pl?uuid=$1
 </Location>
 
 # default Perl config in Ubuntu does not enable .pl globally, we do it just for lml
