@@ -15,9 +15,9 @@ our @EXPORT   	= qw(svnCheckPath svnCopyPath svnMovePath);
 sub svnCopyPath ($$) {
 	my ($source,$destination) = @_;
 
-	my $result = qx(svn copy -m lml $source $destination 2>&1);
+	my $result = qx(svn copy -m "lml triggered" $source $destination 2>&1);
 	if ($? > 0) {
-		warn "'svn copy -m lml $source $destination' failed:\n$result";
+		warn "'svn copy -m 'lml triggered' $source $destination' failed:\n$result";
 		return undef;
 	}
 	#warn "copied $source -> $destination";
@@ -27,9 +27,9 @@ sub svnCopyPath ($$) {
 sub svnMovePath ($$) {
 	my ($source,$destination) = @_;
 
-	my $result = qx(svn move -m lml $source $destination 2>&1);
+	my $result = qx(svn move -m "lml triggered" $source $destination 2>&1);
 	if ($? > 0) {
-		warn "'svn move -m lml $source $destination' failed:\n$result";
+		warn "'svn move -m 'lml triggered' $source $destination' failed:\n$result";
 		return undef;
 	}
 	#warn "moved $source $destination";

@@ -98,8 +98,42 @@ sub handle_vm ($) {
 		};
 	foreach my $vm_dev (@{$vm->config->hardware->device}) {
 		if ($vm_dev->can("macAddress") and defined($vm_dev->macAddress)) {
-			$VM{$uuid}{"MAC"}{$vm_dev->macAddress} = $vm_dev->backing->deviceName;
-#			print "MAC: ".$vm_dev->macAddress."\n";
+			if ($vm_dev->backing->can("deviceName")) {
+				$VM{$uuid}{"MAC"}{$vm_dev->macAddress} = $vm_dev->backing->deviceName;
+	#			print "MAC: ".$vm_dev->macAddress."\n";
+			} else {
+				# TODO: deal with Distributed Virtual Switch:
+=pod
+  DB<34> x $vm_dev
+0  VirtualPCNet32=HASH(0xa8ca558)
+   'addressType' => 'assigned'
+   'backing' => VirtualEthernetCardDistributedVirtualPortBackingInfo=HASH(0xa86dce8)
+      'port' => DistributedVirtualSwitchPortConnection=HASH(0xa7dad90)
+         'connectionCookie' => 1799741339
+         'portKey' => 257
+         'portgroupKey' => 'dvportgroup-288'
+         'switchUuid' => 'a4 4a 13 50 16 1d e3 48-ad 44 65 f2 fa f9 77 72'
+   'connectable' => VirtualDeviceConnectInfo=HASH(0xa853820)
+      'allowGuestControl' => 1
+      'connected' => 0
+      'startConnected' => 1
+      'status' => 'untried'
+   'controllerKey' => 100
+   'deviceInfo' => Description=HASH(0xa8a75a8)
+      'label' => 'Netzwerkadapter 1'
+      'summary' => 'vm.device.VirtualPCNet32.DistributedVirtualPortBackingInfo.summary'
+   'key' => 4000
+   'macAddress' => '00:50:56:b7:00:0f'
+   'unitNumber' => 7
+   'wakeOnLanEnabled' => 1
+
+
+
+=cut
+			my $switchuuid=$vm_dev->backing->port->switchUuid;
+			my $portgroupkey=$vm_dev->backing->port->portgroupKey;
+			$VM{$uuid}{"MAC"}{$vm_dev->macAddress} = Vim::get_view(mo_ref => new ManagedObjectReference(type=>"DistributedVirtualPortgroup",value=>$portgroupkey))->config->name;
+			}
 		}
 	}
 	if ($vm->customValue) {

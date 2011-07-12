@@ -33,6 +33,8 @@ my $search_uuid=param('uuid')?param('uuid'):lc($ARGV[0]);
 # our URL base from REQUEST_URI
 my $base_url = url();
 $base_url =~ s/\/[^\/]+$//; # cheap basename()
+my $tftp_url = $base_url;
+$tftp_url =~ s/\/pxelinux.cfg.*$//; # strip trailing pxelinux.cfg
 
 my $vm_name="";
 my @error=();
@@ -80,6 +82,11 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 			exit 0
 		}
 	}
+
+	# check if the VM has more than one NIC on the managed network. This is because we manage the network via DHCP
+	# and there can be only one DHCP-assigned IP so far. ISC dhcpd also fails if a host entry has more than one hardware address field.
+	# TODO: decide and implement
+	
 	# modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
 	if (exists($CONFIG{MODIFYVM}{FORCENETBOOT}) and $CONFIG{MODIFYVM}{FORCENETBOOT} and
 		(	# either the setting is not set at all or it is set but not equal to "allow:net"
@@ -154,7 +161,7 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 	} elsif (exists($CONFIG{HOSTRULES}{DNSCHECKNEW}) and $CONFIG{HOSTRULES}{DNSCHECKNEW} and
 		scalar(gethostbyname($vm_name.".".$CONFIG{DHCP}{APPENDDOMAIN}."."))) {
 		# if this is a brand-new machine (e.g. we have no history of it) and new VM checking is enabled
-			push(@error,"New VM name exists already in '$LAB->{DHCP}->{APPENDDOMAIN}'");
+			push(@error,"New VM name exists already in '$CONFIG{DHCP}{APPENDDOMAIN}'");
 	}
 
 	# up till here we have only checks that verify the VM.
@@ -230,12 +237,6 @@ for my $uuid (keys(%{$LAB->{HOSTS}})) {
 	}
 }
 
-# dump $LAB to file
-open(LAB_CONF,">$CONFIG{lml}{datadir}/lab.conf") || die "Could not open '$CONFIG{lml}{datadir}/lab.conf' for writing";
-flock(LAB_CONF, 2) || die;
-print LAB_CONF Data::Dumper->Dump([$LAB],[qw(LAB)]);
-close(LAB_CONF);
-
 # dump %VM to file
 open(VM_CONF, ">$CONFIG{lml}{datadir}/vm.conf") || die "Could not open '$CONFIG{lml}{datadir}/vm.conf' for writing";
 flock(VM_CONF, 2) || die;
@@ -246,16 +247,26 @@ close(VM_CONF);
 if (exists($CONFIG{DHCP}{hostsfile}) and $CONFIG{DHCP}{hostsfile} and $hosts_changed) {
 	my $dhcp_hosts="";
 	for my $u (keys(%{$LAB->{HOSTS}})) {
-		$dhcp_hosts .= "host $u { \n";
-		for my $m (@{$LAB->{HOSTS}->{$u}->{MACS}}) {
-			$dhcp_hosts .= "\thardware ethernet $m;\n";
+		my $count=0;
+		# FIXME: Apparently sometimes we get a VM that has no MACS defined :-(
+		if (exists($LAB->{HOSTS}->{$u}->{MACS})) {
+			for my $m (sort(@{$LAB->{HOSTS}->{$u}->{MACS}})) {
+				$dhcp_hosts .= "host $u".($count>0?"-$count":"")." { \n";
+				$dhcp_hosts .= "\thardware ethernet $m;\n";
+				my $hostname = $LAB->{HOSTS}->{$u}->{HOSTNAME}.($count>0?"-$count":"");	
+				$dhcp_hosts .= "\toption host-name \"$hostname".(exists($LAB->{DHCP}->{APPENDDOMAIN})?".".$LAB->{DHCP}->{APPENDDOMAIN}:"")."\";\n";
+				# the following forces the dhcpd to update the DNS records even if the client did NOT send a hostname!!!
+				# took me full day to figure that out :-(
+				$dhcp_hosts .= "\tddns-hostname \"$hostname\";\n";
+				$dhcp_hosts .= "\tfixed-address $LAB->{HOSTS}->{$u}->{IP};\n" if (exists($LAB->{HOSTS}->{$u}->{IP}));
+                $dhcp_hosts .= $LAB->{HOSTS}->{$u}->{EXTRAOPTS}."\n" if (exists($LAB->{HOSTS}->{$u}->{EXTRAOPTS}));
+				$dhcp_hosts .= "}\n\n";
+				$count++;
+			}
+		} else {
+			warn "No MACs found for VM $LAB->{HOSTS}->{$u}->{HOSTNAME} ($u)\n";
+			warn Data::Dumper->Dump([$LAB->{HOSTS}->{$u},$VM{$search_uuid}],[qw(LAB_HOSTS_uuid VM_uuid)]);
 		}
-		$dhcp_hosts .= "\toption host-name \"$LAB->{HOSTS}->{$u}->{HOSTNAME}".(exists($LAB->{DHCP}->{APPENDDOMAIN})?".".$LAB->{DHCP}->{APPENDDOMAIN}:"")."\";\n";
-		# the following forces the dhcpd to update the DNS records even if the client did NOT send a hostname!!!
-		# took me full day to figure that out :-(
-		$dhcp_hosts .= "\tddns-hostname \"$LAB->{HOSTS}->{$u}->{HOSTNAME}\";\n";
-		$dhcp_hosts .= "\tfixed-address $LAB->{HOSTS}->{$u}->{IP};\n" if (exists($LAB->{HOSTS}->{$u}->{IP}));
-		$dhcp_hosts .= "}\n\n";
 	}
 	open(DHCP_HOSTS,">$CONFIG{DHCP}{hostsfile}") || die "Could not open '$CONFIG{DHCP}{hostsfile}' for writing";
 	flock(DHCP_HOSTS,2) || die;
@@ -265,8 +276,12 @@ if (exists($CONFIG{DHCP}{hostsfile}) and $CONFIG{DHCP}{hostsfile} and $hosts_cha
 	my $result = qx($CONFIG{DHCP}{TRIGGERCOMMAND} 2>&1);
 	if ($? > 0) {
 		warn "trigger command '$CONFIG{DHCP}{TRIGGERCOMMAND}' failed:\n$result";
+		push(@error,"Could not reload DHCP server, please call for help");
+		# FIXME: Rollback last change or something
 	}
 }
+
+
 if (scalar(@error)) {
 	# have some errors
 	print header('text/plain');
@@ -283,7 +298,42 @@ EOF
 	}
 } elsif ($vm_name) {
 	# if the VM is found and all is fine then redirect to default PXE configuration
-	print header(-status=>"302 VM is $vm_name and all is fine".($hosts_changed?", some hosts changed":""),-type=>'text/plain',-location=>$base_url."/default");
+	
+	# dump $LAB to file only if all is fine. This makes sure that LML stays with the old view of the lab for some kind of
+	# hard to catch errors.
+	open(LAB_CONF,">$CONFIG{lml}{datadir}/lab.conf") || die "Could not open '$CONFIG{lml}{datadir}/lab.conf' for writing";
+	flock(LAB_CONF, 2) || die;
+	print LAB_CONF Data::Dumper->Dump([$LAB],[qw(LAB)]);
+	close(LAB_CONF);
+
+	my $pxelinux_config_url;
+	my $bootinfo;
+	if ($CONFIG{pxelinux}{pxelinuxcfg_path} and $CONFIG{vsphere}{forceboot_field} and 
+		exists $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}} and
+		$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}}
+	) {
+		my $forceboot=$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}};
+		# little exploit protection, could be done more professional :-)
+		$forceboot =~ s/\.{2,}//g; # remove any .. or ... 
+		$forceboot =~ tr[:/A-Za-z0-9._-][]dc; # normalize to contain only valid path characters
+		# if forceboot contains a path relative to the pxelinux TFTP prefix
+		if (-r $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot) {
+			$pxelinux_config_url="$tftp_url/$forceboot";
+			$bootinfo="force boot from VM config (file)";
+		} elsif ($CONFIG{forceboot}{$forceboot}) {
+			$pxelinux_config_url=($CONFIG{forceboot}{$forceboot} =~ m(://)?"":$tftp_url."/").$CONFIG{forceboot}{$forceboot};
+			$bootinfo="force boot from LML config";
+		} elsif ($forceboot =~ m(://)) {
+			$pxelinux_config_url=$forceboot;
+			$bootinfo="force boot from VM config (URL)";
+		}
+		else {
+			warn("Invalid/Unknown force boot target '$forceboot' ignored");
+		}
+	}
+	$pxelinux_config_url=$base_url."/default" unless ($pxelinux_config_url);
+	$bootinfo="all is fine" unless ($bootinfo);
+	print header(-status=>"302 VM is $vm_name and $bootinfo".($hosts_changed?", some hosts changed":""),-type=>'text/plain',-location=>$pxelinux_config_url);
 } else {
 	# if the VM is not found then also give some error text
 	if (exists($CONFIG{PXELINUX}{REDIRECT_UNKNOWN_TO_DEFAULT}) and $CONFIG{PXELINUX}{REDIRECT_UNKNOWN_TO_DEFAULT}) {
