@@ -254,7 +254,7 @@ if (exists($CONFIG{DHCP}{hostsfile}) and $CONFIG{DHCP}{hostsfile} and $hosts_cha
 				$dhcp_hosts .= "host $u".($count>0?"-$count":"")." { \n";
 				$dhcp_hosts .= "\thardware ethernet $m;\n";
 				my $hostname = $LAB->{HOSTS}->{$u}->{HOSTNAME}.($count>0?"-$count":"");	
-				$dhcp_hosts .= "\toption host-name \"$hostname".(exists($LAB->{DHCP}->{APPENDDOMAIN})?".".$LAB->{DHCP}->{APPENDDOMAIN}:"")."\";\n";
+				$dhcp_hosts .= "\toption host-name \"$hostname".(exists($CONFIG{dhcp}{appenddomain})?".".$CONFIG{dhcp}{appenddomain}:"")."\";\n";
 				# the following forces the dhcpd to update the DNS records even if the client did NOT send a hostname!!!
 				# took me full day to figure that out :-(
 				$dhcp_hosts .= "\tddns-hostname \"$hostname\";\n";
