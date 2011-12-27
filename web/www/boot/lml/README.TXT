@@ -1,7 +1,7 @@
 Lab Manager Light (LML)
 -----------------------------------------------
 Author: Schlomo Schapiro <lml@schlomo.schapiro.org>
-Copyright 2010,2011 by Schlomo Schapiro, Immobilien Scout GmbH
+Copyright 2010-2012 by Schlomo Schapiro, Immobilien Scout GmbH
 Licensed under the GNU General Public License, see accompanying LICENSE.TXT
 and also the current version at  http://www.gnu.org/licenses/gpl.txt.
 

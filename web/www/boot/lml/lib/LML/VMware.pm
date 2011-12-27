@@ -13,7 +13,7 @@ use vars qw(
            );
 our $VERSION     = 1.00;
 our @ISA         = qw(Exporter);
-our @EXPORT   	= qw(connect_vi search_vm custom_fields setVmExtraOptsU setVmExtraOptsM);
+our @EXPORT   	= qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM);
 					
 use VMware::VIRuntime;
 
@@ -96,10 +96,12 @@ sub handle_vm ($) {
 			"UUID" => $uuid,
 #			"DEVICES" => $vm->config->hardware,
 		};
+    my @vm_macs=();
 	foreach my $vm_dev (@{$vm->config->hardware->device}) {
 		if ($vm_dev->can("macAddress") and defined($vm_dev->macAddress)) {
 			if ($vm_dev->backing->can("deviceName")) {
-				$VM{$uuid}{"MAC"}{$vm_dev->macAddress} = $vm_dev->backing->deviceName;
+                $VM{$uuid}{"MAC"}{$vm_dev->macAddress}=$vm_dev->backing->deviceName;
+				push(@vm_macs,{"MAC" => $vm_dev->macAddress, "NETWORK" => $vm_dev->backing->deviceName});
 	#			print "MAC: ".$vm_dev->macAddress."\n";
 			} else {
 				# TODO: deal with Distributed Virtual Switch:
@@ -132,10 +134,15 @@ sub handle_vm ($) {
 =cut
 			my $switchuuid=$vm_dev->backing->port->switchUuid;
 			my $portgroupkey=$vm_dev->backing->port->portgroupKey;
-			$VM{$uuid}{"MAC"}{$vm_dev->macAddress} = Vim::get_view(mo_ref => new ManagedObjectReference(type=>"DistributedVirtualPortgroup",value=>$portgroupkey))->config->name;
+            my $dv_name = Vim::get_view(mo_ref => new ManagedObjectReference(type=>"DistributedVirtualPortgroup",value=>$portgroupkey))->config->name;
+            $VM{$uuid}{"MAC"}{$vm_dev->macAddress} = $dv_name;
+			push(@vm_macs,{"MAC" => $vm_dev->macAddress, "NETWORK" => $dv_name });
 			}
 		}
 	}
+    if (@vm_macs) {
+        $VM{$uuid}{"NETWORKING"}=\@vm_macs;
+    }
 	if ($vm->customValue) {
 		foreach my $value (@{$vm->customValue}) {
 			$VM{$uuid}{"CUSTOMFIELDS"}{$CUSTOMFIELDIDS{$value->key}}=$value->value;
@@ -285,7 +292,35 @@ sub search_vm {
 	return(%VM);
 }
 
+################################ sub #################
+##
+## get_vm_data (<uuid>)
+##
+##
+##
 
+sub get_vm_data {
+    my $search_uuid = shift;
+    my $object = Vim::find_entity_view(view_type => 'VirtualMachine',filter => {'config.uuid' => $search_uuid});
+	# if this is an VM, handle it
+	if ($object and defined($object->config) and $object->can("config") ) {
+		if ($object->config->can("uuid")) {
+			# this seems to be a VM
+			handle_vm($object);
+		}
+	}
+	# print results
+	if ($Util::tracelevel > 1) {
+		foreach my $uuid (keys(%VM)) {
+			print("VM=$uuid\n");
+			foreach my $key (keys(%{ $VM{$uuid} } )) {
+				print("\t$key = $VM{$uuid}{$key}\n");
+			}
+		}
+	}
+	
+	return(%VM);
+}
 ############################### sub #################
 ##
 ## setVmExtraOptsU (<uuid of VM>,<option key>,<option value>)
@@ -297,7 +332,7 @@ sub setVmExtraOptsU {
 	my $value = shift;
 	eval {
 		my $vm_view = Vim::find_entity_view(view_type => 'VirtualMachine',
-                                                 filter => {uuid => $uuid});
+                                                 filter => {"config.uuid" => $uuid});
 		if($vm_view) {   
 			my $vm_config_spec = VirtualMachineConfigSpec->new(
                                                   extraConfig => [OptionValue->new( key => $key, value => $value ),] );

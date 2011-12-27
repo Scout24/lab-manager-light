@@ -38,6 +38,8 @@ use DateTime::Format::Flexible;
 
 use Config::IniFiles;
 
+use POSIX;
+
 # open main config file case-insensitive 
 our %CONFIG;
 tie %CONFIG, 'Config::IniFiles', (-file=>"/etc/lml.conf",-nocase=>1) or die "Could not open '/etc/lml.conf'";

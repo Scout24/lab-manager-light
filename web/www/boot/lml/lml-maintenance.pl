@@ -58,35 +58,39 @@ if (-r "$CONFIG{lml}{datadir}/lab.conf") {
 }
 die '$LAB is empty' unless (scalar(%{$LAB}));
 
+# prepare some configuration variables
+#
+my @vsphere_networks=();
+if (exists($CONFIG{vsphere}{networks}) and $CONFIG{vsphere}{networks}) {
+    if (ref($CONFIG{vsphere}{networks})) {
+        @vsphere_networks=@{$CONFIG{vsphere}{networks}};
+    } else {
+        @vsphere_networks=($CONFIG{vsphere}{networks});
+    }
+}
+
 my $hosts_changed=0;
 
 # if there are VMs and if we find the VM we are looking for:
 if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 	$vm_name=$VM{$search_uuid}{NAME};
 
+
 	# check if we should handle this VM
-	if (exists($CONFIG{vsphere}{networks}) and $CONFIG{vsphere}{networks}) {
+    my @vm_lab_macs=();
+	if (@vsphere_networks and exists($VM{$search_uuid}{NETWORKING}) and @{$VM{$search_uuid}{NETWORKING}}) {
 		# check for each MAC of the VM if the network name is in the list
-		my $match_network=0;
-		my @vsphere_networks;
-		if (ref($CONFIG{vsphere}{networks})) {
-			@vsphere_networks=@{$CONFIG{vsphere}{networks}};
-		} else {
-			@vsphere_networks=($CONFIG{vsphere}{networks});
-		}
-		for my $network (values(%{$VM{$search_uuid}{MAC}})) {
-			 $match_network=$match_network || grep {$_ eq $network} @vsphere_networks;
-		 }
-		if (! $match_network) {
+        for my $vm_network (@{$VM{$search_uuid}{NETWORKING}}) {
+            if (grep {$_ eq $vm_network->{NETWORK}} @vsphere_networks) {
+                push(@vm_lab_macs,$vm_network->{MAC});
+            }
+        }
+		if (! @vm_lab_macs) {
 			print header(-status=>"404 VM does not match LML networks and is out of scope",-type=>'text/plain');
 			exit 0
 		}
 	}
 
-	# check if the VM has more than one NIC on the managed network. This is because we manage the network via DHCP
-	# and there can be only one DHCP-assigned IP so far. ISC dhcpd also fails if a host entry has more than one hardware address field.
-	# TODO: decide and implement
-	
 	# modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
 	if (exists($CONFIG{MODIFYVM}{FORCENETBOOT}) and $CONFIG{MODIFYVM}{FORCENETBOOT} and
 		(	# either the setting is not set at all or it is set but not equal to "allow:net"
@@ -207,16 +211,15 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 			}
 		} # hostdirs is set
 
-		# create HOSTS record for DHCP if it has changed
+		# create HOSTS record for DHCP if it has changed (name or networking)
 		# ~~ compares array since perl 5.10!!
 		#
 		# NOTE: This should be after all other pieces of code that compare with the old host name !!!
-		my @macs=keys(%{$VM{$search_uuid}{MAC}});
 		if (not (exists($LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}) and exists($LAB->{HOSTS}->{$search_uuid}->{MACS})) or
 			not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} or 
-			not @macs ~~ @{$LAB->{HOSTS}->{$search_uuid}->{MACS}} ) {
+			not @vm_lab_macs ~~ @{$LAB->{HOSTS}->{$search_uuid}->{MACS}} ) {
 			$LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} = $vm_name;
-			$LAB->{HOSTS}->{$search_uuid}->{MACS} = [ @macs ];
+            $LAB->{HOSTS}->{$search_uuid}->{MACS} = \@vm_lab_macs;
 			$hosts_changed=1;
 		}
 	} # no errors in @error
@@ -240,6 +243,7 @@ for my $uuid (keys(%{$LAB->{HOSTS}})) {
 # dump %VM to file
 open(VM_CONF, ">$CONFIG{lml}{datadir}/vm.conf") || die "Could not open '$CONFIG{lml}{datadir}/vm.conf' for writing";
 flock(VM_CONF, 2) || die;
+print VM_CONF "# ".POSIX::strftime("%Y-%m-%d %H:%M:%S\n", localtime())."\n";
 print VM_CONF Data::Dumper->Dump([\%VM],[qw(VM)]);
 close(VM_CONF);
 
@@ -264,7 +268,7 @@ if (exists($CONFIG{DHCP}{hostsfile}) and $CONFIG{DHCP}{hostsfile} and $hosts_cha
 				$count++;
 			}
 		} else {
-			warn "No MACs found for VM $LAB->{HOSTS}->{$u}->{HOSTNAME} ($u)\n";
+			warn "No MACs found for VM ".$LAB->{HOSTS}->{$u}->{HOSTNAME}." ($u)\n";
 			warn Data::Dumper->Dump([$LAB->{HOSTS}->{$u},$VM{$search_uuid}],[qw(LAB_HOSTS_uuid VM_uuid)]);
 		}
 	}
@@ -303,7 +307,8 @@ EOF
 	# hard to catch errors.
 	open(LAB_CONF,">$CONFIG{lml}{datadir}/lab.conf") || die "Could not open '$CONFIG{lml}{datadir}/lab.conf' for writing";
 	flock(LAB_CONF, 2) || die;
-	print LAB_CONF Data::Dumper->Dump([$LAB],[qw(LAB)]);
+	print LAB_CONF "# ".POSIX::strftime("%Y-%m-%d %H:%M:%S\n", localtime())."\n";
+    print LAB_CONF Data::Dumper->Dump([$LAB],[qw(LAB)]);
 	close(LAB_CONF);
 
 	my $pxelinux_config_url;
