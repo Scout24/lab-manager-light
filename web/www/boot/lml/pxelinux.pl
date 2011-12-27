@@ -308,7 +308,7 @@ EOF
 		$forceboot =~ s/\.{2,}//g; # remove any .. or ... 
 		$forceboot =~ tr[:/A-Za-z0-9._-][]dc; # normalize to contain only valid path characters
 		# if forceboot contains a path relative to the pxelinux TFTP prefix
-		if (-r $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot) {
+		if (-r $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot and ! -d $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot) {
 			$pxelinux_config_url="$tftp_url/$forceboot";
 			$bootinfo="force boot from VM config (file)";
 		} elsif ($CONFIG{forceboot}{$forceboot}) {
