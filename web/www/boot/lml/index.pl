@@ -98,10 +98,12 @@ my $confdata;
 	local $/=undef;
 	open FILE, "</etc/lml.conf";
 	binmode FILE;
-	$confdata = escapeHTML(<FILE>);
+	$confdata = <FILE>;
 	close FILE;
 }
-$confdata =~ s/$CONFIG{vsphere}{password}/*******************/g;
+my $quoted_password = quotemeta($CONFIG{vsphere}{password});
+$confdata =~ s/$quoted_password/*******************/g;
+$confdata = escapeHTML($confdata);
 print <<EOF;
 $confdata
 </pre>
