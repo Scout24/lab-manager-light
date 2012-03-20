@@ -209,8 +209,8 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 		
 				}
 			} else {
-				# if we should not create the hostdirs, at least warn about missing host dir
-				push(@error,"SVN hostdir '$newhostdir' missing");
+				# if we should not create the hostdirs, at least warn about missing host dir or let it pass
+				push(@error,"SVN hostdir '$newhostdir' missing") if (exists($CONFIG{SUBVERSION}{FAILONMISSINGHOSTDIR}) and $CONFIG{SUBVERSION}{FAILONMISSINGHOSTDIR});
 			}
 		} # hostdirs is set
 
