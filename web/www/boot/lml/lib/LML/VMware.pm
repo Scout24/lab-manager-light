@@ -11,9 +11,9 @@ use vars qw(
             @ISA
             @EXPORT
            );
-our $VERSION     = 1.00;
+our $VERSION     = 1.10;
 our @ISA         = qw(Exporter);
-our @EXPORT   	= qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM);
+our @EXPORT   	= qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 					
 use VMware::VIRuntime;
 
@@ -399,6 +399,74 @@ sub setVmExtraOptsM {
 		} else {
 			Util::trace(0, "\n" . $@ . "\n");
 		}
+	}
+}
+
+############################### sub #################
+##
+## setVmCustomValue (<VM object>,<option key>,<option value>)
+##
+##
+sub setVmCustomValue {
+    my $vm = shift;
+    my $key = shift;
+    my $value = shift;
+	eval {
+		if($vm) {
+            $vm->setCustomValue(key=>$key,value=>$value);
+		}
+	};
+	if ($@) {
+		Util::trace(0, "\nsetCustomValue($key,$value) failed: ");
+		if (ref($@) eq 'SoapFault') {
+			if (ref($@->detail) eq 'TooManyDevices') {
+				Util::trace(0, "\nNumber of virtual devices exceeds "
+					. "the maximum for a given controller.\n");
+			}
+			elsif (ref($@->detail) eq 'InvalidDeviceSpec') {
+				Util::trace(0, "The Device configuration is not valid\n");
+				Util::trace(0, "\nFollowing is the detailed error: \n\n$@");
+			}
+			elsif (ref($@->detail) eq 'FileAlreadyExists') {
+				Util::trace(0, "\nOperation failed because file already exists");
+			}
+			else {
+				Util::trace(0, "\n" . $@ . "\n");
+			}
+		} else {
+			Util::trace(0, "\n" . $@ . "\n");
+		}
+	}
+}
+
+############################### sub #################
+##
+## setVmCustomValueM (<moref of VM>,<option key>,<option value>)
+##
+##
+sub setVmCustomValueM {
+	my $mo_ref = shift;
+	my $key = shift;
+	my $value = shift;
+	my $vm_view = Vim::get_view(mo_ref=>$mo_ref);
+	if($vm_view) {
+        setVmCustomValue($vm_view,$key,$value)
+	}
+}
+
+############################### sub #################
+##
+## setVmCustomValueU (<uuid of VM>,<option key>,<option value>)
+##
+##
+sub setVmCustomValueU {
+	my $uuid = shift;
+	my $key = shift;
+	my $value = shift;
+	my $vm_view = Vim::find_entity_view(view_type => 'VirtualMachine',
+                                                 filter => {"config.uuid" => $uuid});
+   	if($vm_view) {
+        setVmCustomValue($vm_view,$key,$value)
 	}
 }
 1;
