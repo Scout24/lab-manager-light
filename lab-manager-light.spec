@@ -40,6 +40,7 @@ Users can provision and manage their own virtual machines, LML will:
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/lml.conf.d $RPM_BUILD_ROOT/usr/lib/lml $RPM_BUILD_ROOT/var/lib/lml $RPM_BUILD_ROOT/etc/httpd/conf.d $RPM_BUILD_ROOT/etc/cron.d
 cp -r web/www/boot/lml $RPM_BUILD_ROOT/usr/lib/
+find $RPM_BUILD_ROOT/usr/lib/ -type f -name \*.pl | xargs -0 chmod -v +x
 cp -r web/conf.d $RPM_BUILD_ROOT/etc/httpd/
 cp -r etc/cron.d $RPM_BUILD_ROOT/etc/
 cp etc/lml.conf $RPM_BUILD_ROOT/etc/lml.conf.d/00_default.conf
@@ -51,8 +52,6 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(0644,root,root,0755)
 %doc LICENSE.TXT dhcp3
-%attr(0755,-,-) /usr/lib/lml/*.pl
-%attr(0755,root,root) /usr/lib/lml/tools/*.pl
 /usr/lib/lml
 /etc/httpd/conf.d/*
 /etc/cron.d/*

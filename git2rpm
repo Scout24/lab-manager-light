@@ -57,7 +57,7 @@ if ! [ "$REV" ] ; then
         REV=0
 fi
 
-tar -C "$WORK" -xv 2>>"$WORK"/log.txt 2>&1 < <(git archive --prefix export/ HEAD) || die "Could not export with git archive"
+tar -C "$WORK" -Rxv >>"$WORK"/log.txt 2>&1 < <(git archive --prefix export/ HEAD ) || die "Could not export with git archive"
 
 # find spec files in content
 SPECFILES=( $(find "$WORK/export" -maxdepth 1 -type f -name \*.spec) ) >> "$WORK"/log.txt 2>&1 || die "Could not search for spec files"
