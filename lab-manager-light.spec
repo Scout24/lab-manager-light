@@ -55,4 +55,4 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755,root,root) /usr/lib/lml/*.pl
 %attr(0755,root,root) /usr/lib/lml/tools/*.pl
 /etc/lml.conf.d
-%dir %attr(0644,apache,apache,0755) /var/lib/lml
+%attr(-,apache,apache,-) /var/lib/lml
