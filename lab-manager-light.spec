@@ -8,7 +8,7 @@ URL: https://github.com/ImmobilienScout24/lab-manager-light
 Source0: %{name}-%{version}.tar.gz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 # RHEL6 specific so far
-Requires: httpd
+Requires: httpd, cronie
 
 %description
 Lab Manager Light extends existing virtualization farms like VMware vSphere
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755,root,root) /usr/lib/lml/*.pl
 %attr(0755,root,root) /usr/lib/lml/tools/*.pl
 /usr/lib/lml
+/etc/httpd/conf.d/*
+/etc/cron.d/*
 /etc/lml.conf.d
 %defattr(-,apache,apache,-)
 %dir /var/lib/lml
