@@ -37,6 +37,7 @@ Users can provision and manage their own virtual machines, LML will:
 
 
 %install
+umask 0002
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/lml.conf.d $RPM_BUILD_ROOT/usr/lib/lml $RPM_BUILD_ROOT/var/lib/lml $RPM_BUILD_ROOT/etc/httpd/conf.d $RPM_BUILD_ROOT/etc/cron.d
 cp -r web/www/boot/lml $RPM_BUILD_ROOT/usr/lib/
@@ -50,7 +51,7 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %files
-%defattr(0644,root,root,0755)
+%defattr(-,root,root,-)
 %doc LICENSE.TXT dhcp3
 /usr/lib/lml
 /etc/httpd/conf.d/*
