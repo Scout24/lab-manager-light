@@ -39,7 +39,7 @@ Users can provision and manage their own virtual machines, LML will:
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/lml.conf.d $RPM_BUILD_ROOT/usr/lib/lml $RPM_BUILD_ROOT/var/lib/lml $RPM_BUILD_ROOT/etc/httpd/conf.d $RPM_BUILD_ROOT/etc/cron.d
-cp -r web/www/boot/lml/ $RPM_BUILD_ROOT/var/lib/lml/
+cp -r web/www/boot/lml/ $RPM_BUILD_ROOT/usr/lib/lml/
 cp -r web/conf.d/ $RPM_BUILD_ROOT/etc/httpd/conf.d
 cp -r etc/cron.d/ $RPM_BUILD_ROOT/etc/cron.d
 cp etc/lml.conf $RPM_BUILD_ROOT/etc/lml.conf.d/00_default.conf
