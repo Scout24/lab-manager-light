@@ -52,6 +52,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(0644,root,root,0755)
 %doc LICENSE.TXT dhcp3
 /usr/lib/lml
-%attr(0755,-,-) /usr/lib/lml/*.pl /usr/lib/lml/tools/*.pl
+%attr(0755,root,root) /usr/lib/lml/*.pl
+%attr(0755,root,root) /usr/lib/lml/tools/*.pl
 /etc/lml.conf.d
 %dir %attr(-,apache,apache,-) /var/lib/lml
