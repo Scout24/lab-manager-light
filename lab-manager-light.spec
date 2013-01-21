@@ -7,6 +7,7 @@ License: GPL
 URL: https://github.com/ImmobilienScout24/lab-manager-light
 Source0: %{name}-%{version}.tar.gz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+BuildArch: noarch
 # RHEL6 specific so far
 Requires: httpd, cronie
 
