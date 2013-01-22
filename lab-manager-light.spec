@@ -8,6 +8,8 @@ URL: https://github.com/ImmobilienScout24/lab-manager-light
 Source0: %{name}-%{version}.tar.gz
 BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildArch: noarch
+# don't add our LML Perl modules and included libraries to RPM provides
+Autoprov: 0
 # RHEL6 specific so far
 Requires: httpd, cronie
 
