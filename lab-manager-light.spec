@@ -57,13 +57,14 @@ cp -r src/lml/* $RPM_BUILD_ROOT/usr/lib/lml/
 find $RPM_BUILD_ROOT/usr/lib/ -type f -name \*.pl -print0 | xargs -0 chmod -v +x
 cp src/apache/* $RPM_BUILD_ROOT/etc/httpd/conf.d/
 cp src/cron/* $RPM_BUILD_ROOT/etc/cron.d/
+chmod -R g-w $RPM_BUILD_ROOT
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 
 %files
-%defattr(0644,root,root,0755)
+%defattr(-,root,root,-)
 %doc LICENSE.TXT doc
 /usr/lib/lml
 /etc/httpd/conf.d/*
