@@ -1,31 +1,18 @@
 #!/bin/bash
 # export a dir from HG and build an RPM from it
-VERSION='$Id: hg2rpm 6927 2012-03-14 13:40:00Z fbusse $'
 if ! test "$1" ; then
         cat <<EOF
-$0 $VERSION
-Export from HG and build an RPM package.
-SPEC file must be part of files checked out from HG
+$0
+Export from GIT and build an Source RPM package.
+SPEC file must be part of files checked out from  GIT
 
 Usage:
 
-$(basename "$0") <WORKING COPY PATH> [more rpmbuild parameters ...]
-
-Example:
-$(basename "$0") ~/src/intern/perl_mod/trunk
-$(basename "$0") ~/src/intern/perl_mod/trunk --define="key value"
-
-
-This will checkout the URL to perl_mod-0.0.16 and create a tar.gz archive
-from it with the name of perl_mod-0.0.16.tar.gz and call rpmbuild -ta on 
-the resulting tar and remove the tar and checked out directory if the
-RPM building was successful.
-
-The current working directory is used as a work space for temporary files.
+$(basename "$0") PATH_IN_GIT [more rpmbuild parameters ...]
 
 Note: The RPM package name and version are taken from the SPEC file!!
 
-Author: Fridtjof Busse (based on svn2rpm by Schlomo Schapiro, Stefan Schubert)
+Author: Schlomo Schapiro
 
 EOF
 exit 10
@@ -83,10 +70,11 @@ mkdir -p "$WORK"/rpmbuild/{SPECS,SOURCES,BUILD,RPMS/noarch,RPMS/x86_64,RPMS/i386
 
 # pack tgz and build RPMs
 tar -cvzf "$WORK/$PACKAGE".tar.gz -C "$WORK" "$PACKAGE" >> "$WORK"/log.txt 2>&1 || die "Could not pack archive"
-rpmbuild --define="_topdir $WORK/rpmbuild" "$@" -ta "$WORK/$PACKAGE".tar.gz >> "$WORK/log.txt" 2>&1 || die "Could not build RPM"
+rpmbuild --define="_topdir $WORK/rpmbuild" "$@" -ts "$WORK/$PACKAGE".tar.gz >> "$WORK/log.txt" 2>&1 || die "Could not build RPM"
 
 # collect resulting RPMs of rpmbuild
 RESULT_FILES=()
+shopt -s nullglob
 for f in $WORK/rpmbuild/RPMS/*/*rpm $WORK/rpmbuild/SRPMS/*rpm ; do
         RESULT_FILES=( "${RESULT_FILES[@]}" "$(basename "$f")" )
         mv "$f" . || die "Could not move '$f' to ."
