@@ -9,7 +9,7 @@ use vars qw(
           );
 our $VERSION     = 1.00;
 our @ISA         = qw(Exporter);
-our @EXPORT     = qw(%CONFIG);
+our @EXPORT     = qw(%CONFIG $isDebug Debug);
 
 use FindBin;
 use lib "$FindBin::RealBin/../../lib";
@@ -40,9 +40,33 @@ use Config::IniFiles;
 
 use POSIX;
 
+# debugging
+our $isDebug = defined($ENV{LML_DEBUG});
+sub Debug {
+	print STDERR "DEBUG: ".join("\nDEBUG: ",@_)."\n" if ($isDebug);
+}
+Debug("Debug Output enabled.");
+
 # open main config file case-insensitive 
 our %CONFIG;
-tie %CONFIG, 'Config::IniFiles', (-file=>"/etc/lml.conf",-nocase=>1) or die "Could not open '/etc/lml.conf'";
+my $conf;
+foreach my $f (<{/usr/lib/lml/default.conf,/etc/lml/*.conf,$ENV{HOME}/lml-*.conf}>) {
+	$conf = new Config::IniFiles(	-file=>$f,
+					-nocase=>1,
+					-import=>$conf
+					) or die "Could not read '$f'";
+	if ($isDebug) {
+		Debug("Read from $f:");
+		$conf->OutputConfigToFileHandle(*STDERR, 1);
+	}
+}
+
+if ($isDebug) {
+	Debug("Merged configuration:");
+	$conf->OutputConfigToFileHandle(*STDERR);
+}
+
+tie %CONFIG, 'Config::IniFiles', (-import=>$conf,-nocase=>1) or die "Could not tie to config.";
 
 # some config checks
 die "Missing or invalid LML.DATADIR from configuration" unless (-d $CONFIG{lml}{datadir});
