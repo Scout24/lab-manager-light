@@ -50,14 +50,14 @@ WORK="$(mktemp -d -t "$(basename $0)"-XXXXXXXXXX)"
 # KEEPWORKDIR can be set externally to keep the work dir. Else it is empty by default.
 trap "exittrap" 0
 
-# get HG rev for URL and remove whitespaces
-REV="$(git log -l1 "$SRC_DIR" | grep changeset | cut -d: -f2 | tr -d ' ')" >> "$WORK"/log.txt 2>&1 || die "Could not determine Mercurial revision"
+# contstuct something to resemble a SVN rev:
+REV="$(cd "$SRC_DIR" ; git rev-list HEAD | wc -l).$(cd "$SRC_DIR" ; git rev-list HEAD | head -n 1)"
 # make sure there is a REV
-if ! [ "$REV" ] ; then
+if [ "$REV" = . ] ; then
         REV=0
 fi
 
-tar -C "$WORK" -Rxv >>"$WORK"/log.txt 2>&1 < <(git archive --prefix export/ HEAD ) || die "Could not export with git archive"
+tar -C "$WORK" -Rxv >>"$WORK"/log.txt 2>&1 < <( cd "$SRC_DIR" ; git archive --prefix export/ HEAD ) || die "Could not export with git archive"
 
 # find spec files in content
 SPECFILES=( $(find "$WORK/export" -maxdepth 1 -type f -name \*.spec) ) >> "$WORK"/log.txt 2>&1 || die "Could not search for spec files"
