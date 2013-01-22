@@ -29,7 +29,7 @@ die '$LAB is empty' unless (scalar(%{$LAB}));
 
 
 my $VM={};
-{
+if (-r "$CONFIG{lml}{datadir}/vm.conf") {
 	local $/=undef;
 	open(VM_CONF,"<$CONFIG{lml}{datadir}/vm.conf") || die "Could not open $CONFIG{lml}{datadir}/vm.conf";
 	flock(VM_CONF, 1) || die;
@@ -37,7 +37,6 @@ my $VM={};
 	eval <VM_CONF> || die "Could not parse $CONFIG{lml}{datadir}/vm.conf";
 	close(VM_CONF);
 }
-die '$VM is empty' unless (scalar(%{$VM}));
 
 print header();
 print <<EOF;
@@ -83,6 +82,7 @@ for my $uuid (keys(%{$LAB->{HOSTS}})) {
 			$expires,
 		])."\n";
 }
+my $conffiles=join(" ",<{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>);
 print <<EOF;
 </tbody>
 </table>
@@ -90,26 +90,17 @@ print <<EOF;
 <h2>Configuration</h2>
 <div id="configshow"><a href="#" onclick="document.getElementById('configdump').style.display='block';document.getElementById('configshow').style.display='none'">Show configuration</a></div>
 <div id="configdump" style="display:none">
-<p>Config file is <code>/etc/lml.conf</code></p>
+<p>Config files are <code>$conffiles</code>, this is the <strong>merged</strong> result of all config files:</p>
 <pre>
 EOF
-my $confdata;
-{
-	local $/=undef;
-	open FILE, "</etc/lml.conf";
-	binmode FILE;
-	$confdata = <FILE>;
-	close FILE;
-}
-my $quoted_password = quotemeta($CONFIG{vsphere}{password});
-$confdata =~ s/$quoted_password/*******************/g;
-$confdata = escapeHTML($confdata);
+$CONFIG{vsphere}{password}="***** hidden *****" if ($CONFIG{vsphere}{password});
+tied(%CONFIG)->OutputConfigToFileHandle(*STDOUT);
 print <<EOF;
-$confdata
 </pre>
 </div>
 <hr/>
-Lab Manager Light is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.<br/>
-Written by <a href="http://schapiro.org/schlomo">Schlomo Schapiro</a>.
+<a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.<br/>
 </body></html>
 EOF
+
+1;

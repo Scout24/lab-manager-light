@@ -48,7 +48,7 @@ Debug(@INC);
 our %CONFIG;
 my $conf;
 # here we rely on the fact that @INC contains our private lib dir in the first place.
-foreach my $f (<{@INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>) {
+foreach my $f (<{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>) {
 	$conf = new Config::IniFiles(	-file=>$f,
 					-nocase=>1,
 					-import=>$conf
@@ -75,5 +75,6 @@ $ENV{VI_USERNAME}=$CONFIG{vsphere}{username} if ($CONFIG{vsphere}{username});
 $ENV{VI_PASSWORD}=$CONFIG{vsphere}{password} if ($CONFIG{vsphere}{password});
 $ENV{VI_SERVER}=$CONFIG{vsphere}{server} if ($CONFIG{vsphere}{server});
 $ENV{VI_PASSTHROUGHAUTH}=$CONFIG{vsphere}{passthroughauth} if ($CONFIG{vsphere}{passthroughauth});
+$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME}=0 if ($CONFIG{vsphere}{disablecertificatevalidation});
 
 1;
