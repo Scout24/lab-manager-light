@@ -52,18 +52,18 @@ Users can provision and manage their own virtual machines, LML will:
 %install
 umask 0002
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/etc/lml $RPM_BUILD_ROOT/usr/lib $RPM_BUILD_ROOT/var/lib/lml $RPM_BUILD_ROOT/etc/httpd/conf.d $RPM_BUILD_ROOT/etc/cron.d
-cp -r src/lml $RPM_BUILD_ROOT/usr/lib/
+mkdir -p $RPM_BUILD_ROOT/etc/lml $RPM_BUILD_ROOT/usr/lib/lml $RPM_BUILD_ROOT/var/lib/lml $RPM_BUILD_ROOT/etc/httpd/conf.d $RPM_BUILD_ROOT/etc/cron.d
+cp -r src/lml/* $RPM_BUILD_ROOT/usr/lib/lml/
 find $RPM_BUILD_ROOT/usr/lib/ -type f -name \*.pl -print0 | xargs -0 chmod -v +x
-cp -r src/apache/ $RPM_BUILD_ROOT/etc/httpd/conf.d/
-cp -r src/cron/ $RPM_BUILD_ROOT/etc/cron.d/
+cp src/apache/* $RPM_BUILD_ROOT/etc/httpd/conf.d/
+cp src/cron/* $RPM_BUILD_ROOT/etc/cron.d/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 
 %files
-%defattr(-,root,root,-)
+%defattr(0644,root,root,0755)
 %doc LICENSE.TXT doc
 /usr/lib/lml
 /etc/httpd/conf.d/*
