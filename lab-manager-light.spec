@@ -1,6 +1,6 @@
 Name: lab-manager-light
 Version: 2
-Release: 1
+Release: 2
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
 License: GPL
@@ -10,6 +10,16 @@ BuildRoot:  %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildArch: noarch
 # don't add our LML Perl modules and included libraries to RPM provides
 Autoprov: 0
+# autoreq require also all internal libraries, sadly we need to track this manually.
+Autoreq: 0
+# perl stuff
+Requires: /usr/bin/perl
+Requires: perl(CGI)
+Requires: perl(Config::IniFiles)
+Requires: perl(DateTime::Format::Flexible)
+Requires: perl(SVN::Client)
+Requires: perl(VMware::VIRuntime)
+
 # RHEL6 specific so far
 Requires: httpd, cronie
 
