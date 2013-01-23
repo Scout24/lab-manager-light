@@ -82,7 +82,7 @@ for my $uuid (keys(%{$LAB->{HOSTS}})) {
 			$expires,
 		])."\n";
 }
-my $conffiles=join(" ",@CONFIGFILES);
+my $conffiles="<ol>\n\t<li>".join("</li>\n\t<li>",@CONFIGFILES)."</li>\n</ol>\n";
 print <<EOF;
 </tbody>
 </table>
@@ -90,11 +90,19 @@ print <<EOF;
 <h2>Configuration</h2>
 <div id="configshow"><a href="#" onclick="document.getElementById('configdump').style.display='block';document.getElementById('configshow').style.display='none'">Show configuration</a></div>
 <div id="configdump" style="display:none">
-<p>Config files are <code>$conffiles</code>, this is the <strong>merged</strong> result of all config files:</p>
+<p>The config files are 
+<code>
+$conffiles
+</code>
+and this is the <strong>merged</strong> result of all config files:</p>
 <pre>
 EOF
 $CONFIG{vsphere}{password}="***** hidden *****" if ($CONFIG{vsphere}{password});
-tied(%CONFIG)->OutputConfigToFileHandle(*STDOUT);
+my $confdump;
+open(*CONFDUMP,">",\$confdump) or die "Could not open memory file: $!";
+tied(%CONFIG)->OutputConfigToFileHandle(*CONFDUMP);
+close(*CONFDUMP);
+print escapeHTML($confdump);
 print <<EOF;
 </pre>
 </div>
