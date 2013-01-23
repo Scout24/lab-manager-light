@@ -7,7 +7,7 @@ use vars qw(
             @EXPORT
           );
 our @ISA         = qw(Exporter);
-our @EXPORT     = qw(%CONFIG $isDebug Debug);
+our @EXPORT     = qw(%CONFIG @CONFIGFILES $isDebug Debug);
 
 use FindBin;
 
@@ -21,7 +21,6 @@ $Data::Dumper::Useqq  = 1;  # use double quoted strings with "\n" escapes
 $Data::Dumper::Purity = 1;  # extra code for correct perl representation
 
 
-# use VMware VI Perl SDK included modules
 use Fcntl 'SEEK_SET';
 use File::Path;
 use File::Find;
@@ -29,8 +28,7 @@ use File::Basename;
 use File::Glob ':glob';
 use IO::Handle;
 use Path::Class 'dir';
-use Cwd;
-
+use Cwd 'realpath';
 use DateTime::Format::Flexible;
 
 use Config::IniFiles;
@@ -48,7 +46,9 @@ Debug(@INC);
 our %CONFIG;
 my $conf;
 # here we rely on the fact that @INC contains our private lib dir in the first place.
-foreach my $f (<{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>) {
+$ENV{HOME}="/dev/null" unless ($ENV{HOME}); # set HOME to junk if not set to prevent Perl error in next line
+our @CONFIGFILES=map(realpath($_),<{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>);
+foreach my $f (@CONFIGFILES) {
 	$conf = new Config::IniFiles(	-file=>$f,
 					-nocase=>1,
 					-import=>$conf

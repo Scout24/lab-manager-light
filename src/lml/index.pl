@@ -82,7 +82,7 @@ for my $uuid (keys(%{$LAB->{HOSTS}})) {
 			$expires,
 		])."\n";
 }
-my $conffiles=join(" ",<{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>);
+my $conffiles=join(" ",@CONFIGFILES);
 print <<EOF;
 </tbody>
 </table>
