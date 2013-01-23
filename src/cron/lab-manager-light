@@ -1,1 +1,1 @@
-22 * * * *	apache	/usr/lib/lml/lml-maintenance.pl
+22 * * * *	apache	/usr/lib/lml/tools/lml-maintenance.pl
