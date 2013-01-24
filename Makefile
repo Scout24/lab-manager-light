@@ -2,7 +2,7 @@ TOPLEVEL = doc src $(wildcard *.spec) LICENSE.TXT
 MANIFEST = VERSION $(wildcard $(TOPLEVEL) doc/* src/* src/*/* src/*/*/* src/*/*/*/*)
 
 VERSION = $(shell cat VERSION)
-REVISION = "$(shell git rev-list HEAD --count -- $(TOPLEVEL)).$(shell git rev-list HEAD -n 1 -- $(TOPLEVEL))"
+REVISION = "$(shell git rev-list HEAD --count -- $(TOPLEVEL))"
 PV = lab-manager-light-$(VERSION)
 
 .PHONE: all deb rpm
@@ -48,7 +48,6 @@ debrepo: out/*.deb
 #	git commit dist -m "autobuild"
 
 clean:
-	git update-index --assume-unchanged -- dist/*.rpm dist/*.deb
 	rm -Rf dist/*.rpm dist/*.deb build
 
 # todo: create debian/RPM changelog automatically, e.g. with git-dch --full --id-length=10 --ignore-regex '^fixes$' -S -s 68809505c5dea13ba18a8f517e82aa4f74d79acb src doc *.spec
