@@ -1,11 +1,10 @@
-Please refer to the wiki at http://code.google.com/p/lml/w/list for documentation.
+Please refer to the new [wiki] and the old [http://code.google.com/p/lml/w/list](wiki) for additional documentation.
 
 # Building
 
 No compilation required.
 
 1. clone this git repo
-2. Run the `git2srpm` script to create a src.rpm
-3. Use `rpmbuild --rebuild *.src.rpm` to create a binary package. Do this on a suitable build host that is sufficiently similar to the destination environment.
+2. Use `make` to build RPM and DEB packages in `dist/`
 
 # Configuration
