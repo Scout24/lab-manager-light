@@ -5,14 +5,14 @@ VERSION = $(shell cat VERSION)
 REVISION = "$(shell git rev-list HEAD --count -- $(TOPLEVEL))"
 PV = lab-manager-light-$(VERSION)
 
-.PHONE: all deb rpm
+.PHONY: all deb rpm info debinfo rpminfo
+
 all: deb rpm
 	ls -l dist/*.deb dist/*.rpm
-	git add -A dist
 
 deb:  clean $(MANIFEST)
 	echo M $(MANIFEST) V $(VERSION) R $(REVISION)
-	mkdir -p build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib
+	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib
 	sed -e 's/apache/www-data/' <src/cron/lab-manager-light >build/deb/etc/cron.d/lab-manager-light
 	cp src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
 	cp -r src/lml build/deb/usr/lib/
@@ -27,7 +27,7 @@ deb:  clean $(MANIFEST)
 	lintian --suppress-tags no-copyright-file,file-in-etc-not-marked-as-conffile,changelog-file-missing-in-native-package -i dist/*deb
 
 rpm: clean $(MANIFEST)
-	mkdir -p build/$(PV) build/BUILD
+	mkdir -p dist build/$(PV) build/BUILD
 	cp -r $(TOPLEVEL) build/$(PV)
 	mv build/$(PV)/*.spec build/
 	sed -i -e s/VERSION/$(VERSION)/ -e /^Release/s/$$/.$(REVISION)/ build/*.spec
@@ -35,8 +35,12 @@ rpm: clean $(MANIFEST)
 	rpmbuild --define="_topdir $(CURDIR)/build" --define="_sourcedir $(CURDIR)/build" --define="_srcrpmdir $(CURDIR)/dist" --nodeps -ba build/*.spec
 	mv -v build/RPMS/*/* dist/
 
-info: dist/*.deb dist/*.rpm
+info: rpminfo debinfo
+
+debinfo: dist/*.deb
 	dpkg-deb -I dist/*.deb
+
+rpminfo: dist/*.rpm
 	rpm -qip dist/*.rpm
 
 debrepo: out/*.deb
