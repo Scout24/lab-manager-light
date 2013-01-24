@@ -44,6 +44,7 @@ print <<EOF;
 <title>Lab Manager Light - Overview</title>
 <script type="text/javascript" src="lib/js/table.js"></script>
 </head><body>
+<img style="float:right;border:0px" src="lib/images/LabManagerLightlogo-small.png"/>
 <h1>Lab Manager Light - Overview</h1>
 EOF
 
