@@ -1,0 +1,2 @@
+/etc/cron.d/lab-manager-light
+/etc/apache2/conf.d/lab-manager-light.conf

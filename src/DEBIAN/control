@@ -1,0 +1,27 @@
+Package: lab-manager-light
+Version: VERSION
+Priority: optional
+Section: web
+Architecture: all
+Maintainer: Schlomo Schapiro <lml@schlomo.schapiro.org>
+Depends: apache2 | httpd-cgi, perl, libsvn-perl, libconfig-inifiles-perl, libdatetime-format-flexible-perl 
+Homepage: https://github.com/ImmobilienScout24/lab-manager-light
+Description: Lab Manager Light
+ LML extends existing virtualization farms like VMware vSphere and
+ potentially others with advanced network and system management to build
+ a private cloud without the complexity of running cloud solutions.
+ .
+ Users can provision and manage their own virtual machines, LML will:
+ .
+  - enforce VM name compliance with corporate standards
+  - set the host-name to the VM name
+  - assign VMs to users
+  - manage end-of-life dates for VMs
+  - integrate with corporate user accounts
+  - manage IP addresses through a DHCP server
+  - manage DNS names through a DNS server
+  - control PXE boot environment for automated installation of VMs
+  - manage host-based entries in a SVN repository for automated systems
+    integration
+  - LML communicates with the end-user through the existing GUIs of the
+    virtualization farm and the virtual machines.
