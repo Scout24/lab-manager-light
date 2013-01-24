@@ -49,3 +49,6 @@ debrepo: out/*.deb
 
 clean:
 	rm -Rf dist/*.rpm dist/*.deb build
+
+# todo: create debian/RPM changelog automatically, e.g. with git-dch --full --id-length=10 --ignore-regex '^fixes$' -S -s 68809505c5dea13ba18a8f517e82aa4f74d79acb src doc *.spec
+

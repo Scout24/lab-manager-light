@@ -1,5 +1,5 @@
 Name: lab-manager-light
-Version: 5
+Version: VERSION
 Release: 3
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
