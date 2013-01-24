@@ -2,7 +2,7 @@ TOPLEVEL = doc src $(wildcard *.spec) LICENSE.TXT
 MANIFEST = VERSION $(wildcard $(TOPLEVEL) doc/* src/* src/*/* src/*/*/* src/*/*/*/*)
 
 VERSION = $(shell cat VERSION)
-REVISION = "$(shell cd "$SRC_DIR" ; git rev-list HEAD | wc -l).$(shell cd "$SRC_DIR" ; git rev-list HEAD | head -n 1)"
+REVISION = "$(shell git rev-list HEAD --count -- $(TOPLEVEL)).$(shell git rev-list HEAD -n 1 -- $(TOPLEVEL))"
 PV = lab-manager-light-$(VERSION)
 
 .PHONE: all deb rpm
