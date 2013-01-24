@@ -1,4 +1,4 @@
-Please refer to the new [wiki](./wiki/) and the old [wiki](http://code.google.com/p/lml/w/list) for additional documentation.
+Please refer to the new [wiki](https://github.com/ImmobilienScout24/lab-manager-light/wiki/) and the old [wiki](http://code.google.com/p/lml/w/list) for additional documentation.
 
 # Building
 
