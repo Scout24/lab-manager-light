@@ -88,8 +88,8 @@ print <<EOF;
 </tbody>
 </table>
 
-<h2>Configuration</h2>
-<div id="configshow"><a href="#" onclick="document.getElementById('configdump').style.display='block';document.getElementById('configshow').style.display='none'">Show configuration</a></div>
+<h2 name="configdump" >Configuration</h2>
+<div id="configshow"><a href="#configdump" onclick="document.getElementById('configdump').style.display='block';document.getElementById('configshow').style.display='none'">Show configuration</a></div>
 <div id="configdump" style="display:none">
 <p>The config files are 
 <code>
