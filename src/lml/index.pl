@@ -70,16 +70,22 @@ print thead(
 
 for my $uuid (keys(%{$LAB->{HOSTS}})) {
 	my $expires = "unknown";
-	eval { $expires=DateTime::Format::Flexible->parse_datetime($VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{expires_field}} , 
-									european => ($CONFIG{vsphere}{expires_european}?1:0))->ymd(); };
-	my $display_vm_path = $VM->{$uuid}->{PATH};
-	if (exists($CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}) and $CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}) {
-		$display_vm_path =~ s/$CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}/$1/;
+	my $contact_user_id = "unknown";
+	my $display_vm_path = "<em>(no data available)</em>";
+	if (exists($VM->{$uuid})) {
+		eval { $expires=DateTime::Format::Flexible->parse_datetime($VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{expires_field}} , 
+										european => ($CONFIG{vsphere}{expires_european}?1:0))->ymd(); };
+		$display_vm_path = $VM->{$uuid}->{PATH};
+		if (exists($CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}) and $CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}) {
+			$display_vm_path =~ s/$CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}/$1/;
+		}
+		$contact_user_id = $VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}} if (exists($VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}}));
 	}
-	print Tr(td[
+	print Tr({-style=>(exists($VM->{$uuid})?'':'color: grey;')},
+		td[
 			$LAB->{HOSTS}->{$uuid}->{HOSTNAME},
 			$display_vm_path,
-			$VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}},
+			$contact_user_id,
 			$expires,
 		])."\n";
 }
