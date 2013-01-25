@@ -18,13 +18,14 @@ deb:  clean $(MANIFEST)
 	cp -r src/lml build/deb/usr/lib/
 	cp -r src/DEBIAN build/deb/
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
-	mkdir -p build/deb/usr/share/doc/
+	mkdir -p build/deb/usr/share/doc/ build/usr/share/lintian/overrides
 	cp -r doc build/deb/usr/share/doc/lab-manager-light
 	rm -f build/deb/usr/lib/lml/LICENSE.TXT
 	mv build/deb/DEBIAN/copyright build/deb/usr/share/doc/lab-manager-light/copyright
+	mv build/deb/DEBIAN/overrides build/usr/share/lintian/overrides/lab-manager-light
 	find build/deb -type f -name \*~ | xargs rm -vf
 	fakeroot dpkg -b build/deb dist
-	lintian --suppress-tags no-copyright-file,file-in-etc-not-marked-as-conffile,changelog-file-missing-in-native-package -i dist/*deb
+	lintian --quiet --suppress-tags no-copyright-file,file-in-etc-not-marked-as-conffile,changelog-file-missing-in-native-package -i dist/*deb
 
 rpm: clean $(MANIFEST)
 	mkdir -p dist build/$(PV) build/BUILD
