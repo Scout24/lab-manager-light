@@ -178,8 +178,14 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 	if (not scalar(@error)) {
 		# we only modify something if there are no errors
 	
-		# check host-name directory existance in SVN if configured
-		if (exists($CONFIG{SUBVERSION}{HOSTDIRS}) and $CONFIG{SUBVERSION}{HOSTDIRS}) {
+		# check host-name directory existance in SVN if configured. If none of the actions are configured, ignore this test.
+		if (
+			(exists($CONFIG{SUBVERSION}{HOSTDIRS}) and $CONFIG{SUBVERSION}{HOSTDIRS}) &&
+			(
+				(exists($CONFIG{SUBVERSION}{CREATEHOSTDIRS}) and $CONFIG{SUBVERSION}{CREATEHOSTDIRS}) ||
+				(exists($CONFIG{SUBVERSION}{FAILONMISSINGHOSTDIR}) and $CONFIG{SUBVERSION}{FAILONMISSINGHOSTDIR})
+			)
+		) {
 			# check if the host dir exists
 			my $newhostdir=$CONFIG{SUBVERSION}{HOSTDIRS}."/".$vm_name;
 			my $havehostdir=svnCheckPath($newhostdir);
