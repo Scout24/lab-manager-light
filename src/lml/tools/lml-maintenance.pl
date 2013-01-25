@@ -19,7 +19,7 @@ use warnings;
 
 # place DLLs and PMs with the required subdirectory structure into lib/ next to this script
 use FindBin;
-use lib "$FindBin::RealBin/lib";
+use lib "$FindBin::RealBin/../lib";
 
 use CGI ':standard';
 use LML::Common;
