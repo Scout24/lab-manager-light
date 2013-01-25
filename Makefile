@@ -44,8 +44,8 @@ debinfo: dist/*.deb
 rpminfo: dist/*.rpm
 	rpm -qip dist/*.rpm
 
-debrepo: out/*.deb
-	/data/mnt/is24-ubuntu-repo/putinrepo.sh out/*.deb
+debrepo: dist/*.deb
+	/data/mnt/is24-ubuntu-repo/putinrepo.sh dist/*.deb
 
 #*.rpm: clean src doc *.spec
 #	cd dist && ../git2srpm ..
