@@ -2,8 +2,9 @@ TOPLEVEL = doc src $(wildcard *.spec) LICENSE.TXT
 MANIFEST = VERSION $(wildcard $(TOPLEVEL) doc/* src/* src/*/* src/*/*/* src/*/*/*/*)
 
 GITREV := HEAD
+
 VERSION := $(shell cat VERSION)
-REVISION := "$(shell git rev-list $(GITREV) -- $(TOPLEVEL) | wc -l)"
+REVISION := "$(shell git rev-list $(GITREV) -- $(TOPLEVEL) | wc -l)$(EXTRAREV)"
 PV = lab-manager-light-$(VERSION)
 
 .PHONY: all deb rpm info debinfo rpminfo
@@ -39,19 +40,17 @@ rpm: clean $(MANIFEST)
 
 info: rpminfo debinfo
 
-debinfo: dist/*.deb
+debinfo: deb
 	dpkg-deb -I dist/*.deb
 
-rpminfo: dist/*.rpm
+rpminfo: rpm
 	rpm -qip dist/*.rpm
 
-debrepo: dist/*.deb
+debrepo: deb
 	/data/mnt/is24-ubuntu-repo/putinrepo.sh dist/*.deb
 
-#*.rpm: clean src doc *.spec
-#	cd dist && ../git2srpm ..
-#	git add -A dist
-#	git commit dist -m "autobuild"
+rpmrepo: rpm
+	repoclient uploadto "$(TARGET_REPO)" dist/*.rpm
 
 clean:
 	rm -Rf dist/*.rpm dist/*.deb build
