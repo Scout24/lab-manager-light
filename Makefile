@@ -2,7 +2,7 @@ TOPLEVEL = doc src $(wildcard *.spec) LICENSE.TXT
 MANIFEST = VERSION $(wildcard $(TOPLEVEL) doc/* src/* src/*/* src/*/*/* src/*/*/*/*)
 
 VERSION = $(shell cat VERSION)
-REVISION = "$(shell git rev-list HEAD --count -- $(TOPLEVEL))"
+REVISION = "$(shell git rev-list HEAD -- $(TOPLEVEL) | wc -l)"
 PV = lab-manager-light-$(VERSION)
 
 .PHONY: all deb rpm info debinfo rpminfo
