@@ -45,9 +45,14 @@ Debug(@INC);
 # open main config file case-insensitive 
 our %CONFIG;
 my $conf;
+unless ($ENV{HOME}) {
+	# set HOME from NSS if not set to prevent Perl error in next line
+	$ENV{HOME} = (getpwuid($>))[7];
+	Debug("Set HOME to $ENV{HOME}");
+}
 # here we rely on the fact that @INC contains our private lib dir in the first place.
-$ENV{HOME}="/dev/null" unless ($ENV{HOME}); # set HOME to junk if not set to prevent Perl error in next line
 our @CONFIGFILES=map(realpath($_),<{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}>);
+Debug("Our config files are: ",join(" ",@CONFIGFILES));
 foreach my $f (@CONFIGFILES) {
 	$conf = new Config::IniFiles(	-file=>$f,
 					-nocase=>1,
@@ -67,10 +72,10 @@ if ($isDebug) {
 tie %CONFIG, 'Config::IniFiles', (-import=>$conf,-nocase=>1) or die "Could not tie to config.";
 
 # some config checks
-die "Missing or invalid LML.DATADIR from configuration" unless (-d $CONFIG{lml}{datadir});
+die "Missing or invalid LML.DATADIR ($CONFIG{lml}{datadir}) from configuration\n" unless (-d $CONFIG{lml}{datadir});
 
 # setup vSphere environment
-die "Missing VSPHERE configuration section in configuration" unless ($CONFIG{vsphere});
+die "Missing VSPHERE configuration section in configuration\n" unless ($CONFIG{vsphere});
 $ENV{VI_USERNAME}=$CONFIG{vsphere}{username} if ($CONFIG{vsphere}{username});
 $ENV{VI_PASSWORD}=$CONFIG{vsphere}{password} if ($CONFIG{vsphere}{password});
 $ENV{VI_SERVER}=$CONFIG{vsphere}{server} if ($CONFIG{vsphere}{server});

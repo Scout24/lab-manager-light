@@ -25,20 +25,45 @@ use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 
-# connect to vSphere
-connect_vi();
 
-# input parameter, UUID of a VM
-my $search_uuid=param('uuid')?param('uuid'):lc($ARGV[0]);
 
 # our URL base from REQUEST_URI
-my $base_url = url();
+our $base_url = url();
 $base_url =~ s/\/[^\/]+$//; # cheap basename()
 my $tftp_url = $base_url;
 $tftp_url =~ s/\/pxelinux.cfg.*$//; # strip trailing pxelinux.cfg
 
+# install die handler to report fatal errors
+$SIG{__DIE__} = sub { 
+	die @_ if $^S; # see http://perldoc.perl.org/functions/die.html at the end
+	return unless (
+		(exists($CONFIG{lml}{showfatalerrors}) and $CONFIG{lml}{showfatalerrors}) and
+		(exists($CONFIG{pxelinux}{fatalerror_template}) and $CONFIG{pxelinux}{fatalerror_template})
+		);
+	my $message = shift;
+	chomp($message); # remove trailing newlines
+	$message =~ s/\n/; /; # turn message into single line
+	print header(-status=>'200 Fatal Error',-type=>'text/plain');
+	my $body = join("\n",@{$CONFIG{pxelinux}{fatalerror_template}})."\n";
+	$body =~ s/MESSAGE/$message/;
+	print $body;
+};
+
+# input parameter, UUID of a VM
+my $search_uuid;
+if (param('uuid')) {
+	$search_uuid=param('uuid');
+} elsif (@ARGV) {
+	$search_uuid=lc($ARGV[0]);
+} else {
+	die("Give UUID address as query parameter 'uuid' or as command line parameter\n");
+}
+
 my $vm_name="";
 my @error=();
+
+# connect to vSphere
+connect_vi();
 
 # get dump of single VM from vSphere
 my %VM = get_vm_data($search_uuid);
@@ -309,10 +334,6 @@ EOF
 	} else {
 		print header(-status=>404,-type=>'text/plain');
 	}
-	print "Give UUID address as query parameter 'uuid' or as command line parameter\n";
-	if ($search_uuid) {
-		print "No VM found for '$search_uuid'\n";
-	}
+	print "No VM found for '$search_uuid'\n";
 }
-
 #print Data::Dumper->Dump([\%CONFIG,\%VM,$LAB],[qw(CONFIG VM LAB)]);
