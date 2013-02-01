@@ -8,11 +8,15 @@
 
 #uparrowframe {
 	position: fixed;
-	right: 0px;
+	left: 0px;
 	bottom: 0px;
 	padding: 5px;
 	font-weight: bold;
 	font-size: 200%;
+}
+
+#footer {
+	margin-left: 4ex;
 }
 
 .vm_without_data {
