@@ -74,16 +74,16 @@ my %VM = get_vm_data($search_uuid);
 my $LAB={};
 if (-r "$CONFIG{lml}{datadir}/lab.conf") {
 	local $/=undef;
-	open(LAB_CONF,"<$CONFIG{lml}{datadir}/lab.conf") || die "Could not open $CONFIG{lml}{datadir}/lab.conf";
+	open(LAB_CONF,"<$CONFIG{lml}{datadir}/lab.conf") || die("Could not open $CONFIG{lml}{datadir}/lab.conf");
 	flock(LAB_CONF, 1) || die;
 	binmode LAB_CONF;
-	eval <LAB_CONF> || die "Could not parse $CONFIG{lml}{datadir}/lab.conf";
+	eval <LAB_CONF> || die("Could not parse $CONFIG{lml}{datadir}/lab.conf: '$@'\n");
 	close(LAB_CONF);
 } else {
 	# set up empty structure if our data file is missing
 	$LAB->{HOSTS} = {};
 }
-die '$LAB is empty' unless (scalar(%{$LAB}));
+die('$LAB is empty') unless (scalar(%{$LAB}));
 
 # prepare some configuration variables
 #
@@ -97,6 +97,9 @@ if (exists($CONFIG{vsphere}{networks}) and $CONFIG{vsphere}{networks}) {
 }
 
 my $hosts_changed=0;
+# keep force boot info for later
+my $pxelinux_config_url;
+my $bootinfo;
 
 # if there are VMs and if we find the VM we are looking for:
 if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
@@ -152,6 +155,7 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 			}
 		}
 	}
+
 	# check that contact ID is set to a valid UNIX user 
 	if (exists $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{contactuserid_field}}) {
 		my @pwnaminfo=getpwnam($VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{contactuserid_field}});
@@ -161,6 +165,7 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 	} else {
 		push(@error,"Must set $CONFIG{vsphere}{contactuserid_field} to valid username");
 	}
+
 	# check that expiry date is set and valid
 	if (exists $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{expires_field}}) {
 		my $expires;
@@ -194,6 +199,32 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 		scalar(gethostbyname($vm_name.".".$CONFIG{DHCP}{APPENDDOMAIN}."."))) {
 		# if this is a brand-new machine (e.g. we have no history of it) and new VM checking is enabled
 			push(@error,"New VM name exists already in '$CONFIG{DHCP}{APPENDDOMAIN}'");
+	}
+
+	# check force boot configuration
+	if ($CONFIG{pxelinux}{pxelinuxcfg_path} and $CONFIG{vsphere}{forceboot_field} and 
+		exists $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}} and
+		$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}}
+	) {
+		my $forceboot=$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}};
+		# little exploit protection, could be done more professional :-)
+		$forceboot =~ s/\.{2,}//g; # remove any .. or ... 
+		$forceboot =~ tr[:/A-Za-z0-9._-][]dc; # normalize to contain only valid path characters
+		# if forceboot contains a path relative to the pxelinux TFTP prefix
+		if (-r $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot and ! -d $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot) {
+			$pxelinux_config_url="$tftp_url/$forceboot";
+			$bootinfo="force boot from VM config (file)";
+		} elsif ($CONFIG{forceboot}{$forceboot}) {
+			$pxelinux_config_url=($CONFIG{forceboot}{$forceboot} =~ m(://)?"":$tftp_url."/").$CONFIG{forceboot}{$forceboot};
+			$bootinfo="force boot from LML config";
+		} elsif ($forceboot =~ m(://)) {
+			$pxelinux_config_url=$forceboot;
+			$bootinfo="force boot from VM config (URL)";
+		} elsif ($forceboot eq "fatalerror") {
+			die("Enjoy this fatal error, you called for it.\n");
+		} elsif ($CONFIG{lml}{failoninvalidforceboot} and $CONFIG{lml}{failoninvalidforceboot}) {
+			push(@error,"Invalid force boot target '$forceboot'");
+		} # else do nothing to silently ignore invalid force boot targets
 	}
 
 	# up till here we have only checks that verify the VM.
@@ -266,7 +297,7 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 # disconnect from VI
 Util::disconnect;
 
-# housekeeping needs to be in own script. This script has only the scope of a single VM.
+# housekeeping is in tools/lml-maintenance.pl. This script has only the scope of a single VM.
 
 # write dhcp-hosts.conf if it is configured and if we have host entries to write
 if ($hosts_changed) {
@@ -293,37 +324,13 @@ EOF
 	
 	# dump $LAB to file only if all is fine. This makes sure that LML stays with the old view of the lab for some kind of
 	# hard to catch errors.
-	open(LAB_CONF,">$CONFIG{lml}{datadir}/lab.conf") || die "Could not open '$CONFIG{lml}{datadir}/lab.conf' for writing";
+	open(LAB_CONF,">$CONFIG{lml}{datadir}/lab.conf") || die "Could not open '$CONFIG{lml}{datadir}/lab.conf' for writing\n";
 	flock(LAB_CONF, 2) || die;
-    print LAB_CONF "# pxelinux.pl ".POSIX::strftime("%Y-%m-%d %H:%M:%S\n", localtime())."\n";
+	print LAB_CONF "# pxelinux.pl ".POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime())." for $vm_name ($search_uuid)\n";
 	print LAB_CONF Data::Dumper->Dump([$LAB],[qw(LAB)]);
 	close(LAB_CONF);
 
-	my $pxelinux_config_url;
-	my $bootinfo;
-	if ($CONFIG{pxelinux}{pxelinuxcfg_path} and $CONFIG{vsphere}{forceboot_field} and 
-		exists $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}} and
-		$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}}
-	) {
-		my $forceboot=$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{forceboot_field}};
-		# little exploit protection, could be done more professional :-)
-		$forceboot =~ s/\.{2,}//g; # remove any .. or ... 
-		$forceboot =~ tr[:/A-Za-z0-9._-][]dc; # normalize to contain only valid path characters
-		# if forceboot contains a path relative to the pxelinux TFTP prefix
-		if (-r $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot and ! -d $CONFIG{pxelinux}{pxelinuxcfg_path}."/".$forceboot) {
-			$pxelinux_config_url="$tftp_url/$forceboot";
-			$bootinfo="force boot from VM config (file)";
-		} elsif ($CONFIG{forceboot}{$forceboot}) {
-			$pxelinux_config_url=($CONFIG{forceboot}{$forceboot} =~ m(://)?"":$tftp_url."/").$CONFIG{forceboot}{$forceboot};
-			$bootinfo="force boot from LML config";
-		} elsif ($forceboot =~ m(://)) {
-			$pxelinux_config_url=$forceboot;
-			$bootinfo="force boot from VM config (URL)";
-		}
-		else {
-			warn("Invalid/Unknown force boot target '$forceboot' ignored");
-		}
-	}
+	# these can be set by the force boot handling above
 	$pxelinux_config_url=$base_url."/default" unless ($pxelinux_config_url);
 	$bootinfo="all is fine" unless ($bootinfo);
 	print header(-status=>"302 VM is $vm_name and $bootinfo".($hosts_changed?", some hosts changed":""),-type=>'text/plain',-location=>$pxelinux_config_url);
