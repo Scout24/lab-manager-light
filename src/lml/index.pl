@@ -41,18 +41,31 @@ if (-r "$CONFIG{lml}{datadir}/vm.conf") {
 print header();
 print <<EOF;
 <html><head>
-<title>Lab Manager Light - Overview</title>
-<script type="text/javascript" src="lib/js/table.js"></script>
+	<title>Lab Manager Light - Overview</title>
+	<script type="text/javascript" src="lib/js/table.js"></script>
+	<script type="text/javascript" src="lib/js/jquery-1.8.3.min.js"></script>
+	<script type="text/javascript" src="lib/js/jquery.cluetip.min.js"></script>
+	<script type="text/javascript" src="lib/js/jquery.tabsLite.js"></script>
+	<script type="text/javascript" src="lib/js/lml.js"></script>
+	<link rel="stylesheet" type="text/css" href="lib/css/jquery.cluetip.css" />
+	<link rel="stylesheet" type="text/css" href="lib/css/lml.css" />
 </head><body>
-<img style="float:right;border:0px" src="lib/images/LabManagerLightlogo-small.png"/>
-<h1>Lab Manager Light - Overview</h1>
+<div id="logoframe">
+	<a href="#"><img src="lib/images/LabManagerLightlogo-small.png"/></a><br/>
+	Version $LML_VERSION
+</div>
+<div id="uparrowframe"><a href="#">&#9650;</a></div>
+&nbsp;
+<div id="tabs">
+    <ul>
+        <li><a href="#tab-1">Managed Systems</a></li>
+        <li><a href="#tab-2">Configuration</a></li>
+    </ul>
+	<div id="tab-1">
+<table class="table-autostripe table-stripeclass:alternate table-autosort:0 table-autofilter" cellpadding="3" cellspacing="0">
 EOF
 
-print <<EOF;
-<h2>Managed Systems</h2>
-<table class="table-autosort:0 table-autofilter" cellpadding="3" cellspacing="0">
-EOF
-print thead(
+print thead({-id=>"vmlist"},
 		Tr({-valign=>"top"},
 			th({-title=>"Click to sort",-class=>"table-sortable:alphanumeric filterable"},'Hostname'),
 			th({-title=>"Click to sort",-class=>"table-sortable:alphanumeric"},"VM Path"),
@@ -79,30 +92,39 @@ for my $uuid (keys(%{$LAB->{HOSTS}})) {
 		if (exists($CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}) and $CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}) {
 			$display_vm_path =~ s/$CONFIG{GUI}{DISPLAY_FILTER_VM_PATH}/$1/;
 		}
-		$contact_user_id = $VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}} if (exists($VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}}));
+		# lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
+		$contact_user_id = lc($VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}}) if (exists($VM->{$uuid}->{CUSTOMFIELDS}->{$CONFIG{vsphere}{contactuserid_field}}));
 	}
-	print Tr({-style=>(exists($VM->{$uuid})?'':'color: grey;')},
+	print Tr({-class=>(exists($VM->{$uuid})?'vm_with_data':'vm_without_data')},
 		td[
-			$LAB->{HOSTS}->{$uuid}->{HOSTNAME},
+			a({	-href=>"vmdata.pl?uuid=$uuid",
+				-title=>"Details",
+				-onclick=>"return false;",
+				-rel=>"vmdata.pl?uuid=$uuid",
+				-class=>"tip vmhostname"
+				},
+				$LAB->{HOSTS}->{$uuid}->{HOSTNAME}
+			),
 			$display_vm_path,
 			$contact_user_id,
 			$expires,
 		])."\n";
 }
+print <<EOF;
+		</tbody>
+		</table>
+	</div>
+EOF
+
 my $conffiles="<ol>\n\t<li>".join("</li>\n\t<li>",@CONFIGFILES)."</li>\n</ol>\n";
 print <<EOF;
-</tbody>
-</table>
-
-<h2 name="configdump" >Configuration</h2>
-<div id="configshow"><a href="#configdump" onclick="document.getElementById('configdump').style.display='block';document.getElementById('configshow').style.display='none'">Show configuration</a></div>
-<div id="configdump" style="display:none">
-<p>The config files are 
-<code>
-$conffiles
-</code>
-and this is the <strong>merged</strong> result of all config files:</p>
-<pre>
+	<div id="tab-2">
+		<p>The config files are 
+		<code>
+		$conffiles
+		</code>
+		and this is the <strong>merged</strong> result of all config files:</p>
+		<pre>
 EOF
 $CONFIG{vsphere}{password}="***** hidden *****" if ($CONFIG{vsphere}{password});
 my $confdump;
@@ -111,8 +133,9 @@ tied(%CONFIG)->OutputConfigToFileHandle(*CONFDUMP);
 close(*CONFDUMP);
 print escapeHTML($confdump);
 print <<EOF;
-</pre>
-</div>
+		</pre>
+	</div>
+</div><!-- tabs -->
 <hr/>
 <a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.<br/>
 </body></html>
