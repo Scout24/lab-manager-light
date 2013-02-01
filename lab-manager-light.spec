@@ -15,7 +15,7 @@ Autoreq: 0
 # perl stuff
 Requires: /usr/bin/perl
 Requires: perl(CGI)
-Requires: perl(Config::IniFiles)
+Requires: perl(Config::IniFiles) >= 2.72
 Requires: perl(DateTime::Format::Flexible)
 Requires: perl(SVN::Client)
 Requires: perl(VMware::VIRuntime)
