@@ -14,11 +14,13 @@ all: deb rpm
 
 deb:  clean $(MANIFEST)
 	echo M $(MANIFEST) V $(VERSION) R $(REVISION)
-	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib
+	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib build/deb/etc/lml
+	touch build/deb/etc/lml/.placeholder
 	sed -e 's/apache/www-data/' <src/cron/lab-manager-light >build/deb/etc/cron.d/lab-manager-light
 	cp src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
 	cp -r src/lml build/deb/usr/lib/
 	cp -r src/DEBIAN build/deb/
+	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
 	mkdir -p build/deb/usr/share/doc/ build/usr/share/lintian/overrides
 	cp -r doc build/deb/usr/share/doc/lab-manager-light
@@ -34,6 +36,7 @@ rpm: clean $(MANIFEST)
 	cp -r $(TOPLEVEL) build/$(PV)
 	mv build/$(PV)/*.spec build/
 	sed -i -e s/VERSION/$(VERSION)/ -e /^Release/s/$$/.$(REVISION)/ build/*.spec
+	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/$(PV)/src/lml/lib/LML/Common.pm
 	tar -czf build/$(PV).tar.gz -C build $(PV)
 	rpmbuild --define="_topdir $(CURDIR)/build" --define="_sourcedir $(CURDIR)/build" --define="_srcrpmdir $(CURDIR)/dist" --nodeps -ba build/*.spec
 	mv -v build/RPMS/*/* dist/

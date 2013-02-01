@@ -7,7 +7,7 @@ use vars qw(
             @EXPORT
           );
 our @ISA         = qw(Exporter);
-our @EXPORT     = qw(%CONFIG @CONFIGFILES $isDebug Debug);
+our @EXPORT     = qw(%CONFIG @CONFIGFILES $isDebug Debug $LML_VERSION);
 
 use FindBin;
 
@@ -34,6 +34,9 @@ use DateTime::Format::Flexible;
 use Config::IniFiles;
 
 use POSIX;
+
+# our version, patched by Makefile
+our $LML_VERSION="DEVELOPMENT_LML_VERSION";
 
 # debugging
 our $isDebug = defined($ENV{LML_DEBUG});
