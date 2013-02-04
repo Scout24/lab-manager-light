@@ -39,7 +39,8 @@ if (-r "$CONFIG{lml}{datadir}/vm.conf") {
 }
 
 print header();
-my %VM_DATA = %{$VM->{$search_uuid}};
+my %VM_DATA = ( "NO_INFORMATION_AVAILABLE" => "SORRY" );
+%VM_DATA = %{$VM->{$search_uuid}} if (exists($VM->{$search_uuid}));
 print "<html><body><pre>\n".
 #	escapeHTML(Data::Dumper->Dump([\%VM_DATA],[qw(VM_DATA)]))."\n".
 	to_json(\%VM_DATA,{utf8 => 0, pretty => 1, allow_blessed => 1})."\n".
