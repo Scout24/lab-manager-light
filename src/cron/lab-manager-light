@@ -1,2 +1,2 @@
 # Perform Lab Manager Light maintenance. For clusters we stagger the call
-22 * * * *	apache	sleep $[($RANDOM%20)+1] ; /usr/lib/lml/tools/lml-maintenance.pl
+22 * * * *	apache	sleep $((RANDOM\%20+1)) && /usr/lib/lml/tools/lml-maintenance.pl
