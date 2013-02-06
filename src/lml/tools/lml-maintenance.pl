@@ -47,12 +47,12 @@ close(VM_CONF);
 # used mainly to react to renamed VMs or VMs with changed MAC adresses
 my $LAB={};
 if (-r "$CONFIG{lml}{datadir}/lab.conf") {
-	local $/=undef;
-	open(LAB_CONF,"+<$CONFIG{lml}{datadir}/lab.conf") || die "Could not open $CONFIG{lml}{datadir}/lab.conf";
-	flock(LAB_CONF, 2) || die;
-	binmode LAB_CONF;
-	eval <LAB_CONF> || die "Could not parse $CONFIG{lml}{datadir}/lab.conf";
-    
+    local $/=undef;
+    open(LAB_CONF,"+<$CONFIG{lml}{datadir}/lab.conf") || die "Could not open $CONFIG{lml}{datadir}/lab.conf";
+    flock(LAB_CONF, 2) || die;
+    binmode LAB_CONF;
+    eval <LAB_CONF> || die "Could not parse $CONFIG{lml}{datadir}/lab.conf";
+
     die '$LAB is empty' unless (scalar(%{$LAB}));
 
     my $hosts_removed=0;
@@ -74,9 +74,8 @@ if (-r "$CONFIG{lml}{datadir}/lab.conf") {
     }
     close(LAB_CONF);
 
-#    if ($hosts_removed > 0) {
-        push(@error,UpdateDHCP($LAB));
-#    }
+    push(@error,UpdateDHCP($LAB));
+
 } else {
     push(@error,"'$CONFIG{lml}{datadir}/lab.conf' not found\n");
 }
