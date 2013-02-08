@@ -19,6 +19,7 @@ deb:  clean $(MANIFEST)
 	sed -e 's/apache/www-data/' <src/cron/lab-manager-light >build/deb/etc/cron.d/lab-manager-light
 	cp src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
 	cp -r src/lml build/deb/usr/lib/
+	chmod 0755 build/deb/usr/lib/lml/*.pl build/deb/usr/lib/lml/tools/*.pl
 	cp -r src/DEBIAN build/deb/
 	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
