@@ -11,30 +11,8 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use LML::Common;
 
-# $LAB describes our internal view of the lab that lml manages
-# used mainly to react to renamed VMs or VMs with changed MAC adresses
-my $LAB->{HOSTS} = {};
-my $labfile = Config("lml","datadir")."/lab.conf";
-if (-r $labfile) {
-	local $/=undef;
-	open(LAB_CONF,"<",$labfile) || die "Could not open $labfile for reading.\n";
-	flock(LAB_CONF, 1) || die;
-	binmode LAB_CONF;
-	eval <LAB_CONF> || die "Could not parse $labfile:\n$@\n";
-	close(LAB_CONF);
-}
-die '$LAB is empty, your $labfile must be broken.\n' unless ( scalar( %{$LAB} ) );
-
-my $VM = {};
-my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
-if ( -r $vmfile ) {
-    local $/ = undef;
-    open( VM_CONF, "<$vmfile" ) || die "Could not open $vmfile for reading.\n";
-    flock( VM_CONF, 1 ) || die;
-    binmode VM_CONF;
-    eval <VM_CONF> || die "Could not parse $vmfile:\n$@\n";
-    close(VM_CONF);
-}
+my $LAB = ReadLabFile;
+my $VM = ReadVmFile;
 
 print header();
 print <<EOF;

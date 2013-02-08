@@ -7,7 +7,7 @@ use vars qw(
   @EXPORT
 );
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(%CONFIG @CONFIGFILES Config ReadDataFile $isDebug Debug $LML_VERSION);
+our @EXPORT = qw(%CONFIG @CONFIGFILES Config ReadVmFile ReadLabFile ReadDataFile $isDebug Debug $LML_VERSION);
 
 use FindBin;
 
@@ -48,6 +48,7 @@ Debug(@INC);
 our %CONFIG;
 my $conf;
 unless ( $ENV{HOME} ) {
+
     # set HOME from NSS if not set to prevent Perl error in next line
     $ENV{HOME} = ( getpwuid($>) )[7];
     Debug("Set HOME to $ENV{HOME}");
@@ -77,8 +78,8 @@ tie %CONFIG, 'Config::IniFiles', ( -import => $conf, -nocase => 1 ) or die "Coul
 
 sub Config($$) {
     my $section = shift;
-    my $key = shift;
-    if (exists($CONFIG{$section}{$key})) {
+    my $key     = shift;
+    if ( exists( $CONFIG{$section}{$key} ) ) {
         return $CONFIG{$section}{$key};
     } else {
         return undef;
@@ -86,15 +87,15 @@ sub Config($$) {
 }
 
 # some config checks
-die "Missing or invalid LML.DATADIR (".Config("lml","datadir").") from configuration\n" unless ( -d Config("lml","datadir") );
+die "Missing or invalid LML.DATADIR (" . Config( "lml", "datadir" ) . ") from configuration\n" unless ( -d Config( "lml", "datadir" ) );
 
 # setup vSphere environment
 die "Missing VSPHERE configuration section in configuration\n" unless ( $CONFIG{vsphere} );
-$ENV{VI_USERNAME}                  = Config("vsphere","username")        if ( Config("vsphere","username") );
-$ENV{VI_PASSWORD}                  = Config("vsphere","password")        if ( Config("vsphere","password") );
-$ENV{VI_SERVER}                    = Config("vsphere","server")          if ( Config("vsphere","server") );
-$ENV{VI_PASSTHROUGHAUTH}           = Config("vsphere","passthroughauth") if ( Config("vsphere","passthroughauth") );
-$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0                                 if ( Config("vsphere","disablecertificatevalidation") );
+$ENV{VI_USERNAME}        = Config( "vsphere", "username" )        if ( Config( "vsphere", "username" ) );
+$ENV{VI_PASSWORD}        = Config( "vsphere", "password" )        if ( Config( "vsphere", "password" ) );
+$ENV{VI_SERVER}          = Config( "vsphere", "server" )          if ( Config( "vsphere", "server" ) );
+$ENV{VI_PASSTHROUGHAUTH} = Config( "vsphere", "passthroughauth" ) if ( Config( "vsphere", "passthroughauth" ) );
+$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0 if ( Config( "vsphere", "disablecertificatevalidation" ) );
 
 # read data file
 # $1 is file in data dir
@@ -103,13 +104,45 @@ $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0                                 if ( Conf
 sub ReadDataFile($%) {
     my $datafile = Config( "lml", "datadir" ) . "/" . shift;
     my $hashref = shift;
-	if ( -r $datafile ) {
-	    local $/ = undef;
-	    open( DATAFILE, "<", $datafile ) || die "Could not open $datafile for reading.\n";
-	    flock( DATAFILE, 1 ) || die;
-	    binmode DATAFILE;
-	    eval <DATAFILE> || die "Could not parse $datafile:\n$@\n";
-	    close(DATAFILE);
-	}
+    if ( -r $datafile ) {
+        local $/ = undef;
+        open( DATAFILE, "<", $datafile ) || die "Could not open $datafile for reading.\n";
+        flock( DATAFILE, 1 ) || die;
+        binmode DATAFILE;
+        eval <DATAFILE> || die "Could not parse $datafile:\n$@\n";
+        close(DATAFILE);
+    }
+}
+
+sub ReadLabFile() {
+
+    # $LAB describes our internal view of the lab that lml manages
+    # used mainly to react to renamed VMs or VMs with changed MAC adresses
+    my $LAB->{HOSTS} = {};
+    my $labfile = Config( "lml", "datadir" ) . "/lab.conf";
+    if ( -r $labfile ) {
+        local $/ = undef;
+        open( LAB_CONF, "<", $labfile ) || die "Could not open $labfile for reading.\n";
+        flock( LAB_CONF, 1 ) || die;
+        binmode LAB_CONF;
+        eval <LAB_CONF> || die "Could not parse $labfile:\n$@\n";
+        close(LAB_CONF);
+    }
+    die '$LAB is empty, your $labfile must be broken.\n' unless ( scalar( %{$LAB} ) );
+    return $LAB;
+}
+
+sub ReadVmFile() {
+    my $VM = {};
+    my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
+    if ( -r $vmfile ) {
+        local $/ = undef;
+        open( VM_CONF, "<$vmfile" ) || die "Could not open $vmfile for reading.\n";
+        flock( VM_CONF, 1 ) || die;
+        binmode VM_CONF;
+        eval <VM_CONF> || die "Could not parse $vmfile:\n$@\n";
+        close(VM_CONF);
+    }
+    return $VM;
 }
 1;
