@@ -308,7 +308,7 @@ if ($hosts_changed) {
 
 if (scalar(@error)) {
 	# have some errors
-	print header(-status=>"200 There are ".scalar(@error)." errors",'text/plain');
+	print header(-status=>"200 There are ".scalar(@error)." errors",-type=>'text/plain');
 	print join("\n",@{$CONFIG{pxelinux}{error_main}})."\n"; # multiline values come as array
 	print "menu title ".$CONFIG{pxelinux}{error_title}." ".$vm_name."\n";
 	my $c=1;
