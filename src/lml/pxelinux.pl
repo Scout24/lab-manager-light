@@ -168,14 +168,15 @@ if (scalar(keys(%VM)) and exists($VM{$search_uuid})) {
 
 	# check that expiry date is set and valid
 	if (exists $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{expires_field}}) {
+	    my $vmdate = $VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{expires_field}};
 		my $expires;
 		eval { 
-			$expires=DateTime::Format::Flexible->parse_datetime($VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{expires_field}} , 
+			$expires=DateTime::Format::Flexible->parse_datetime($vmdate , 
 										european => ($CONFIG{vsphere}{expires_european}?1:0)
 									) 
 		};
 		if ($@) {
-			push(@error,"Cannot parse $CONFIG{vsphere}{expires_field} date '".$VM{$search_uuid}{CUSTOMFIELDS}{$CONFIG{vsphere}{expires_field}}."'");
+			push(@error,"Cannot parse $CONFIG{vsphere}{expires_field} date '".$vmdate."'");
 		} elsif (DateTime->compare(DateTime->now(),$expires) > 0 ) {
 			push(@error,"VM expired on ".$expires);
 		}
@@ -307,7 +308,7 @@ if ($hosts_changed) {
 
 if (scalar(@error)) {
 	# have some errors
-	print header(-status=>"200 There are @error errors",'text/plain');
+	print header(-status=>"200 There are ".scalar(@error)." errors",'text/plain');
 	print join("\n",@{$CONFIG{pxelinux}{error_main}})."\n"; # multiline values come as array
 	print "menu title ".$CONFIG{pxelinux}{error_title}." ".$vm_name."\n";
 	my $c=1;
