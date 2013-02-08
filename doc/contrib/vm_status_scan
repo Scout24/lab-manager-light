@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# this is a quick hack to run all VMs against pxelinux.pl via HTTP
+#
+# $1 = full path to vm.conf
+# $2 = host for http://<host>/boot/pxelinux.cfg/<uuid> calls
+
+if  [[ -r "$1" && "$2" ]] && 
+    type -p GET >/dev/null &&
+    GET -d http://$2/boot/pxelinux.cfg/default ; then
+        sed -n -e '/UUID/s#^.*"\(.*-.*-.*\)"#\1#p' $1 | while read uuid ; do 
+            echo -n "$uuid: "
+            GET -s -d http://$2/boot/pxelinux.cfg/$uuid
+        done
+else
+    echo "Usage: $0 <vm.conf> <pxelinux host>"
+fi
