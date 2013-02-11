@@ -1,6 +1,6 @@
 Name: lab-manager-light
 Version: VERSION
-Release: 4
+Release: 5
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
 License: GPL
@@ -55,7 +55,7 @@ umask 0002
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc/lml $RPM_BUILD_ROOT/usr/lib/lml $RPM_BUILD_ROOT/var/lib/lml $RPM_BUILD_ROOT/etc/httpd/conf.d $RPM_BUILD_ROOT/etc/cron.d
 cp -r src/lml/* $RPM_BUILD_ROOT/usr/lib/lml/
-find $RPM_BUILD_ROOT/usr/lib/ -type f -name \*.pl -print0 | xargs -0 chmod -v +x
+find $RPM_BUILD_ROOT/usr/lib/ -type f -name \*.pl -print0 | xargs -0 chmod -c +x
 cp src/apache/* $RPM_BUILD_ROOT/etc/httpd/conf.d/
 cp src/cron/* $RPM_BUILD_ROOT/etc/cron.d/
 chmod -R g-w $RPM_BUILD_ROOT

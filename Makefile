@@ -14,23 +14,25 @@ all: deb rpm
 
 deb:  clean $(MANIFEST)
 	echo M $(MANIFEST) V $(VERSION) R $(REVISION)
-	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib build/deb/etc/lml
-	touch build/deb/etc/lml/.placeholder
-	sed -e 's/apache/www-data/' <src/cron/lab-manager-light >build/deb/etc/cron.d/lab-manager-light
-	cp src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
+	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib build/deb/etc/lml build/deb/DEBIAN
+	# replace RHEL-style users with Debian-style users
+	install -m 0644 src/cron/lab-manager-light build/deb/etc/cron.d/lab-manager-light
+	sed -e 's/apache/www-data/' -i build/deb/etc/cron.d/lab-manager-light
+	install -m 0644 src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
 	cp -r src/lml build/deb/usr/lib/
 	chmod 0755 build/deb/usr/lib/lml/*.pl build/deb/usr/lib/lml/tools/*.pl
-	cp -r src/DEBIAN build/deb/
+	install -m 0644 src/DEBIAN/* build/deb/DEBIAN
+	chmod -R go-w build # remove group writeable in case you have it in your umask
 	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
-	mkdir -p build/deb/usr/share/doc/ build/usr/share/lintian/overrides
+	mkdir -p build/deb/usr/share/doc/ build/deb/usr/share/lintian/overrides
 	cp -r doc build/deb/usr/share/doc/lab-manager-light
 	rm -f build/deb/usr/lib/lml/LICENSE.TXT
 	mv build/deb/DEBIAN/copyright build/deb/usr/share/doc/lab-manager-light/copyright
-	mv build/deb/DEBIAN/overrides build/usr/share/lintian/overrides/lab-manager-light
+	mv build/deb/DEBIAN/overrides build/deb/usr/share/lintian/overrides/lab-manager-light
 	find build/deb -type f -name \*~ | xargs rm -vf
 	fakeroot dpkg -b build/deb dist
-	lintian --quiet --suppress-tags no-copyright-file,file-in-etc-not-marked-as-conffile,changelog-file-missing-in-native-package -i dist/*deb
+	lintian --quiet -i dist/*deb
 
 rpm: clean $(MANIFEST)
 	mkdir -p dist build/$(PV) build/BUILD
@@ -48,7 +50,7 @@ debinfo: deb
 	dpkg-deb -I dist/*.deb
 
 rpminfo: rpm
-	rpm -qip dist/*.rpm
+	rpm -qip dist/*.noarch.rpm
 
 debrepo: deb
 	/data/mnt/is24-ubuntu-repo/putinrepo.sh dist/*.deb
