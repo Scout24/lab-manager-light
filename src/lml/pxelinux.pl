@@ -184,19 +184,17 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
     # if the host changed the name make sure that it does not conflict with an existing name in our domain
     my $appendomain = Config( "dhcp",      "appenddomain" );
     my $dnschecknew = Config( "hostrules", "dnschecknew" );
+    my $vm_fqdn = $vm_name . ".$appendomain.";
     if ( exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) ) {
-        my $vm_fqdn = $vm_name . ".$appendomain.";
         if ( not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}
              and scalar( gethostbyname($vm_fqdn) ) )
         {
             Debug( Dumper( gethostbyname($vm_fqdn) ) ) if ($isDebug);
             push( @error, "Renamed VM '$vm_fqdn' name exists already in '$appendomain'" );
-
-        } elsif ( $dnschecknew and scalar( gethostbyname($vm_fqdn) ) ) {
-
+        }
+    } elsif ( $dnschecknew and scalar( gethostbyname($vm_fqdn) ) ) {
             # if this is a brand-new machine (e.g. we have no history of it) and new VM checking is enabled
             push( @error, "New VM name exists already in '$appendomain'" );
-        }
     }
 
     # check force boot configuration
