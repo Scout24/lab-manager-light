@@ -1,2 +1,3 @@
 # this is in the web space of LML
-lab-manager-light binary: image-file-in-usr-lib /usr/lib/lml/lib/images/LabManagerLightlogo-small.png
+image-file-in-usr-lib
+changelog-file-missing-in-native-package
