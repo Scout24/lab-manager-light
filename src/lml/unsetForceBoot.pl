@@ -14,8 +14,7 @@
 use strict;
 use warnings;
 
-
-# place DLLs and PMs with the required subdirectory structure into lib/ next to this script
+# Place DLLs and PMs with the required subdirectory structure into lib/ next to this script
 use FindBin;
 use lib "$FindBin::RealBin/lib";
 
@@ -25,17 +24,29 @@ use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 
-# connect to vSphere
+# Connect to vSphere
 connect_vi();
 
-# input parameter, UUID of a VM
+# Input parameter, UUID of a VM
 my $search_uuid=param('uuid')?lc(param('uuid')):lc($ARGV[0]);
 
 die "No forceboot_field parameter set in [vsphere] section" unless (exists($CONFIG{vsphere}{forceboot_field}) and $CONFIG{vsphere}{forceboot_field});
 
 if ($search_uuid) {
     print header('text/plain');
-    setVmCustomValueU($search_uuid,$CONFIG{vsphere}{forceboot_field},"");
+
+    # Get dump of single VM from vSphere
+    my %VM                     = get_vm_data($search_uuid);
+    my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
+
+    # The new variant is to use the forceboot field as trigger, set a coherent value
+    if ( $forceboot_target_field and $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field} ) {
+        setVmCustomValueU($search_uuid,$CONFIG{vsphere}{forceboot_field},"OFF");
+
+    # The old variant is to clear the forceboot field
+    } else {
+        setVmCustomValueU($search_uuid,$CONFIG{vsphere}{forceboot_field},"");
+    }
 } else {
     print header(-status=>404,-type=>'text/plain');
     print "Give UUID address as query parameter 'uuid' or as command line parameter\n";
