@@ -19,15 +19,16 @@ if ( param('uuid') ) {
 } elsif (@ARGV) {
     $search_uuid = lc( $ARGV[0] );
 } else {
-    die("Give UUID address as query parameter 'uuid' or as command line parameter\n");
+    $search_uuid = "all"; # use this to denote everything
 }
 
 my %VM_DATA;
 my $status = "200 OK";
 my $VM = ReadVmFile;
-if ( exists( $VM->{$search_uuid} ) ) {
+if ($search_uuid eq "all") {
+    %VM_DATA = %{ $VM };
+} elsif ( exists( $VM->{$search_uuid} ) ) {
     %VM_DATA = %{ $VM->{$search_uuid} };
-
 } elsif ( %{$VM} ) {
     $status = "200 No Data for VM $search_uuid found" ;
     %VM_DATA = ( "NO_INFORMATION_AVAILABLE" => "SORRY" );
