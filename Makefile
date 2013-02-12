@@ -23,9 +23,7 @@ deb:  test clean $(MANIFEST)
 	sed -e 's/apache/www-data/' -i build/deb/etc/cron.d/lab-manager-light
 	install -m 0644 src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
 	cp -r src/lml build/deb/usr/lib/
-	chmod 0755 build/deb/usr/lib/lml/*.pl build/deb/usr/lib/lml/tools/*.pl
 	install -m 0644 src/DEBIAN/* build/deb/DEBIAN
-	chmod -R go-w build # remove group writeable in case you have it in your umask
 	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
 	mkdir -p build/deb/usr/share/doc/ build/deb/usr/share/lintian/overrides
@@ -33,6 +31,8 @@ deb:  test clean $(MANIFEST)
 	rm -f build/deb/usr/lib/lml/LICENSE.TXT
 	mv build/deb/DEBIAN/copyright build/deb/usr/share/doc/lab-manager-light/copyright
 	mv build/deb/DEBIAN/overrides build/deb/usr/share/lintian/overrides/lab-manager-light
+	chmod 0755 build/deb/usr/lib/lml/*.pl build/deb/usr/lib/lml/tools/*.pl build/deb/usr/share/doc/lab-manager-light/contrib/*
+	chmod -R go-w build # remove group writeable in case you have it in your umask
 	find build/deb -type f -name \*~ | xargs rm -vf
 	fakeroot dpkg -b build/deb dist
 	lintian --quiet -i dist/*deb
