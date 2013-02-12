@@ -7,15 +7,18 @@ VERSION := $(shell cat VERSION)
 REVISION := "$(shell git rev-list $(GITREV) -- $(TOPLEVEL) | wc -l)$(EXTRAREV)"
 PV = lab-manager-light-$(VERSION)
 
-.PHONY: all deb rpm info debinfo rpminfo
+.PHONY: all test deb rpm info debinfo rpminfo
 
-all: deb rpm
+all: test deb rpm
 	ls -l dist/*.deb dist/*.rpm
 
-deb:  clean $(MANIFEST)
-	echo M $(MANIFEST) V $(VERSION) R $(REVISION)
+test: clean
+	mkdir -p test/temp
+	prove test/t
+	
+deb:  test clean $(MANIFEST)
 	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib build/deb/etc/lml build/deb/DEBIAN
-	# replace RHEL-style users with Debian-style users
+# replace RHEL-style users with Debian-style users
 	install -m 0644 src/cron/lab-manager-light build/deb/etc/cron.d/lab-manager-light
 	sed -e 's/apache/www-data/' -i build/deb/etc/cron.d/lab-manager-light
 	install -m 0644 src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
@@ -34,7 +37,7 @@ deb:  clean $(MANIFEST)
 	fakeroot dpkg -b build/deb dist
 	lintian --quiet -i dist/*deb
 
-rpm: clean $(MANIFEST)
+rpm: test clean $(MANIFEST)
 	mkdir -p dist build/$(PV) build/BUILD
 	cp -r $(TOPLEVEL) build/$(PV)
 	mv build/$(PV)/*.spec build/
@@ -59,7 +62,7 @@ rpmrepo: rpm
 	repoclient uploadto "$(TARGET_REPO)" dist/*.rpm
 
 clean:
-	rm -Rf dist/*.rpm dist/*.deb build
+	rm -Rf dist/*.rpm dist/*.deb build test/temp
 
 # todo: create debian/RPM changelog automatically, e.g. with git-dch --full --id-length=10 --ignore-regex '^fixes$' -S -s 68809505c5dea13ba18a8f517e82aa4f74d79acb src doc *.spec
 
