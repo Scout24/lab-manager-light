@@ -1,4 +1,4 @@
-TOPLEVEL = doc src $(wildcard *.spec) LICENSE.TXT
+TOPLEVEL = doc src lab-manager-light.spec LICENSE.TXT
 MANIFEST = VERSION $(wildcard $(TOPLEVEL) doc/* src/* src/*/* src/*/*/* src/*/*/*/*)
 
 GITREV := HEAD
