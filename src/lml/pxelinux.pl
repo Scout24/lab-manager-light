@@ -59,15 +59,10 @@ my @error   = ();
 # connect to vSphere
 connect_vi();
 
-# get dump of single VM from vSphere
-my %VM = get_vm_data($search_uuid);
-
-#
-
+my %VM = get_vm_data($search_uuid); # Get dump of single VM from vSphere
 my $LAB = ReadLabFile;
 
 # prepare some configuration variables
-#
 my @vsphere_networks = ();
 my $config_vsphere_networks = Config( "vsphere", "networks" );
 if ($config_vsphere_networks) {
@@ -193,92 +188,117 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
             push( @error, "Renamed VM '$vm_fqdn' name exists already in '$appendomain'" );
         }
     } elsif ( $dnschecknew and scalar( gethostbyname($vm_fqdn) ) ) {
-            # if this is a brand-new machine (e.g. we have no history of it) and new VM checking is enabled
-            push( @error, "New VM name exists already in '$appendomain'" );
+        # if this is a brand-new machine (e.g. we have no history of it) and new VM checking is enabled
+        push( @error, "New VM name exists already in '$appendomain'" );
     }
 
-    # check force boot configuration
-    my $pxelinuxcfg_path = Config("pxelinux","pxelinuxcfg_path");
-    my $forceboot_field = Config("vsphere","forceboot_field");
-    if (     $pxelinuxcfg_path and $forceboot_field
-         and exists $VM{$search_uuid}{CUSTOMFIELDS}{ $forceboot_field }
-         and $VM{$search_uuid}{CUSTOMFIELDS}{ $forceboot_field } )
-    {
-        my $forceboot = $VM{$search_uuid}{CUSTOMFIELDS}{ $forceboot_field };
+    # Check force boot configuration
+    my $pxelinuxcfg_path       = Config( "pxelinux", "pxelinuxcfg_path" );
+    my $forceboot_field        = Config( "vsphere",  "forceboot_field" );
+    # This will be the triggers for deactivating forceboot. Every other value will be taken as TRUE!
+    my @disabled_forceboot     = ( "OFF", "", 0, "NO", "FALSE" );
 
-        # little exploit protection, could be done more professional :-)
-        $forceboot =~ s/\.{2,}//g;               # remove any .. or ...
-        $forceboot =~ tr[:/A-Za-z0-9._-][]dc;    # normalize to contain only valid path characters
-                                                 # if forceboot contains a path relative to the pxelinux TFTP prefix
-        if ( -r $pxelinuxcfg_path . "/" . $forceboot and !-d $pxelinuxcfg_path . "/" . $forceboot ) {
-            $pxelinux_config_url = "$tftp_url/$forceboot";
+    if ( $pxelinuxcfg_path
+         and $forceboot_field
+         and exists $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field}
+         and $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field}
+         and not grep { $_ eq uc($VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field}) } @disabled_forceboot )
+    {
+        my $forceboot_target; # Will be set in the next step, just to define with my
+        my $forceboot              = $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
+
+        # For backward compatibility. If the user is working with a forceboot_target_field
+        # then take this value, ...
+        if ( $forceboot_target_field
+             and exists $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field}
+             and $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field} )
+        {
+            $forceboot_target = $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field};
+
+        # Else take the value from the forceboot field as target (old behaviour)
+        } else {
+            $forceboot_target = $forceboot
+        }
+
+        # Little exploit protection, could be done more professional :-)
+        $forceboot_target =~ s/\.{2,}//g;               # remove any .. or ...
+        $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;    # normalize to contain only valid path characters
+                                                        # if forceboot contains a path relative to the pxelinux TFTP prefix
+        # Try if a file exists for this forceboot target entry
+        if ( -r $pxelinuxcfg_path . "/" . $forceboot_target and !-d $pxelinuxcfg_path . "/" . $forceboot_target ) {
+            $pxelinux_config_url = "$tftp_url/$forceboot_target";
             $bootinfo            = "force boot from VM config (file)";
-        } elsif ( my $forceboot_dest = Config("forceboot",$forceboot) ) {
+
+        # If no direct file exist, try if we have a mapping for it
+        } elsif ( my $forceboot_dest = Config( "forceboot", $forceboot_target ) ) {
             $pxelinux_config_url = ( $forceboot_dest =~ m(://) ? "" : $tftp_url . "/" ) . $forceboot_dest;
-            $bootinfo = "force boot from LML config";
-        } elsif ( $forceboot =~ m(://) ) {
-            $pxelinux_config_url = $forceboot;
+            $bootinfo            = "force boot from LML config";
+
+        # If forceboot is empty
+        } elsif ( $forceboot_target =~ m(://) ) {
+            $pxelinux_config_url = $forceboot_target;
             $bootinfo            = "force boot from VM config (URL)";
-        } elsif ( $forceboot eq "fatalerror" ) {
+
+        # If the user want to provoke a error
+        } elsif ( $forceboot_target eq "fatalerror" ) {
             die("Enjoy this fatal error, you called for it.\n");
-        } elsif ( Config("lml","failoninvalidforceboot") ) {
-            push( @error, "Invalid force boot target '$forceboot'" );
-        }    # else do nothing to silently ignore invalid force boot targets
+
+        # If nothing could be found for the given forceboot entry
+        } elsif ( Config( "lml", "failoninvalidforceboot" ) ) {
+            # Because we have to differ between the old and new variants in forceboot, check if
+            # we hit the else block above (a bit ugly, but it works)
+            if ( $forceboot_target eq $forceboot ) {
+                push( @error, "Invalid force boot target '$forceboot_target'" );
+            } else {
+                push( @error, "Please specify a valid force boot target in '$forceboot_target_field'" );
+            }
+        } # else do nothing to silently ignore invalid force boot targets
     }
 
     # up till here we have only checks that verify the VM.
     # in case of errors stop processing so that we do not create host records anywhere as long
     # as some conditions are unmet.
 
+    # we only modify something if there are no errors
     if ( not scalar(@error) ) {
-
-        # we only modify something if there are no errors
-
         # check host-name directory existance in SVN if configured. If none of the actions are configured, ignore this test.
-        if (
-             ( Config("subversion","hostdirs") 
-             && ( Config("subversion","createhostdirs") || Config("subversion","failonmissinghostdir")  ) )
-          )
-        {
+        if ( ( Config( "subversion", "hostdirs" ) && ( Config( "subversion", "createhostdirs" ) || Config( "subversion", "failonmissinghostdir" ) ) ) ) {
 
             # check if the host dir exists
-            my $newhostdir  = Config("subversion","hostdirs") . "/" . $vm_name;
+            my $newhostdir  = Config( "subversion", "hostdirs" ) . "/" . $vm_name;
             my $havehostdir = svnCheckPath($newhostdir);
 
             # if CREATEHOSTDIRS is set, create missing host dirs
-            if ( Config("subversion","createhostdirs") ) {
+            if ( Config( "subversion", "createhostdirs" ) ) {
                 if ($havehostdir) {
-
                     # do nothing, be happy
                 } else {
-
                     # hostdir is missing, should we rename it from old
                     # putting all the conditions for a move into the same if saves us the trouble
                     # of having several branches of logic leading to a copy :-(
-                    if (     Config("subversion","renamehostdirs")
+                    if (     Config( "subversion", "renamehostdirs" )
                          and exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} )
                          and ( not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} )
-                         and svnCheckPath( Config("subversion","hostdirs") . "/" . $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) )
+                         and svnCheckPath( Config( "subversion", "hostdirs" ) . "/" . $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) )
                     {
-                        if ( not svnMovePath( Config("subversion","hostdirs") . "/" . $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}, $newhostdir ) ) {
+                        if ( not svnMovePath( Config( "subversion", "hostdirs" ) . "/" . $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}, $newhostdir ) ) {
                             push( @error, "Could not move old hostdir to new hostdir in SVN" );
                         }
                     } else {
-                        if ( not svnCopyPath( Config("subversion","hostskel"), $newhostdir ) ) {
+                        if ( not svnCopyPath( Config( "subversion", "hostskel" ), $newhostdir ) ) {
                             push( @error, "Could not create hostdir in SVN" );
                         }
                     }
-
                 }
             } else {
-
                 # if we should not create the hostdirs, at least warn about missing host dir or let it pass
-                push( @error, "SVN hostdir '$newhostdir' missing" ) if ( Config("subversion","failonmissinghostdir") );
+                push( @error, "SVN hostdir '$newhostdir' missing" ) if ( Config( "subversion", "failonmissinghostdir" ) );
             }
         }    # hostdirs is set
 
         # add lastseen info to host
-        $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN} = time;
+        $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN}         = time;
         $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN_DISPLAY} = POSIX::strftime( "%a %b %e %H:%M:%S %Y", localtime );
 
         # create HOSTS record for DHCP if it has changed (name or networking)
@@ -287,7 +307,7 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
         # NOTE: This should be after all other pieces of code that compare with the old host name !!!
         if (    not( exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) and exists( $LAB->{HOSTS}->{$search_uuid}->{MACS} ) )
              or not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}
-             or not @vm_lab_macs ~~ @{ $LAB->{HOSTS}->{$search_uuid}->{MACS} } )
+             or not @vm_lab_macs ~~@{ $LAB->{HOSTS}->{$search_uuid}->{MACS} } )
         {
             $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} = $vm_name;
             $LAB->{HOSTS}->{$search_uuid}->{MACS}     = \@vm_lab_macs;
@@ -308,28 +328,25 @@ if ($hosts_changed) {
 }
 
 if ( scalar(@error) ) {
-
     # have some errors
     print header( -status => "200 Errors: " . join( ", ", @error ), -type => 'text/plain' );
-    print join( "\n", @{ Config("pxelinux","error_main") } ) . "\n";    # multiline values come as array
-    print "menu title " . Config("pxelinux","error_title") . " " . $vm_name . "\n";
+    print join( "\n", @{ Config( "pxelinux", "error_main" ) } ) . "\n";    # multiline values come as array
+    print "menu title " . Config( "pxelinux", "error_title" ) . " " . $vm_name . "\n";
     my $c = 1;
     foreach my $e (@error) {
         print <<EOF;
 label l$c
         menu label $c. $e
 EOF
-        print join( "\n", @{ Config("pxelinux","error_item") } ) . "\n";
+        print join( "\n", @{ Config( "pxelinux", "error_item" ) } ) . "\n";
         $c++;
     }
-} elsif ($vm_name) {
-
     # if the VM is found and all is fine then redirect to default PXE configuration
-
+} elsif ($vm_name) {
     # dump $LAB to file only if all is fine. This makes sure that LML stays with the old view of the lab for some kind of
     # hard to catch errors.
-    my $labfile = Config("lml","datadir");
-    open( LAB_CONF, ">","$labfile/lab.conf" ) || die "Could not open '$labfile' for writing\n";
+    my $labfile = Config( "lml", "datadir" );
+    open( LAB_CONF, ">", "$labfile/lab.conf" ) || die "Could not open '$labfile' for writing\n";
     flock( LAB_CONF, 2 ) || die;
     print LAB_CONF "# pxelinux.pl " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " for $vm_name ($search_uuid)\n";
     print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] );
@@ -344,9 +361,8 @@ EOF
                   -location => $pxelinux_config_url
     );
 } else {
-
     # if the VM is not found then also give some error text
-    if ( Config("pxelinux","redirect_unknown_to_default") ) {
+    if ( Config( "pxelinux", "redirect_unknown_to_default" ) ) {
         print header(
                       -status   => '302 VM not found',
                       -type     => 'text/plain',
