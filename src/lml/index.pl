@@ -11,6 +11,8 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use LML::Common;
 
+LoadConfig();
+
 my $LAB = ReadLabFile;
 my $VM = ReadVmFile;
 

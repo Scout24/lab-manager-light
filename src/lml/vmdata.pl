@@ -12,6 +12,8 @@ use CGI ':standard';
 use JSON;
 use LML::Common;
 
+LoadConfig();
+
 # input parameter, UUID of a VM
 my $search_uuid;
 if ( param('uuid') ) {

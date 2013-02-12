@@ -24,6 +24,8 @@ use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 
+LoadConfig();
+
 # our URL base from REQUEST_URI
 our $base_url = url();
 $base_url =~ s/\/[^\/]+$//;    # cheap basename()

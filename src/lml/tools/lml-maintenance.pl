@@ -27,6 +27,8 @@ use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 
+LoadConfig();
+
 # connect to vSphere
 connect_vi();
 
@@ -37,7 +39,8 @@ my @error=();
 my %VM = search_vm();
 
 # dump %VM to file
-open(VM_CONF, ">$CONFIG{lml}{datadir}/vm.conf") || die "Could not open '$CONFIG{lml}{datadir}/vm.conf' for writing";
+my $vmfile = Config("lml","datadir")."/vm.conf";
+open(VM_CONF, ">",$vmfile) || die "Could not open '$vmfile' for writing\n";
 flock(VM_CONF, 2) || die;
 print VM_CONF "# lml-maintenance.pl ".POSIX::strftime("%Y-%m-%d %H:%M:%S\n", localtime())."\n";
 print VM_CONF Data::Dumper->Dump([\%VM],[qw(VM)]);
@@ -46,12 +49,13 @@ close(VM_CONF);
 # $LAB describes our internal view of the lab that lml manages
 # used mainly to react to renamed VMs or VMs with changed MAC adresses
 my $LAB={};
-if (-r "$CONFIG{lml}{datadir}/lab.conf") {
+my $labfile = Config("lml","datadir")."/lab.conf";
+if (-r $labfile) {
     local $/=undef;
-    open(LAB_CONF,"+<$CONFIG{lml}{datadir}/lab.conf") || die "Could not open $CONFIG{lml}{datadir}/lab.conf";
+    open(LAB_CONF,"+<",$labfile) || die "Could not open '$labfile' for reading and writing\n";
     flock(LAB_CONF, 2) || die;
     binmode LAB_CONF;
-    eval <LAB_CONF> || die "Could not parse $CONFIG{lml}{datadir}/lab.conf";
+    eval <LAB_CONF> || die "Could not parse $labfile\n";
 
     die '$LAB is empty' unless (scalar(%{$LAB}));
 
@@ -77,7 +81,7 @@ if (-r "$CONFIG{lml}{datadir}/lab.conf") {
     push(@error,UpdateDHCP($LAB));
 
 } else {
-    push(@error,"'$CONFIG{lml}{datadir}/lab.conf' not found\n");
+    push(@error,"'$labfile' not found\n");
 }
 
 if (scalar(@error)) {

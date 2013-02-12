@@ -25,6 +25,8 @@ use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 
+LoadConfig();
+
 # connect to vSphere
 connect_vi();
 

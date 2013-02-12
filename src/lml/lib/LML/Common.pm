@@ -7,7 +7,7 @@ use vars qw(
   @EXPORT
 );
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(%CONFIG @CONFIGFILES Config ReadVmFile ReadLabFile ReadDataFile $isDebug Debug $LML_VERSION);
+our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config ReadVmFile ReadLabFile ReadDataFile $isDebug Debug $LML_VERSION);
 
 use FindBin;
 
@@ -44,37 +44,64 @@ sub Debug {
 Debug("Our \@INC list looks like this:");
 Debug(@INC);
 
-# open main config file case-insensitive
+our @CONFIGFILES;
 our %CONFIG;
-my $conf;
-unless ( $ENV{HOME} ) {
+sub LoadConfig {
 
-    # set HOME from NSS if not set to prevent Perl error in next line
-    $ENV{HOME} = ( getpwuid($>) )[7];
-    Debug("Set HOME to $ENV{HOME}");
-}
-
-# here we rely on the fact that @INC contains our private lib dir in the first place.
-our @CONFIGFILES = map( realpath($_), <{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}> );
-Debug( "Our config files are: ", join( " ", @CONFIGFILES ) );
-foreach my $f (@CONFIGFILES) {
-    $conf = new Config::IniFiles(
-                                  -file   => $f,
-                                  -nocase => 1,
-                                  -import => $conf
-    ) or die "Could not read '$f'";
-    if ($isDebug) {
-        Debug("Read from $f:");
-        $conf->OutputConfigToFileHandle( *STDERR, 1 );
+    # optionally specify config files to read
+    if (scalar(@_)) {
+        @CONFIGFILES = @_;
     }
-}
 
-if ($isDebug) {
-    Debug("Merged configuration:");
-    $conf->OutputConfigToFileHandle(*STDERR);
-}
+    # or use built-in default list
+    else {
+        unless ( $ENV{HOME} ) {
 
-tie %CONFIG, 'Config::IniFiles', ( -import => $conf, -nocase => 1 ) or die "Could not tie to config.";
+            # set HOME from NSS if not set
+            $ENV{HOME} = ( getpwuid($>) )[7];
+            Debug("Set HOME to $ENV{HOME}");
+        }
+        @CONFIGFILES = map( realpath($_), <{$INC[0]/../default.conf,/etc/lml/*.conf,$ENV{HOME}/.lml-*.conf}> );
+    }
+
+    # open main config file case-insensitive
+
+    my $conf;
+
+    Debug( "Our config files are: ", join( " ", @CONFIGFILES ) );
+    foreach my $f (@CONFIGFILES) {
+        $conf = new Config::IniFiles(
+                                      -file   => $f,
+                                      -nocase => 1,
+                                      -import => $conf
+        ) or die "Could not read '$f'\n";
+        if ($isDebug) {
+            Debug("Read from $f:");
+            $conf->OutputConfigToFileHandle( *STDERR, 1 );
+        }
+    }
+
+    tie %CONFIG, 'Config::IniFiles', ( -import => $conf, -nocase => 1 ) or die "Could not tie to config.";
+
+    $isDebug = 1 if (Config("lml","debug"));
+    if ($isDebug) {
+        Debug("Merged configuration:");
+        $conf->OutputConfigToFileHandle(*STDERR);
+    }
+
+    # some config checks
+    die "Missing or invalid LML.DATADIR (" . Config( "lml", "datadir" ) . ") from configuration\n" unless ( -d Config( "lml", "datadir" ) );
+
+    # setup vSphere environment
+    die "Missing VSPHERE configuration section in configuration\n" unless ( $CONFIG{vsphere} );
+    $ENV{VI_USERNAME}        = Config( "vsphere", "username" )        if ( Config( "vsphere", "username" ) );
+    $ENV{VI_PASSWORD}        = Config( "vsphere", "password" )        if ( Config( "vsphere", "password" ) );
+    $ENV{VI_SERVER}          = Config( "vsphere", "server" )          if ( Config( "vsphere", "server" ) );
+    $ENV{VI_PASSTHROUGHAUTH} = Config( "vsphere", "passthroughauth" ) if ( Config( "vsphere", "passthroughauth" ) );
+    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0 if ( Config( "vsphere", "disablecertificatevalidation" ) );
+
+    return %CONFIG;
+}
 
 sub Config($$) {
     my $section = shift;
@@ -85,17 +112,6 @@ sub Config($$) {
         return undef;
     }
 }
-
-# some config checks
-die "Missing or invalid LML.DATADIR (" . Config( "lml", "datadir" ) . ") from configuration\n" unless ( -d Config( "lml", "datadir" ) );
-
-# setup vSphere environment
-die "Missing VSPHERE configuration section in configuration\n" unless ( $CONFIG{vsphere} );
-$ENV{VI_USERNAME}        = Config( "vsphere", "username" )        if ( Config( "vsphere", "username" ) );
-$ENV{VI_PASSWORD}        = Config( "vsphere", "password" )        if ( Config( "vsphere", "password" ) );
-$ENV{VI_SERVER}          = Config( "vsphere", "server" )          if ( Config( "vsphere", "server" ) );
-$ENV{VI_PASSTHROUGHAUTH} = Config( "vsphere", "passthroughauth" ) if ( Config( "vsphere", "passthroughauth" ) );
-$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0 if ( Config( "vsphere", "disablecertificatevalidation" ) );
 
 # read data file
 # $1 is file in data dir

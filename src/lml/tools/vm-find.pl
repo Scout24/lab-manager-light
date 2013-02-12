@@ -78,6 +78,8 @@ use lib "$FindBin::Bin/../lib";
 use LML::Common;
 use LML::VMware;
 
+LoadConfig();
+
 print("$PRODUCT Version $VERSION $CHANGEDATE\n");
 print($COPYRIGHT."\n");
 print($LICENSE."\n");
