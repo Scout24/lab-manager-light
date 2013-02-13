@@ -11,22 +11,21 @@ use vars qw(
   @ISA
   @EXPORT
 );
-our $VERSION = 1.10;
-our @ISA     = qw(Exporter);
-our @EXPORT  = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+
+
+our @ISA         = qw(Exporter);
+our @EXPORT      = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 
 use VMware::VIRuntime;
 
 # only on VMA
 #use VMware::VmaTargetLib;
 
+our %CUSTOMFIELDIDS; # internal cache for custom field id->name relation
+
 our %VM              = ();    # empty hash for VMs
 our $find_tag        = "";
 our $custom_field_id = 0;     # ID of custom field to use
-
-our %CUSTOMFIELDIDS;          # internal cache for custom field id->name relation
-
-$Util::script_version = "1.0";
 
 our %opts = (
               tag => {
