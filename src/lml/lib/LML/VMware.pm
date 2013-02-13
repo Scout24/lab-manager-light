@@ -7,20 +7,15 @@ package LML::VMware;
 use strict;
 use Exporter;
 use vars qw(
-            $VERSION
-            @ISA
-            @EXPORT
-           );
-our $VERSION     = 1.10;
+  $VERSION
+  @ISA
+  @EXPORT
+);
+
 our @ISA         = qw(Exporter);
-our @EXPORT   	= qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
-					
+our @EXPORT      = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+
 use VMware::VIRuntime;
-
-
-# only on VMA
-#use VMware::VmaTargetLib;
-
 
 our %VM=(); # empty hash for VMs
 our $find_tag = "";
@@ -30,7 +25,6 @@ our %CUSTOMFIELDIDS; # internal cache for custom field id->name relation
 
 # disconnect at the end, no matter what
 $SIG{__DIE__} = sub{Util::disconnect()};
-$Util::script_version = "1.0";
 
 our %opts = (
 	tag => {
@@ -41,7 +35,6 @@ our %opts = (
 		required => 0,
 	},
 );
-
 
 ################################ sub #################
 ##

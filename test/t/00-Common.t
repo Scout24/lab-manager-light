@@ -77,7 +77,6 @@ my %VM = %{ ReadVmFile() };
 is_deeply( \%VM, \%VM_TESTDATA, "VM loaded correctly" );
 
 # test lab.conf loading
-
 my %LAB_TESTDATA = (
     "DHCP"  => {},
     "HOSTS" => {
