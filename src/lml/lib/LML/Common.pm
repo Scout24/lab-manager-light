@@ -13,9 +13,9 @@ use FindBin;
 
 # Defaults for Data Dumper
 use Data::Dumper;
-$Data::Dumper::Sortkeys = 1;    #Sort the keys in the output
-$Data::Dumper::Deepcopy = 1;    #Enable deep copies of structures
-$Data::Dumper::Indent   = 2;    #Output in a reasonable style (but no array indexes)
+$Data::Dumper::Sortkeys = 1;    # Sort the keys in the output
+$Data::Dumper::Deepcopy = 1;    # Enable deep copies of structures
+$Data::Dumper::Indent   = 2;    # Output in a reasonable style (but no array indexes)
 $Data::Dumper::Useqq    = 1;    # use double quoted strings with "\n" escapes
 $Data::Dumper::Purity   = 1;    # extra code for correct perl representation
 
