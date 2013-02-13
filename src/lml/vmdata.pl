@@ -12,46 +12,49 @@ use CGI ':standard';
 use JSON;
 use LML::Common;
 
-LoadConfig();
+# uuid is either "" or undef to denote everything
+sub display_vm_data($;$) {
+    my $uuid = shift;
+    my $as_json = shift;
+    
+    my %VM_DATA;
 
-# input parameter, UUID of a VM
-my $search_uuid;
-if ( param('uuid') ) {
-    $search_uuid = param('uuid');
-} elsif (@ARGV) {
-    $search_uuid = lc( $ARGV[0] );
-} else {
-    $search_uuid = "all"; # use this to denote everything
+    my $VM = ReadVmFile();
+    if ( $uuid eq "" or $uuid eq undef ) {
+        %VM_DATA = %{$VM};
+    } elsif ( exists( $VM->{$uuid} ) ) {
+        %VM_DATA = %{ $VM->{$uuid} };
+    } else {
+        return undef;
+    } 
+    
+    my $json_data = to_json( \%VM_DATA, { utf8 => 0, pretty => 1, allow_blessed => 1 } );
+
+    if ( $as_json) {
+        return $json_data;
+    } else {
+        return "<html><head><title>Details for $uuid</title></head>\n" . "<body><pre>\n" . escapeHTML($json_data) . "\n" . "</pre></body></html>\n";
+    }
 }
 
-my %VM_DATA;
-my $status = "200 OK";
-my $VM = ReadVmFile;
-if ($search_uuid eq "all") {
-    %VM_DATA = %{ $VM };
-} elsif ( exists( $VM->{$search_uuid} ) ) {
-    %VM_DATA = %{ $VM->{$search_uuid} };
-} elsif ( %{$VM} ) {
-    $status = "200 No Data for VM $search_uuid found" ;
-    %VM_DATA = ( "NO_INFORMATION_AVAILABLE" => "SORRY" );
+# main() code when running as stand-alone program
+unless (caller) {
+    LoadConfig();
 
-} else {
-    $status = "500 No VM Data Found" ;
-    %VM_DATA = ( "FATAL_ERROR" => "NO VM DATA FOUND" );
+    # input parameter, UUID of a VM
+    my $search_uuid;
+    if ( param('uuid') ) {
+        $search_uuid = param('uuid');
+    } elsif (@ARGV) {
+        $search_uuid = lc( $ARGV[0] );
+    } else {
+        $search_uuid = undef;    # use this to denote everything
+    }
+    my $as_json = Accept("text/json") >= 0.9;
+
+    my $result = display_vm_data( $search_uuid, $as_json );
+    print header( -status => ( $result ? 200 : 500 ),
+                  -type => "text/" . ( $as_json ? "json" : "html" ) );
+    print $result;
+    exit( $result ? 0 : 1 ); # report status as exit code
 }
-
-
-my $json_data = to_json( \%VM_DATA, { utf8 => 0, pretty => 1, allow_blessed => 1 } );
-
-if (Accept("text/json") >= 0.9) {
-    print header(-status => $status,-type=>"text/json");
-    print $json_data
-} else {
-    print header(-status => $status,-type=>"text/html");
-    print "<html><head><title>Details for $search_uuid</title></head>\n".
-        "<body><pre>\n" .
-        escapeHTML($json_data)."\n".
-        "</pre></body></html>\n";
-}
-
-1;

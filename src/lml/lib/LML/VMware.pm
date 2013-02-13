@@ -84,8 +84,10 @@ sub handle_vm ($) {
                               or $customvalue eq "true"
                               or $customvalue eq "yes" );
     }
-
-    #	print Dumper([$vm]);
+    if ($Util::tracelevel > 1 ) {
+        Util::trace( 1, "VM DETAILS:\n".Dumper([$vm],[qw(vm)]));
+    }
+    
     my $uuid = $vm->config->uuid;
     $VM{$uuid} = {
         "NAME" => $vm->name,
@@ -98,13 +100,13 @@ sub handle_vm ($) {
     foreach my $vm_dev ( @{ $vm->config->hardware->device } ) {
         if ( $vm_dev->can("macAddress") and defined( $vm_dev->macAddress ) ) {
             if ( $vm_dev->backing->can("deviceName") ) {
+                # no distributed vSwitch
                 $VM{$uuid}{"MAC"}{ $vm_dev->macAddress } = $vm_dev->backing->deviceName;
                 push( @vm_macs, { "MAC" => $vm_dev->macAddress, "NETWORK" => $vm_dev->backing->deviceName } );
 
                 #			print "MAC: ".$vm_dev->macAddress."\n";
             } else {
-
-                # TODO: deal with Distributed Virtual Switch:
+                # this is probably a distributed vSwitch, need to retrieve infos by following the vSwitch UUID
 
 =pod
   DB<34> x $vm_dev
@@ -159,6 +161,7 @@ sub handle_vm ($) {
         $VM{$uuid}{EXTRAOPTIONS}{ $extraConfig->key } = $extraConfig->value if ( $extraConfig->key eq "bios.bootDeviceClasses" );
     }
     $VM{$uuid}{MO_REF} = $vm->{mo_ref};
+    $VM{$uuid}{VM_ID} = $vm->{mo_ref}->{value};
     return ( $vm->name );
 }
 
@@ -172,7 +175,9 @@ sub handle_vm ($) {
 ##
 sub walk_mob {
     my $object = shift;
-    Util::trace( 1, "Examining '" . $object->name . "' [" . Util::get_inventory_path( $object, $object->{vim} ) . "]\n" );
+    if ($Util::tracelevel > 1 )  {
+        Util::trace( 1, "Examining '" . $object->name . "' [" . Util::get_inventory_path( $object, $object->{vim} ) . "]\n" );
+    }
 
     # walk the children recursively
     if ( $object->can("childEntity") ) {
