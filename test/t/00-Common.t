@@ -62,6 +62,32 @@ my %VM_TESTDATA = (
                                                                 ],
                                                                 "PATH" => "development/vm/otherpath/tsthst001",
                                                                 "UUID" => "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"
+                    },
+                    "4213038e-9203-3a2b-ce9d-123456789abc" => {
+                                                                "CUSTOMFIELDS" => {
+                                                                                    "Contact User ID" => "User3",
+                                                                                    "Expires"         => "31.01.2010",
+                                                                                    "Force Boot"      => "garbage",
+                                                                                    "Force Boot Target" => "server"
+                                                                },
+                                                                "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
+                                                                "MAC"          => { "01:02:03:04:6e:5c"      => "arc.int" },
+                                                                "MO_REF"       => bless(
+                                                                                   {
+                                                                                     "type"  => "VirtualMachine",
+                                                                                     "value" => "vm-2199"
+                                                                                   },
+                                                                                   'ManagedObjectReference'
+                                                                ),
+                                                                "NAME"       => "tsthst099",
+                                                                "NETWORKING" => [
+                                                                                  {
+                                                                                    "MAC"     => "01:02:03:04:6e:5c",
+                                                                                    "NETWORK" => "arc.int"
+                                                                                  }
+                                                                ],
+                                                                "PATH" => "development/vm/otherpath/tsthst099",
+                                                                "UUID" => "4213038e-9203-3a2b-ce9d-123456789abc"
                     }
 );
 

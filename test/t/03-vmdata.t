@@ -59,6 +59,30 @@ my $vm_json=<<EOF;
          "Expires" : "31.12.2013"
       },
       "UUID" : "42130272-a509-8010-6e85-4e01cb1b7284"
+   },
+   "4213038e-9203-3a2b-ce9d-123456789abc" : {
+      "NETWORKING" : [
+         {
+            "NETWORK" : "arc.int",
+            "MAC" : "01:02:03:04:6e:5c"
+         }
+      ],
+      "NAME" : "tsthst099",
+      "EXTRAOPTIONS" : {
+         "bios.bootDeviceClasses" : "allow:net"
+      },
+      "MO_REF" : null,
+      "MAC" : {
+         "01:02:03:04:6e:5c" : "arc.int"
+      },
+      "PATH" : "development/vm/otherpath/tsthst099",
+      "CUSTOMFIELDS" : {
+         "Contact User ID" : "User3",
+         "Force Boot" : "garbage",
+         "Force Boot Target" : "server",
+         "Expires" : "31.01.2010"
+      },
+      "UUID" : "4213038e-9203-3a2b-ce9d-123456789abc"
    }
 }
 EOF

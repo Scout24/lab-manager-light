@@ -43,3 +43,5 @@ if ($search_uuid) {
     print header( -status => 404, -type => 'text/plain' );
     print "Give UUID address as query parameter 'uuid' or as command line parameter\n";
 }
+
+Util::disconnect();

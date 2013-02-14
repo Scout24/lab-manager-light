@@ -407,7 +407,9 @@ sub setVmExtraOptsM {
         } else {
             Util::trace( 0, "\n" . $@ . "\n" );
         }
+        return 0;
     }
+    return 1;
 }
 
 ############################### sub #################
@@ -441,7 +443,9 @@ sub setVmCustomValue {
         } else {
             Util::trace( 0, "\n" . $@ . "\n" );
         }
+        return 0;
     }
+    return 1;
 }
 
 ############################### sub #################
@@ -455,7 +459,7 @@ sub setVmCustomValueM {
     my $value   = shift;
     my $vm_view = Vim::get_view( mo_ref => $mo_ref );
     if ($vm_view) {
-        setVmCustomValue( $vm_view, $key, $value );
+        return setVmCustomValue( $vm_view, $key, $value );
     }
 }
 
@@ -471,7 +475,7 @@ sub setVmCustomValueU {
     my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
                                          filter    => { "config.uuid" => $uuid } );
     if ($vm_view) {
-        setVmCustomValue( $vm_view, $key, $value );
+        return setVmCustomValue( $vm_view, $key, $value );
     }
 }
 1;

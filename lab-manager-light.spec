@@ -20,7 +20,7 @@ Requires: perl(DateTime::Format::Flexible)
 Requires: perl(SVN::Client) subversion
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON)
-BuildRequires: perl(File::Slurp) perl(Test::More) perl(Test::Warn) perl(Test::Exception)
+BuildRequires: perl(File::Slurp) perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
 
 # RHEL6 specific so far
 Requires: httpd, cronie
