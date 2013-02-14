@@ -28,7 +28,8 @@ sub display_vm_data($;$) {
         return undef;
     } 
     
-    my $json_data = to_json( \%VM_DATA, { utf8 => 0, pretty => 1, allow_blessed => 1 } );
+    # canonical makes the output sorted so that the same input always yields the same output. A bit slower but helps the testing...
+    my $json_data = to_json( \%VM_DATA, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
 
     if ( $as_json) {
         return $json_data;
