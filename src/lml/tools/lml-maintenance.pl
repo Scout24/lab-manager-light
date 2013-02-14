@@ -23,7 +23,6 @@ use lib "$FindBin::RealBin/../lib";
 
 use CGI ':standard';
 use LML::Common;
-use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 

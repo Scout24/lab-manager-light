@@ -20,7 +20,6 @@ use lib "$FindBin::RealBin/lib";
 
 use CGI ':standard';
 use LML::Common;
-use LML::Subversion;
 use LML::VMware;
 use LML::DHCP;
 
@@ -269,44 +268,6 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
     # we only modify something if there are no errors
     if ( not scalar(@error) ) {
 
-        # check host-name directory existance in SVN if configured. If none of the actions are configured, ignore this test.
-        if ( ( Config( "subversion", "hostdirs" ) && ( Config( "subversion", "createhostdirs" ) || Config( "subversion", "failonmissinghostdir" ) ) ) ) {
-
-            # check if the host dir exists
-            my $newhostdir = Config( "subversion", "hostdirs" ) . "/" . $vm_name;
-            my $havehostdir = svnCheckPath($newhostdir);
-
-            # if CREATEHOSTDIRS is set, create missing host dirs
-            if ( Config( "subversion", "createhostdirs" ) ) {
-                if ($havehostdir) {
-
-                    # do nothing, be happy
-                } else {
-
-                    # hostdir is missing, should we rename it from old
-                    # putting all the conditions for a move into the same if saves us the trouble
-                    # of having several branches of logic leading to a copy :-(
-                    if (     Config( "subversion", "renamehostdirs" )
-                         and exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} )
-                         and ( not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} )
-                         and svnCheckPath( Config( "subversion", "hostdirs" ) . "/" . $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) )
-                    {
-                        if ( not svnMovePath( Config( "subversion", "hostdirs" ) . "/" . $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}, $newhostdir ) ) {
-                            push( @error, "Could not move old hostdir to new hostdir in SVN" );
-                        }
-                    } else {
-                        if ( not svnCopyPath( Config( "subversion", "hostskel" ), $newhostdir ) ) {
-                            push( @error, "Could not create hostdir in SVN" );
-                        }
-                    }
-                }
-            } else {
-
-                # if we should not create the hostdirs, at least warn about missing host dir or let it pass
-                push( @error, "SVN hostdir '$newhostdir' missing" ) if ( Config( "subversion", "failonmissinghostdir" ) );
-            }
-        }    # hostdirs is set
-
         # add lastseen info to host
         $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN} = time;
         $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN_DISPLAY} = POSIX::strftime( "%a %b %e %H:%M:%S %Y", localtime );
@@ -328,7 +289,7 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
 }    # if have $VM{$search_uuid}
 
 # disconnect from VI
-Util::disconnect;
+Util::disconnect();
 
 # housekeeping is in tools/lml-maintenance.pl. This script has only the scope of a single VM.
 
