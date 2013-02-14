@@ -20,7 +20,9 @@ Requires: perl(DateTime::Format::Flexible)
 Requires: perl(SVN::Client) subversion
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON)
-BuildRequires: perl(File::Slurp) perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
+BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
+BuildRequires: perl(File::Slurp) perl(Text::Diff) perl(DateTime::Format::Flexible) perl(JSON)
+BuildRequires: perl(VMware::VIRuntime)
 
 # RHEL6 specific so far
 Requires: httpd, cronie
@@ -45,11 +47,11 @@ Users can provision and manage their own virtual machines, LML will:
 * LML communicates with the end-user through the existing GUIs of the
   virtualization farm and the virtual machines.
 
-
+%check
+make test
 
 %prep
 %setup -q
-
 
 %install
 umask 0002
