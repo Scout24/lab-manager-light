@@ -12,100 +12,45 @@ use vars qw(
   @EXPORT
 );
 
-
-our @ISA         = qw(Exporter);
-our @EXPORT      = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+our @ISA    = qw(Exporter);
+our @EXPORT = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 
 use VMware::VIRuntime;
 
 # only on VMA
 #use VMware::VmaTargetLib;
 
-our %CUSTOMFIELDIDS; # internal cache for custom field id->name relation
-
-our %VM              = ();    # empty hash for VMs
-our $find_tag        = "";
-our $custom_field_id = 0;     # ID of custom field to use
-
-our %opts = (
-              tag => {
-                       type     => ":s",
-                       default  => "easyVCB",
-                       variable => "VI_TAG",
-                       help     => "Find only VMs with specified tag",
-                       required => 0,
-              },
-);
+our %CUSTOMFIELDIDS;    # internal cache for custom field id->name relation
 
 ################################ sub #################
 ##
-## getcustomvalue (<vm>)
+## retrieve_vm_details (<vm>)
 ##
-## retrieve the value of the custom field specified in the global $custom_field_id
+## read details about this vm (an object of the VirtualMachine type) and return a hash with the data that is relevant for us
 ##
 ##
-sub getcustomvalue {
+##
+sub retrieve_vm_details ($) {
     my $vm = shift;
-
-    return undef unless ( $custom_field_id and $vm->customValue );    # do nothing if the field is not defined
-                                                                      # iterate over the customValues
-
-    foreach my $value ( @{ $vm->customValue } ) {
-        if ( $value->key eq $custom_field_id ) {
-            return $value->value;
-        }
-    }
-    return undef;
-}
-
-################################ sub #################
-##
-## handle_vm (<vm>)
-##
-## do something with a vm that was found
-##
-## at the moment, add the vm to the @RESULT array
-##
-##
-sub handle_vm ($) {
-    my $vm = shift;
+    my %VM_DATA;
 
     # filter out templates
-    return undef if ( $vm->config->template );
+    return %VM_DATA if ( $vm->config->template );
 
-    # filter out only tagged VM
-    if ($custom_field_id) {
-
-        # find out custom value, if needed
-        my $customvalue = getcustomvalue($vm);
-        Util::trace( 1, "  Custom Value[$find_tag]: $customvalue\n" ) if ($customvalue);
-        return undef unless ($customvalue);
-        return undef unless (    $customvalue eq "1"
-                              or $customvalue eq "true"
-                              or $customvalue eq "yes" );
-    }
-    if ($Util::tracelevel > 1 ) {
-        Util::trace( 1, "VM DETAILS:\n".Dumper([$vm],[qw(vm)]));
-    }
-    
-    my $uuid = $vm->config->uuid;
-    $VM{$uuid} = {
-        "NAME" => $vm->name,
-        "PATH" => Util::get_inventory_path( $vm, $vm->{vim} ),
-        "UUID" => $uuid,
-
-        #			"DEVICES" => $vm->config->hardware,
-    };
+    $VM_DATA{"UUID"} = $vm->config->uuid;
+    $VM_DATA{"NAME"} = $vm->name;
+    $VM_DATA{"PATH"} = Util::get_inventory_path( $vm, $vm->{vim} );
     my @vm_macs = ();
     foreach my $vm_dev ( @{ $vm->config->hardware->device } ) {
         if ( $vm_dev->can("macAddress") and defined( $vm_dev->macAddress ) ) {
+            my $mac = $vm_dev->macAddress;
+            my $net;
             if ( $vm_dev->backing->can("deviceName") ) {
-                # no distributed vSwitch
-                $VM{$uuid}{"MAC"}{ $vm_dev->macAddress } = $vm_dev->backing->deviceName;
-                push( @vm_macs, { "MAC" => $vm_dev->macAddress, "NETWORK" => $vm_dev->backing->deviceName } );
 
-                #			print "MAC: ".$vm_dev->macAddress."\n";
+                # no distributed vSwitch
+                $net = $vm_dev->backing->deviceName;
             } else {
+
                 # this is probably a distributed vSwitch, need to retrieve infos by following the vSwitch UUID
 
 =pod
@@ -136,20 +81,22 @@ sub handle_vm ($) {
 
 =cut
 
-                my $switchuuid   = $vm_dev->backing->port->switchUuid;
                 my $portgroupkey = $vm_dev->backing->port->portgroupKey;
-                my $dv_name      = Vim::get_view( mo_ref => new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ) )->config->name;
-                $VM{$uuid}{"MAC"}{ $vm_dev->macAddress } = $dv_name;
-                push( @vm_macs, { "MAC" => $vm_dev->macAddress, "NETWORK" => $dv_name } );
+                $net = Vim::get_view( mo_ref => new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ) )->config->name;
+
             }
+
+            $VM_DATA{"MAC"}{$mac} = $net;
+            push( @vm_macs, { "MAC" => $mac, "NETWORK" => $net } );
+
         }
     }
-    if (@vm_macs) {
-        $VM{$uuid}{"NETWORKING"} = \@vm_macs;
+    if ( scalar(@vm_macs) ) {
+        $VM_DATA{"NETWORKING"} = \@vm_macs;
     }
     if ( $vm->customValue ) {
         foreach my $value ( @{ $vm->customValue } ) {
-            $VM{$uuid}{"CUSTOMFIELDS"}{ $CUSTOMFIELDIDS{ $value->key } } = $value->value;
+            $VM_DATA{"CUSTOMFIELDS"}{ $CUSTOMFIELDIDS{ $value->key } } = $value->value;
         }
     }
 
@@ -158,24 +105,28 @@ sub handle_vm ($) {
     #	$VM{$uuid}{OBJECT}=$vm;
     # store relevant extraConfig
     for my $extraConfig ( @{ $vm->config->extraConfig } ) {
-        $VM{$uuid}{EXTRAOPTIONS}{ $extraConfig->key } = $extraConfig->value if ( $extraConfig->key eq "bios.bootDeviceClasses" );
+        $VM_DATA{EXTRAOPTIONS}{ $extraConfig->key } = $extraConfig->value if ( $extraConfig->key eq "bios.bootDeviceClasses" );
     }
-    $VM{$uuid}{MO_REF} = $vm->{mo_ref};
-    $VM{$uuid}{VM_ID} = $vm->{mo_ref}->{value};
-    return ( $vm->name );
+    $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
+    return %VM_DATA;
 }
+
+# end retrieve_vm_details
 
 ################################ sub #################
 ##
-## walk_mob (<object>)
+## walk_mob (<object>,<vm data hash>)
 ##
 ## walk down the managed object browser searching for VM and call
-## handle_vm for each VM found
+## retrieve_vm_details to build up the vm data hash
 ##
 ##
-sub walk_mob {
+sub walk_mob($$);    # define prototype for recursive function
+
+sub walk_mob($$) {
     my $object = shift;
-    if ($Util::tracelevel > 1 )  {
+    my $VM     = shift;
+    if ( $Util::tracelevel > 1 ) {
         Util::trace( 1, "Examining '" . $object->name . "' [" . Util::get_inventory_path( $object, $object->{vim} ) . "]\n" );
     }
 
@@ -185,23 +136,27 @@ sub walk_mob {
         # walk in only if there are any children
         if ( $object->childEntity ) {
             foreach my $child ( @{ $object->childEntity } ) {
-                walk_mob( Vim::get_view( mo_ref => $child ) );
+                walk_mob( Vim::get_view( mo_ref => $child ), $VM );
             }
         }
     }
 
     # walk into vmFolder (there is always only 1 vmFolder in each Datacenter
     if ( $object->can("vmFolder") ) {
-        walk_mob( Vim::get_view( mo_ref => $object->vmFolder ) );
+        walk_mob( Vim::get_view( mo_ref => $object->vmFolder ), $VM );
     }
 
     # if this is an VM, handle it
-    if ( $object->can("config") and defined( $object->config ) ) {
-        if ( $object->config->can("uuid") ) {
+    if (     $object->can("config")
+         and defined( $object->config )
+         and $object->config->can("uuid")
+         and my $uuid = $object->config->uuid )
+    {
 
-            # this seems to be a VM
-            handle_vm($object);
-        }
+        # this seems to be a VM
+        my %VM_DATA = retrieve_vm_details($object);
+        $VM->{$uuid} = \%VM_DATA;
+
     }
 }
 
@@ -213,10 +168,10 @@ sub walk_mob {
 ##
 
 sub connect_vi() {
-    Opts::add_options(%opts);
+
     # NOTE: This will eat up all arguments that come AFTER the --arg things.
     # Placing e.g. --verbose as last argument avoids this behaviour.
-    Opts::parse();    
+    Opts::parse();
 
     # TODO: the validate call seems to query for VI credentials
     #	even though they are not required on VMA
@@ -235,18 +190,6 @@ sub connect_vi() {
     # initialize CUSTOMFIELDIDS and retrieve custom fields
     my %fields = custom_fields();
 
-    # find out about using a custom field definition
-    if ( Opts::option_is_set('tag') ) {
-        $find_tag = Opts::get_option('tag');
-        $find_tag = "easyVCB" unless ($find_tag);    # set reasonable default
-        Util::trace( 1, "Will find only '$find_tag' tagged VM\n" );
-
-        if ( exists( $fields{$find_tag} ) ) {
-            $custom_field_id = $fields{$find_tag};
-        } else {
-            die "Could not find custom field ID for '$find_tag'";
-        }
-    }
 }
 
 ################################ sub #################
@@ -271,11 +214,12 @@ sub custom_fields {
 
 ################################ sub #################
 ##
-## search_vm (<list of paths>)
+## search_vm ([<list of paths>])
 ##
 ##
 ##
 sub search_vm {
+    my %VM;
 
     # collect the virtual machines to work on in @VM
     if (@_) {
@@ -283,7 +227,7 @@ sub search_vm {
             my $searchindex = Vim::get_view( mo_ref => Vim::get_service_content->searchIndex );
             my $searchresult = $searchindex->FindByInventoryPath( inventoryPath => $path );
             if ($searchresult) {
-                walk_mob( Vim::get_view( mo_ref => $searchresult ) );
+                walk_mob( Vim::get_view( mo_ref => $searchresult ), \%VM );
             } else {
                 die "ERROR: Could not find inventory path '$path'";
             }
@@ -291,11 +235,12 @@ sub search_vm {
     } else {
 
         # method 3: walk down from the very top
-        walk_mob( Vim::get_view( mo_ref => Vim::get_service_content->rootFolder ) );
+        walk_mob( Vim::get_view( mo_ref => Vim::get_service_content->rootFolder ), \%VM );
     }
 
     # print results
     if ( $Util::tracelevel > 1 ) {
+        print("search_vm result:\n");
         foreach my $uuid ( keys(%VM) ) {
             print("VM=$uuid\n");
             foreach my $key ( keys( %{ $VM{$uuid} } ) ) {
@@ -304,7 +249,7 @@ sub search_vm {
         }
     }
 
-    return (%VM);
+    return %VM;
 }
 
 ################################ sub #################
@@ -315,30 +260,28 @@ sub search_vm {
 ##
 
 sub get_vm_data {
-    my $search_uuid = shift;
-    my $object = Vim::find_entity_view( view_type => 'VirtualMachine', filter => { 'config.uuid' => $search_uuid } );
+    my $uuid = shift;
+    my $object = Vim::find_entity_view( view_type => 'VirtualMachine', filter => { 'config.uuid' => $uuid } );
 
     # if this is an VM, handle it
-    if ( $object and defined( $object->config ) and $object->can("config") ) {
-        if ( $object->config->can("uuid") ) {
+    if (     $object
+         and defined( $object->config )
+         and $object->can("config")
+         and $object->config->can("uuid") )
+    {
 
-            # this seems to be a VM
-            handle_vm($object);
-        }
+        # this seems to be a VM
+        return retrieve_vm_details($object);
+
+    } else {
+        return ();    # return empty hash
     }
-
-    # print results
-    if ( $Util::tracelevel > 1 ) {
-        foreach my $uuid ( keys(%VM) ) {
-            print("VM=$uuid\n");
-            foreach my $key ( keys( %{ $VM{$uuid} } ) ) {
-                print("\t$key = $VM{$uuid}{$key}\n");
-            }
-        }
-    }
-
-    return (%VM);
 }
+
+#
+#
+#
+#
 ############################### sub #################
 ##
 ## setVmExtraOptsU (<uuid of VM>,<option key>,<option value>)

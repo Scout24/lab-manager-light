@@ -20,6 +20,7 @@ our @EXPORT = qw(remove_forceboot);
 use LML::Common;
 use LML::VMware;
 
+
 sub remove_forceboot($) {
     my $uuid = shift;
 
@@ -32,10 +33,10 @@ sub remove_forceboot($) {
 
     # get dump of single VM from vSphere
     my %VM = get_vm_data($uuid);
-    unless ( exists $VM{$uuid} ) {
+    unless ( scalar(keys(%VM)) ) {
 
         # bail out if not VM data available, probably no VM for this uuid
-        Debug("No VM data for $uuid found, VM Data is\n".join(", ",keys(%VM))) if ($isDebug);
+        Debug("No VM data for uuid '$uuid' found, VM Data is\n".join(", ",keys(%VM))) if ($isDebug);
         return 0;
     }
 
@@ -43,7 +44,7 @@ sub remove_forceboot($) {
     my $off_value = "OFF";
 
     # the new variant is to use the forceboot field as trigger, set a coherent value
-    if ( not( $forceboot_target_field and $VM{$uuid}{CUSTOMFIELDS}{$forceboot_target_field} ) ) {
+    if ( not( $forceboot_target_field and $VM{CUSTOMFIELDS}{$forceboot_target_field} ) ) {
         $off_value = "";
     }
 

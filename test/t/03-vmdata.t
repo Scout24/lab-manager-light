@@ -26,10 +26,10 @@ my $vm_json=<<EOF;
       "EXTRAOPTIONS" : {
          "bios.bootDeviceClasses" : "allow:net"
       },
-      "MO_REF" : null,
       "MAC" : {
          "01:02:03:04:6e:4e" : "arc.int"
       },
+      "VM_ID" : "vm-1000",
       "PATH" : "development/vm/otherpath/tsthst001",
       "CUSTOMFIELDS" : {
          "Contact User ID" : "User2",
@@ -49,10 +49,10 @@ my $vm_json=<<EOF;
       "EXTRAOPTIONS" : {
          "bios.bootDeviceClasses" : "allow:net"
       },
-      "MO_REF" : null,
       "MAC" : {
          "01:02:03:04:00:15" : "arc.int"
       },
+      "VM_ID" : "vm-0500",
       "PATH" : "development/vm/path/lochst001",
       "CUSTOMFIELDS" : {
          "Contact User ID" : "User1",
@@ -71,10 +71,10 @@ my $vm_json=<<EOF;
       "EXTRAOPTIONS" : {
          "bios.bootDeviceClasses" : "allow:net"
       },
-      "MO_REF" : null,
       "MAC" : {
          "01:02:03:04:6e:5c" : "arc.int"
       },
+      "VM_ID" : "vm-2000",
       "PATH" : "development/vm/otherpath/tsthst099",
       "CUSTOMFIELDS" : {
          "Contact User ID" : "User3",

@@ -40,36 +40,13 @@
 # 2008-07-02	GSS GPL name correction
 # 2008-10-30	GSS Show all custom tags
 # 2010-10-13	GSS Migrate from easyVCB to vinfo
-#
+# 2013-01-14    GSS Refactor and stop recording history in this list. Check the github commit history instead.
 #
 
 use strict;
 use warnings;
 
-############
-##
-## DO NOT CHANGE THIS CONFIGURATION BUT INSTEAD USE THE vinfo.conf FILE !!
-##
-##
-
-# vinfo-find.pl uses only a few settings, mainly to connect to the Virtual Center server.
-
 # end of user configuration
-
-my $PRODUCT = "vm-find";
-my $VERSION = "1.0";
-my $CHANGEDATE = "2011-05-02";
-my $COPYRIGHT = "Copyright 2011 by Schlomo Schapiro, Immobilien Scout GmbH";
-my $LICENSE = "Licensed under the GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full license";
-
-my $FULLHEADER = <<EOF;
-
-$PRODUCT Version $VERSION $CHANGEDATE
-$COPYRIGHT
-$LICENSE
-
-EOF
-
 
 # place DLLs and PMs with the required subdirectory structure into lib/ next to this script
 use FindBin;
@@ -78,9 +55,15 @@ use lib "$FindBin::Bin/../lib";
 use LML::Common;
 use LML::VMware;
 
+my $PRODUCT = "vm-find";
+my $COPYRIGHT = "Copyright 2011 by Schlomo Schapiro, Immobilien Scout GmbH";
+my $LICENSE = "Licensed under the GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full license";
+
+
+
 LoadConfig();
 
-print("$PRODUCT Version $VERSION $CHANGEDATE\n");
+print("$PRODUCT Version $LML_VERSION\n");
 print($COPYRIGHT."\n");
 print($LICENSE."\n");
 print("\n");
@@ -94,10 +77,10 @@ my %customfields=custom_fields();
 if (scalar(keys(%customfields))) {
 	print("\n");
 	print("The following Custom Attribute Keys are defined (use the name as an argument to --tag):"."\n");
-	print("ID  Name"."\n");
+	print("        ID  Name"."\n");
 	foreach my $name (keys(%customfields)) {
 		next if ($name =~ m/^com\.vmware/);
-		printf("%2d: %s\n",$customfields{$name},$name);
+		printf("%10d: %s\n",$customfields{$name},$name);
 	}
 	print("\n");
 }

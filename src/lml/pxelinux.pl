@@ -75,22 +75,22 @@ if ($config_vsphere_networks) {
     }
 }
 
-my $hosts_changed = 0;
+my $has_changed = 0;
 
 # keep force boot info for later
 my $pxelinux_config_url;
 my $bootinfo;
 
 # if there are VMs and if we find the VM we are looking for:
-if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
-    $vm_name = $VM{$search_uuid}{NAME};
+if ( scalar( keys(%VM) ) and exists( $VM{"UUID"} ) and $search_uuid eq $VM{"UUID"} ) {
+    $vm_name = $VM{NAME};
 
     # check if we should handle this VM
     my @vm_lab_macs = ();
-    if ( @vsphere_networks and exists( $VM{$search_uuid}{NETWORKING} ) and @{ $VM{$search_uuid}{NETWORKING} } ) {
+    if ( @vsphere_networks and exists( $VM{NETWORKING} ) and @{ $VM{NETWORKING} } ) {
 
         # check for each MAC of the VM if the network name is in the list
-        for my $vm_network ( @{ $VM{$search_uuid}{NETWORKING} } ) {
+        for my $vm_network ( @{ $VM{NETWORKING} } ) {
             if ( grep { $_ eq $vm_network->{NETWORK} } @vsphere_networks ) {
                 push( @vm_lab_macs, $vm_network->{MAC} );
             }
@@ -105,11 +105,11 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
     # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
     if (
         Config( "modifyvm", "forcenetboot" ) and (    # either the setting is not set at all or it is set but not equal to "allow:net"
-              not exists( $VM{$search_uuid}{EXTRAOPTIONS}{'bios.bootDeviceClasses'} ) or not "$VM{$search_uuid}{EXTRAOPTIONS}{'bios.bootDeviceClasses'}" eq "allow:net"
+              not exists( $VM{EXTRAOPTIONS}{'bios.bootDeviceClasses'} ) or not "$VM{EXTRAOPTIONS}{'bios.bootDeviceClasses'}" eq "allow:net"
         )
       )
     {
-        setVmExtraOptsM( $VM{$search_uuid}{MO_REF}, "bios.bootDeviceClasses", "allow:net" );
+        setVmExtraOptsU( $VM{"UUID"}, "bios.bootDeviceClasses", "allow:net" );
     }
 
     # check for FQDN in VM name
@@ -145,10 +145,10 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
     my $contactuserid_field  = Config( "vsphere", "contactuserid_field" );
     my $contactuserid_minuid = Config( "vsphere", "contactuserid_minuid" );
     if (     $contactuserid_field
-         and exists $VM{$search_uuid}{CUSTOMFIELDS}{$contactuserid_field}
+         and exists $VM{CUSTOMFIELDS}{$contactuserid_field}
          and $contactuserid_minuid )
     {
-        my $contactuserid = $VM{$search_uuid}{CUSTOMFIELDS}{$contactuserid_field};
+        my $contactuserid = $VM{CUSTOMFIELDS}{$contactuserid_field};
         my @pwnaminfo     = getpwnam($contactuserid);
         unless ( @pwnaminfo and scalar(@pwnaminfo) and $pwnaminfo[2] > $contactuserid_minuid ) {
             push( @error, "$contactuserid_field '" . $contactuserid . "' does not exist" );
@@ -159,8 +159,8 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
 
     # check that expiry date is set and valid
     my $expires_field = Config( "vsphere", "expires_field" );
-    if ( exists $VM{$search_uuid}{CUSTOMFIELDS}{$expires_field} ) {
-        my $vmdate = $VM{$search_uuid}{CUSTOMFIELDS}{$expires_field};
+    if ( exists $VM{CUSTOMFIELDS}{$expires_field} ) {
+        my $vmdate = $VM{CUSTOMFIELDS}{$expires_field};
         my $expires;
         eval { $expires = DateTime::Format::Flexible->parse_datetime( $vmdate, european => ( Config( "vsphere", "expires_european" ) ? 1 : 0 ) ) };
         if ($@) {
@@ -204,21 +204,21 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
 
     if (     $pxelinuxcfg_path
          and $forceboot_field
-         and exists $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field}
-         and $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field}
-         and not grep { $_ eq uc( $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
+         and exists $VM{CUSTOMFIELDS}{$forceboot_field}
+         and $VM{CUSTOMFIELDS}{$forceboot_field}
+         and not grep { $_ eq uc( $VM{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
     {
         my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot = $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot = $VM{CUSTOMFIELDS}{$forceboot_field};
         my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
 
         # For backward compatibility. If the user is working with a forceboot_target_field
         # then take this value, ...
         if (     $forceboot_target_field
-             and exists $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field}
-             and $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field} )
+             and exists $VM{CUSTOMFIELDS}{$forceboot_target_field}
+             and $VM{CUSTOMFIELDS}{$forceboot_target_field} )
         {
-            $forceboot_target = $VM{$search_uuid}{CUSTOMFIELDS}{$forceboot_target_field};
+            $forceboot_target = $VM{CUSTOMFIELDS}{$forceboot_target_field};
 
             # Else take the value from the forceboot field as target (old behaviour)
         } else {
@@ -282,11 +282,11 @@ if ( scalar( keys(%VM) ) and exists( $VM{$search_uuid} ) ) {
         {
             $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} = $vm_name;
             $LAB->{HOSTS}->{$search_uuid}->{MACS}     = \@vm_lab_macs;
-            $hosts_changed                            = 1;
+            $has_changed                            = 1;
         }
     }    # no errors in @error
 
-}    # if have $VM{$search_uuid}
+}    # if have $VM
 
 # disconnect from VI
 Util::disconnect();
@@ -294,7 +294,7 @@ Util::disconnect();
 # housekeeping is in tools/lml-maintenance.pl. This script has only the scope of a single VM.
 
 # write dhcp-hosts.conf if it is configured and if we have host entries to write
-if ($hosts_changed) {
+if ($has_changed) {
     push( @error, UpdateDHCP($LAB) );
 }
 
@@ -330,7 +330,7 @@ EOF
     $pxelinux_config_url = $base_url . "/default" unless ($pxelinux_config_url);
     $bootinfo            = "all is fine"          unless ($bootinfo);
     print header(
-                  -status => "302 VM is $vm_name and $bootinfo" . ( $hosts_changed ? ", some hosts changed" : "" ),
+                  -status => "302 VM is $vm_name and $bootinfo" . ( $has_changed ? ", some hosts changed" : "" ),
                   -type => 'text/plain',
                   -location => $pxelinux_config_url
     );

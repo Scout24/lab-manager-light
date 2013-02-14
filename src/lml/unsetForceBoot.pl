@@ -1,14 +1,5 @@
 #!/usr/bin/perl
-#
-#
-# unsetForceBoot.pl Lab Manager Light unset Force Boot
-#
-# Authors:
-# GSS Schlomo Schapiro <lml@schlomo.schapiro.org>
-#
-# Copyright:  Schlomo Schapiro, Immobilien Scout GmbH
-# License:    GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full text
-#
+
 
 use strict;
 use warnings;
@@ -29,7 +20,7 @@ LoadConfig();
 connect_vi();
 
 # input parameter, UUID of a VM
-my $search_uuid = param('uuid') ? lc( param('uuid') ) : lc( $ARGV[0] );
+my $search_uuid = param('uuid') ? lc( param('uuid') ) : ( scalar(@ARGV) ? lc( $ARGV[0] ) : "" );
 
 die "No forceboot_field parameter set in [vsphere] section\n" unless ( Config( "vsphere", "forceboot_field" ) );
 

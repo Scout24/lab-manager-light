@@ -21,13 +21,6 @@ my %VM_TESTDATA = (
                                                                 },
                                                                 "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                                 "MAC"          => { "01:02:03:04:00:15"      => "arc.int" },
-                                                                "MO_REF"       => bless(
-                                                                                   {
-                                                                                     "type"  => "VirtualMachine",
-                                                                                     "value" => "vm-232"
-                                                                                   },
-                                                                                   'ManagedObjectReference'
-                                                                ),
                                                                 "NAME"       => "lochst001",
                                                                 "NETWORKING" => [
                                                                                   {
@@ -36,6 +29,7 @@ my %VM_TESTDATA = (
                                                                                   }
                                                                 ],
                                                                 "PATH" => "development/vm/path/lochst001",
+                                                                "VM_ID" => "vm-0500",
                                                                 "UUID" => "42130272-a509-8010-6e85-4e01cb1b7284"
                     },
                     "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf" => {
@@ -46,13 +40,6 @@ my %VM_TESTDATA = (
                                                                 },
                                                                 "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                                 "MAC"          => { "01:02:03:04:6e:4e"      => "arc.int" },
-                                                                "MO_REF"       => bless(
-                                                                                   {
-                                                                                     "type"  => "VirtualMachine",
-                                                                                     "value" => "vm-2131"
-                                                                                   },
-                                                                                   'ManagedObjectReference'
-                                                                ),
                                                                 "NAME"       => "tsthst001",
                                                                 "NETWORKING" => [
                                                                                   {
@@ -61,6 +48,7 @@ my %VM_TESTDATA = (
                                                                                   }
                                                                 ],
                                                                 "PATH" => "development/vm/otherpath/tsthst001",
+                                                                "VM_ID" => "vm-1000",
                                                                 "UUID" => "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"
                     },
                     "4213038e-9203-3a2b-ce9d-123456789abc" => {
@@ -72,13 +60,6 @@ my %VM_TESTDATA = (
                                                                 },
                                                                 "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                                 "MAC"          => { "01:02:03:04:6e:5c"      => "arc.int" },
-                                                                "MO_REF"       => bless(
-                                                                                   {
-                                                                                     "type"  => "VirtualMachine",
-                                                                                     "value" => "vm-2199"
-                                                                                   },
-                                                                                   'ManagedObjectReference'
-                                                                ),
                                                                 "NAME"       => "tsthst099",
                                                                 "NETWORKING" => [
                                                                                   {
@@ -87,6 +68,7 @@ my %VM_TESTDATA = (
                                                                                   }
                                                                 ],
                                                                 "PATH" => "development/vm/otherpath/tsthst099",
+                                                                "VM_ID" => "vm-2000",
                                                                 "UUID" => "4213038e-9203-3a2b-ce9d-123456789abc"
                     }
 );

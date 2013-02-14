@@ -18,11 +18,11 @@ $mock->mock(
     sub {
         my $uuid = shift;
         my %VM_ALL          = %{ ReadVmFile() };
-        my %VM;
-        $VM{$uuid} = $VM_ALL{$uuid} if (exists $VM_ALL{$uuid});
         #diag("Mock get_vm_data($uuid):\n");
-        #diag(explain(\%VM));
-        return %VM;
+        return () unless (exists $VM_ALL{$uuid});
+        return %{ $VM_ALL{$uuid} };
+
+
     }
 );
 
