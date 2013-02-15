@@ -97,14 +97,14 @@ my $vm_json=<<EOF;
       "MAC" : {
          "01:02:03:04:2e:73" : "vlan_902"
       },
-      "NAME" : "SomeVM123",
+      "NAME" : "Some VM123",
       "NETWORKING" : [
          {
             "MAC" : "01:02:03:04:2e:73",
             "NETWORK" : "vlan_123"
          }
       ],
-      "PATH" : "development/vm/Unrelated/VMPath/Web-Java/SomeVM123",
+      "PATH" : "development/vm/Unrelated/VMPath/Web-Java/Some VM123",
       "UUID" : "4213c435-a176-a533-e07e-38644cf43390",
       "VM_ID" : "vm-9876"
    }

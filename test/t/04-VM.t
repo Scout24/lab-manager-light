@@ -50,14 +50,14 @@ $mock->mock(
         return 1;
     }
 );
-use_ok "LML::VMware::VM";
+use_ok "LML::VM";
 
 my $VM;
-warning_like { $VM = new LML::VMware::VM() } qr(Give the VM uuid as arg), "contructor should fail on missing argument";
+warning_like { $VM = new LML::VM() } qr(Give the VM uuid as arg), "contructor should fail on missing argument";
 is( $VM,                           undef, "failed constructor should return undef" );
-is( new LML::VMware::VM("foobar"), undef, "constructor should return undef if no VM found for given uuid" );
+is( new LML::VM("foobar"), undef, "constructor should return undef if no VM found for given uuid" );
 
-$VM = new LML::VMware::VM("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
+$VM = new LML::VM("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
 my %VM_DATA = LML::VMware::get_vm_data("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
 is_deeply( \%VM_DATA, $VM, "constructor should return hashref with VM datails" );
 
@@ -72,7 +72,7 @@ is_deeply( [ $VM->get_macs_for_networks("arc.int") ], ["01:02:03:04:6e:4e"], "ge
 is_deeply( [ $VM->get_macs_for_networks( "arc.int", "foo.bar" ) ], ["01:02:03:04:6e:4e"], "get_macs_for_networks should return matching mac if called with a list containing the right network" );
 
 ok( $VM->forcenetboot,                                                           "should return that forcenetboot is active for managed VM" );
-ok( !LML::VMware::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot, "should return that forcenetboot is not active for unmanaged VM" );
+ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot, "should return that forcenetboot is not active for unmanaged VM" );
 
 ok ($VM->activate_forcenetboot,"should not fail activating force net boot");
 ok (($extraopts_key eq "bios.bootDeviceClasses" and $extraopts_value eq "allow:net"),"should have used the correct vSphere setting to actually force only net boot");

@@ -1,6 +1,7 @@
 package LML::Common;
 
 use strict;
+use warnings;
 use Exporter;
 use vars qw(
   @ISA
@@ -46,10 +47,11 @@ Debug(@INC);
 
 our @CONFIGFILES;
 our %CONFIG;
+
 sub LoadConfig {
 
     # optionally specify config files to read
-    if (scalar(@_)) {
+    if ( scalar(@_) ) {
         @CONFIGFILES = @_;
     }
 
@@ -83,7 +85,7 @@ sub LoadConfig {
 
     tie %CONFIG, 'Config::IniFiles', ( -import => $conf, -nocase => 1 ) or die "Could not tie to config.";
 
-    $isDebug = 1 if (Config("lml","debug"));
+    $isDebug = 1 if ( Config( "lml", "debug" ) );
     if ($isDebug) {
         Debug("Merged configuration:");
         $conf->OutputConfigToFileHandle(*STDERR);
@@ -161,4 +163,6 @@ sub ReadVmFile() {
     }
     return $VM;
 }
+
+
 1;

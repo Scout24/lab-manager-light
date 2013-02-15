@@ -2,7 +2,7 @@
 #
 # create a VM object which encapsulates a single VM
 
-package LML::VMware::VM;
+package LML::VM;
 
 use strict;
 use warnings;
