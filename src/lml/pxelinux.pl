@@ -73,7 +73,7 @@ my $LAB = ReadLabFile;
 my @vsphere_networks = (); # list of network names for which LML is responsible.
 my $config_vsphere_networks = Config( "vsphere", "networks" );
 if ($config_vsphere_networks) {
-    if ( ref($config_vsphere_networks) ) {
+    if ( ref($config_vsphere_networks) eq "ARRAY") {
         @vsphere_networks = @{$config_vsphere_networks};
     } else {
         @vsphere_networks = ($config_vsphere_networks);
@@ -109,21 +109,12 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     push( @error , 
         $Policy->validate_vm_name,
         $Policy->validate_hostrules_pattern,
+        $Policy->validate_dns_zones,
     
     
     );
     
-    
-    # check VM against forbidden DNS zones
-    my $dnscheckzones = Config( "HOSTRULES", "DNSCHECKZONES" );
-    if ( scalar( @{$dnscheckzones} ) ) {
-        for my $z ( @{$dnscheckzones} ) {
-            if ( scalar( gethostbyname( $vm_name . ".$z." ) ) ) {
-                push( @error, "Name conflict with '$vm_name.$z.'" );
-            }
-        }
-    }
-
+    #Debug(Data::Dumper->Dump([\@error],["error"]));
     # check that contact ID is set to a valid UNIX user
     my $contactuserid_field  = Config( "vsphere", "contactuserid_field" );
     my $contactuserid_minuid = Config( "vsphere", "contactuserid_minuid" );

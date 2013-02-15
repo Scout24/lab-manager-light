@@ -6,9 +6,14 @@ use warnings;
 use LML::Common;
 
 sub new {
-    my ($class,@configfiles) = @_;
-    my %C = LoadConfig(@configfiles);
-    my $self  = \%C;
+    my $class = shift;
+    my $self;
+    if (ref($_[0]) eq "HASH" ) {
+        $self = shift;
+    } else {
+        my %C = LoadConfig(@_);
+        $self  = \%C;
+    }
     bless( $self, $class );
     return $self;
 }
