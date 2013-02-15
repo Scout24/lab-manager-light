@@ -96,15 +96,10 @@ my %VM_TESTDATA = (
                                                                 "UUID" => "4213c435-a176-a533-e07e-38644cf43390",
                                                                 "VM_ID" => "vm-9876"
                                                               }
-                    
 );
 
 # dump %VM to file
-open( VM_CONF, ">$CONFIG{lml}{datadir}/vm.conf" ) || die "Could not open '$CONFIG{lml}{datadir}/vm.conf' for writing";
-flock( VM_CONF, 2 ) || die;
-print VM_CONF "# " . __FILE__ . " " . POSIX::strftime( "%Y-%m-%d %H:%M:%S\n", localtime() ) . "\n";
-print VM_CONF Data::Dumper->Dump( [ \%VM_TESTDATA ], [qw(VM)] );
-close(VM_CONF);
+write_vm_file(\%VM_TESTDATA);
 
 # now read the data back from file and compare it with the original data
 my %VM = %{ ReadVmFile() };

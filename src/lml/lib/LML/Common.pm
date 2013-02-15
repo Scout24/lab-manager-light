@@ -7,7 +7,7 @@ use vars qw(
   @EXPORT
 );
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config ReadVmFile ReadLabFile ReadDataFile $isDebug Debug $LML_VERSION);
+our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config ReadVmFile ReadLabFile ReadDataFile write_vm_file $isDebug Debug $LML_VERSION);
 
 use FindBin;
 
@@ -131,7 +131,6 @@ sub ReadDataFile($%) {
 }
 
 sub ReadLabFile() {
-
     # $LAB describes our internal view of the lab that lml manages
     # used mainly to react to renamed VMs or VMs with changed MAC adresses
     my $LAB->{HOSTS} = {};
@@ -161,4 +160,22 @@ sub ReadVmFile() {
     }
     return $VM;
 }
+
+sub write_vm_file($) {
+    # Purpose: Takes an hashref with vm data and dump it to
+    #          the appropriate file
+    # Returns: TRUE if ok, FALSE if errors occured
+
+    # get the parameter
+    my $VM = shift;
+
+    # open and write
+    my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
+    open( VM_CONF, ">", $vmfile ) || die "Could not open '$vmfile' for writing\n";
+    flock( VM_CONF, 2 ) || die;
+    print VM_CONF "# " . __FILE__ . " " . POSIX::strftime( "%Y-%m-%d %H:%M:%S\n", localtime() ) . "\n";
+    print VM_CONF Data::Dumper->Dump( [$VM], [qw(VM)] );
+    close(VM_CONF);
+}
+
 1;
