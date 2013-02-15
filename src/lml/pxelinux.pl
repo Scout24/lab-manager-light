@@ -21,7 +21,9 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use LML::Common;
 use LML::VMware;
+use LML::VMware::VM;
 use LML::DHCP;
+use Data::Dumper;
 
 LoadConfig();
 
@@ -34,7 +36,6 @@ $tftp_url =~ s/\/pxelinux.cfg.*$//;    # strip trailing pxelinux.cfg
 # install die handler to report fatal errors
 $SIG{__DIE__} = sub {
     die @_ if $^S;                                          # see http://perldoc.perl.org/functions/die.html at the end
-    Util::disconnect() if ( defined &Util::disconnect );    # if we have VMware code loaded then disconnect when dying.
     return unless ( Config( "lml", "showfatalerrors" ) and Config( "pxelinux", "fatalerror_template" ) );
     my $message = shift;
     chomp($message);                                        # remove trailing newlines
@@ -61,11 +62,12 @@ my @error   = ();
 # connect to vSphere
 connect_vi();
 
-my %VM  = get_vm_data($search_uuid);    # Get dump of single VM from vSphere
+# read history to detect renamed VMs and to be able to update the DHCP
 my $LAB = ReadLabFile;
 
+
 # prepare some configuration variables
-my @vsphere_networks = ();
+my @vsphere_networks = (); # list of network names for which LML is responsible.
 my $config_vsphere_networks = Config( "vsphere", "networks" );
 if ($config_vsphere_networks) {
     if ( ref($config_vsphere_networks) ) {
@@ -81,37 +83,24 @@ my $has_changed = 0;
 my $pxelinux_config_url;
 my $bootinfo;
 
+my $VM = new LML::VMware::VM($search_uuid);
+
 # if there are VMs and if we find the VM we are looking for:
-if ( scalar( keys(%VM) ) and exists( $VM{"UUID"} ) and $search_uuid eq $VM{"UUID"} ) {
-    $vm_name = $VM{NAME};
+if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
+    $vm_name = $VM->name;
 
     # check if we should handle this VM
-    my @vm_lab_macs = ();
-    if ( @vsphere_networks and exists( $VM{NETWORKING} ) and @{ $VM{NETWORKING} } ) {
-
-        # check for each MAC of the VM if the network name is in the list
-        for my $vm_network ( @{ $VM{NETWORKING} } ) {
-            if ( grep { $_ eq $vm_network->{NETWORK} } @vsphere_networks ) {
-                push( @vm_lab_macs, $vm_network->{MAC} );
-            }
-        }
-        if ( !@vm_lab_macs ) {
-            print header( -status => "404 VM does not match LML networks and is out of scope", -type => 'text/plain' );
-            Util::disconnect;
-            exit 0;
-        }
+    my @vm_lab_macs = $VM->get_macs_for_networks(@vsphere_networks);
+    if ( !@vm_lab_macs ) {
+        print header( -status => "404 VM does not match LML networks and is out of scope", -type => 'text/plain' );
+        exit 0;
     }
 
     # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
-    if (
-        Config( "modifyvm", "forcenetboot" ) and (    # either the setting is not set at all or it is set but not equal to "allow:net"
-              not exists( $VM{EXTRAOPTIONS}{'bios.bootDeviceClasses'} ) or not "$VM{EXTRAOPTIONS}{'bios.bootDeviceClasses'}" eq "allow:net"
-        )
-      )
-    {
-        setVmExtraOptsU( $VM{"UUID"}, "bios.bootDeviceClasses", "allow:net" );
+    if (Config( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot) {
+        $VM->activate_forcenetboot;
     }
-
+    
     # check for FQDN in VM name
     if ( $vm_name =~ m/\./ ) {
         push( @error, "FQDN not allowed in VM name" );
@@ -145,10 +134,10 @@ if ( scalar( keys(%VM) ) and exists( $VM{"UUID"} ) and $search_uuid eq $VM{"UUID
     my $contactuserid_field  = Config( "vsphere", "contactuserid_field" );
     my $contactuserid_minuid = Config( "vsphere", "contactuserid_minuid" );
     if (     $contactuserid_field
-         and exists $VM{CUSTOMFIELDS}{$contactuserid_field}
+         and exists $VM->{CUSTOMFIELDS}{$contactuserid_field}
          and $contactuserid_minuid )
     {
-        my $contactuserid = $VM{CUSTOMFIELDS}{$contactuserid_field};
+        my $contactuserid = $VM->{CUSTOMFIELDS}{$contactuserid_field};
         my @pwnaminfo     = getpwnam($contactuserid);
         unless ( @pwnaminfo and scalar(@pwnaminfo) and $pwnaminfo[2] > $contactuserid_minuid ) {
             push( @error, "$contactuserid_field '" . $contactuserid . "' does not exist" );
@@ -159,8 +148,8 @@ if ( scalar( keys(%VM) ) and exists( $VM{"UUID"} ) and $search_uuid eq $VM{"UUID
 
     # check that expiry date is set and valid
     my $expires_field = Config( "vsphere", "expires_field" );
-    if ( exists $VM{CUSTOMFIELDS}{$expires_field} ) {
-        my $vmdate = $VM{CUSTOMFIELDS}{$expires_field};
+    if ( exists $VM->{CUSTOMFIELDS}{$expires_field} ) {
+        my $vmdate = $VM->{CUSTOMFIELDS}{$expires_field};
         my $expires;
         eval { $expires = DateTime::Format::Flexible->parse_datetime( $vmdate, european => ( Config( "vsphere", "expires_european" ) ? 1 : 0 ) ) };
         if ($@) {
@@ -204,21 +193,21 @@ if ( scalar( keys(%VM) ) and exists( $VM{"UUID"} ) and $search_uuid eq $VM{"UUID
 
     if (     $pxelinuxcfg_path
          and $forceboot_field
-         and exists $VM{CUSTOMFIELDS}{$forceboot_field}
-         and $VM{CUSTOMFIELDS}{$forceboot_field}
-         and not grep { $_ eq uc( $VM{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
+         and exists $VM->{CUSTOMFIELDS}{$forceboot_field}
+         and $VM->{CUSTOMFIELDS}{$forceboot_field}
+         and not grep { $_ eq uc( $VM->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
     {
         my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot = $VM{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot = $VM->{CUSTOMFIELDS}{$forceboot_field};
         my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
 
         # For backward compatibility. If the user is working with a forceboot_target_field
         # then take this value, ...
         if (     $forceboot_target_field
-             and exists $VM{CUSTOMFIELDS}{$forceboot_target_field}
-             and $VM{CUSTOMFIELDS}{$forceboot_target_field} )
+             and exists $VM->{CUSTOMFIELDS}{$forceboot_target_field}
+             and $VM->{CUSTOMFIELDS}{$forceboot_target_field} )
         {
-            $forceboot_target = $VM{CUSTOMFIELDS}{$forceboot_target_field};
+            $forceboot_target = $VM->{CUSTOMFIELDS}{$forceboot_target_field};
 
             # Else take the value from the forceboot field as target (old behaviour)
         } else {

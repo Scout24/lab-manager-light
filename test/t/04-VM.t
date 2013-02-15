@@ -1,0 +1,79 @@
+use strict;
+use warnings;
+
+use Test::More;
+use Test::Warn;
+use Test::MockModule;
+use LML::Common;
+
+# load shipped configuration
+LoadConfig( "src/lml/default.conf", "test/data/test.conf" );
+
+# mock needed function from LML::VMware
+use LML::VMware;
+my $mock            = new Test::MockModule('LML::VMware');
+my $off_value       = undef;
+my $extraopts_key   = undef;
+my $extraopts_value = undef;
+
+$mock->mock(
+    'get_vm_data',
+    sub {
+        my $uuid   = shift;
+        my %VM_ALL = %{ ReadVmFile() };
+
+        #diag("Mock get_vm_data($uuid):\n");
+        return () unless ( exists $VM_ALL{$uuid} );
+        return %{ $VM_ALL{$uuid} };
+
+    }
+);
+
+$mock->mock(
+    'setVmCustomValueU',
+    sub {
+        my $uuid            = shift;
+        my $forceboot_field = shift;
+        $off_value = shift;
+
+        #diag("Mock setVmCustomValueU($uuid,$forceboot_field,$off_value)\n");
+        return 1;
+    }
+);
+
+$mock->mock(
+    'setVmExtraOptsU',
+    sub {
+        my $uuid;
+        ( $uuid, $extraopts_key, $extraopts_value ) = @_;
+        #diag("Mock setVmExtraOptsU($uuid,$extraopts_key,$extraopts_value)\n");
+        return 1;
+    }
+);
+use_ok "LML::VMware::VM";
+
+my $VM;
+warning_like { $VM = new LML::VMware::VM() } qr(Give the VM uuid as arg), "contructor should fail on missing argument";
+is( $VM,                           undef, "failed constructor should return undef" );
+is( new LML::VMware::VM("foobar"), undef, "constructor should return undef if no VM found for given uuid" );
+
+$VM = new LML::VMware::VM("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
+my %VM_DATA = LML::VMware::get_vm_data("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
+is_deeply( \%VM_DATA, $VM, "constructor should return hashref with VM datails" );
+
+is( $VM->uuid, "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf", "uuid method should return uuid" );
+
+is( $VM->name, "tsthst001", "name method should return VM name" );
+
+is_deeply( [ $VM->get_macs() ], [ '01:02:03:04:6e:4e', '01:02:03:04:9e:9e' ], "Get_macs should return a list of mac addresses" );
+is_deeply( [ $VM->get_macs_for_networks() ], [], "get_macs_for_networks should return empty list if called without parameters" );
+is_deeply( [ $VM->get_macs_for_networks( "baz", "foo.bar" ) ], [], "get_macs_for_networks should return empty list if called with a list of wrong networks" );
+is_deeply( [ $VM->get_macs_for_networks("arc.int") ], ["01:02:03:04:6e:4e"], "get_macs_for_networks should return matching mac if called with the right network" );
+is_deeply( [ $VM->get_macs_for_networks( "arc.int", "foo.bar" ) ], ["01:02:03:04:6e:4e"], "get_macs_for_networks should return matching mac if called with a list containing the right network" );
+
+ok( $VM->forcenetboot,                                                           "should return that forcenetboot is active for managed VM" );
+ok( !LML::VMware::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot, "should return that forcenetboot is not active for unmanaged VM" );
+
+ok ($VM->activate_forcenetboot,"should not fail activating force net boot");
+ok (($extraopts_key eq "bios.bootDeviceClasses" and $extraopts_value eq "allow:net"),"should have used the correct vSphere setting to actually force only net boot");
+done_testing();

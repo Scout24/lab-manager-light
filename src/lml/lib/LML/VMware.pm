@@ -5,6 +5,7 @@
 package LML::VMware;
 
 use strict;
+use warnings;
 use Exporter;
 use vars qw(
   $VERSION
@@ -16,6 +17,14 @@ our @ISA    = qw(Exporter);
 our @EXPORT = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 
 use VMware::VIRuntime;
+use LML::Common;
+use Carp;
+
+
+################ Old Interface #############
+#
+#
+#
 
 # only on VMA
 #use VMware::VmaTargetLib;
@@ -177,7 +186,7 @@ sub connect_vi() {
     #	even though they are not required on VMA
     #	fix so that it won't do that anymore
     eval { Opts::validate(); };
-    die("Could not validate VI options: $@") if ($@);
+    croak("Could not validate VI options: $@") if ($@);
 
     #	eval {
     #		my @targets = VmaTargetLib::enumerate_targets;
@@ -185,7 +194,8 @@ sub connect_vi() {
     #		$targets[0]->login()
     #	};
     eval { Util::connect(); };
-    die("Could not connect to VI: $@") if ($@);
+    croak("Could not connect to VI: $@") if ($@);
+    Debug("Connected to vSphere");
 
     # initialize CUSTOMFIELDIDS and retrieve custom fields
     my %fields = custom_fields();
@@ -421,4 +431,14 @@ sub setVmCustomValueU {
         return setVmCustomValue( $vm_view, $key, $value );
     }
 }
+
+END {
+    if ( defined &Util::disconnect ) {
+        # if we have VMware code loaded then disconnect when dying.
+        Util::disconnect();
+        Debug("Disconnected from vSphere");
+    }
+}
+        
+    
 1;
