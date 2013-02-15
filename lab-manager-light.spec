@@ -1,6 +1,6 @@
 Name: lab-manager-light
 Version: VERSION
-Release: 5
+Release: 6
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
 License: GPL
@@ -17,7 +17,6 @@ Requires: /usr/bin/perl
 Requires: perl(CGI)
 Requires: perl(Config::IniFiles) >= 2.72
 Requires: perl(DateTime::Format::Flexible)
-Requires: perl(SVN::Client) subversion
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON)
 BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
