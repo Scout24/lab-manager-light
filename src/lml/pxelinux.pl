@@ -21,11 +21,14 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use LML::Common;
 use LML::VMware;
-use LML::VMware::VM;
+use LML::VM;
+use LML::Config;
+use LML::VMpolicy;
 use LML::DHCP;
 use Data::Dumper;
 
-LoadConfig();
+my $C = new LML::Config(); # implicitly also fills %LML::Common::CONFIG
+
 
 # our URL base from REQUEST_URI
 our $base_url = url();
@@ -70,7 +73,7 @@ my $LAB = ReadLabFile;
 my @vsphere_networks = (); # list of network names for which LML is responsible.
 my $config_vsphere_networks = Config( "vsphere", "networks" );
 if ($config_vsphere_networks) {
-    if ( ref($config_vsphere_networks) ) {
+    if ( ref($config_vsphere_networks) eq "ARRAY") {
         @vsphere_networks = @{$config_vsphere_networks};
     } else {
         @vsphere_networks = ($config_vsphere_networks);
@@ -83,7 +86,7 @@ my $has_changed = 0;
 my $pxelinux_config_url;
 my $bootinfo;
 
-my $VM = new LML::VMware::VM($search_uuid);
+my $VM = new LML::VM($search_uuid);
 
 # if there are VMs and if we find the VM we are looking for:
 if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
@@ -101,35 +104,17 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         $VM->activate_forcenetboot;
     }
     
-    # check for FQDN in VM name
-    if ( $vm_name =~ m/\./ ) {
-        push( @error, "FQDN not allowed in VM name" );
-    }
-    if ( $vm_name =~ m/ / ) {
-        push( @error, "Spaces not allowed in VM name" );
-    }
-    if ( $vm_name ne lc($vm_name) ) {
-        push( @error, "UpperCase letters not allowed in VM name" );
-    }
-
-    # check VM name against pattern of allowed names
-    my $hostrulespattern = Config( "hostrules", "pattern" );
-    if ( $hostrulespattern and $vm_name !~ $hostrulespattern ) {
-        my $displaypattern = $hostrulespattern;
-        $displaypattern =~ s/\^/^^/g;    # pxelinux menu uses ^ to mark keyboard shortcuts. ^^ comes out as plain ^
-        push( @error, "VM name does not match '$displaypattern' pattern" );
-    }
-
-    # check VM against forbidden DNS zones
-    my $dnscheckzones = Config( "HOSTRULES", "DNSCHECKZONES" );
-    if ( scalar( @{$dnscheckzones} ) ) {
-        for my $z ( @{$dnscheckzones} ) {
-            if ( scalar( gethostbyname( $vm_name . ".$z." ) ) ) {
-                push( @error, "Name conflict with '$vm_name.$z.'" );
-            }
-        }
-    }
-
+    my $Policy = new LML::VMpolicy($C,$VM);
+    
+    push( @error , 
+        $Policy->validate_vm_name,
+        $Policy->validate_hostrules_pattern,
+        $Policy->validate_dns_zones,
+    
+    
+    );
+    
+    #Debug(Data::Dumper->Dump([\@error],["error"]));
     # check that contact ID is set to a valid UNIX user
     my $contactuserid_field  = Config( "vsphere", "contactuserid_field" );
     my $contactuserid_minuid = Config( "vsphere", "contactuserid_minuid" );
@@ -295,6 +280,7 @@ if ( scalar(@error) ) {
     print "menu title " . Config( "pxelinux", "error_title" ) . " " . $vm_name . "\n";
     my $c = 1;
     foreach my $e (@error) {
+        $e =~ s/\^/^^/g;  # pxelinux menu uses ^ to mark keyboard shortcuts. ^^ comes out as plain ^
         print <<EOF;
 label l$c
         menu label $c. $e

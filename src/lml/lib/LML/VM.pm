@@ -2,7 +2,7 @@
 #
 # create a VM object which encapsulates a single VM
 
-package LML::VMware::VM;
+package LML::VM;
 
 use strict;
 use warnings;
@@ -15,17 +15,25 @@ use Carp;
 # new object, takes uuid
 sub new {
     my $class = shift;
+    my $self;
     my $uuid = shift;
-    unless ($uuid) {
-        carp("Give the VM uuid as arg to the constructor");
-        return undef;
+    if (ref($uuid) eq "HASH") {
+        # hashref given, turn it into a VM object.
+        # if some of the data structures are missing, then you are on your own!
+        $self = $uuid;
+    } else {
+    
+        unless ($uuid) {
+            carp("Give the VM uuid as arg to the constructor");
+            return undef;
+        }
+        my %VM_DATA = get_vm_data($uuid);
+        if (! %VM_DATA) {
+            Debug("Could not load any data for uuid '$uuid'");
+            return undef;
+        }
+        $self = \%VM_DATA;
     }
-    my %VM_DATA = get_vm_data($uuid);
-    if (! %VM_DATA) {
-        Debug("Could not load any data for uuid '$uuid'");
-        return undef;
-    }
-    my $self = \%VM_DATA;
     bless($self,$class);
     return $self;
 }

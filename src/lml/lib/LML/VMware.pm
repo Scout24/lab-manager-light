@@ -436,7 +436,7 @@ END {
     if ( defined &Util::disconnect ) {
         # if we have VMware code loaded then disconnect when dying.
         Util::disconnect();
-        Debug("Disconnected from vSphere");
+        #Debug("Disconnected from vSphere");
     }
 }
         
