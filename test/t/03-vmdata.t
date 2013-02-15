@@ -110,7 +110,9 @@ my $vm_json=<<EOF;
    }
 }
 EOF
+chomp($vm_json);
 my $result = display_vm_data("",1);
+chomp($result);
 is ($result,$vm_json,"all data");
 $result = display_vm_data("");
 like ($result,qr(.*html.*),"all data as html");

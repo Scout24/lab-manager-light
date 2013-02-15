@@ -1,13 +1,12 @@
-TOPLEVEL = doc src lab-manager-light.spec LICENSE.TXT
-MANIFEST = VERSION $(wildcard $(TOPLEVEL) doc/* src/* src/*/* src/*/*/* src/*/*/*/*)
+TOPLEVEL = test doc src lab-manager-light.spec LICENSE.TXT
 
 GITREV := HEAD
 
-VERSION := $(shell cat VERSION)
-REVISION := "$(shell git rev-list $(GITREV) -- $(TOPLEVEL) | wc -l)$(EXTRAREV)"
+VERSION := $(shell cat VERSION 2>/dev/null)
+REVISION := "$(shell git rev-list $(GITREV) -- $(TOPLEVEL) 2>/dev/null| wc -l)$(EXTRAREV)"
 PV = lab-manager-light-$(VERSION)
 
-.PHONY: all test deb rpm info debinfo rpminfo
+.PHONY: all test deb srpm clean rpm info debinfo rpminfo
 
 all: test deb rpm
 	ls -l dist/*.deb dist/*.rpm
@@ -15,14 +14,15 @@ all: test deb rpm
 test: clean
 	mkdir -p test/temp
 	prove test/t
-	
-deb:  test clean $(MANIFEST)
+
+deb: clean test
 	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib build/deb/etc/lml build/deb/DEBIAN
 # replace RHEL-style users with Debian-style users
 	install -m 0644 src/cron/lab-manager-light build/deb/etc/cron.d/lab-manager-light
 	sed -e 's/apache/www-data/' -i build/deb/etc/cron.d/lab-manager-light
 	install -m 0644 src/apache/lab-manager-light.conf build/deb/etc/apache2/conf.d/lab-manager-light.conf
 	cp -r src/lml build/deb/usr/lib/
+	rm build/deb/usr/lib/lml/.gitignore
 	install -m 0644 src/DEBIAN/* build/deb/DEBIAN
 	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
@@ -37,15 +37,19 @@ deb:  test clean $(MANIFEST)
 	fakeroot dpkg -b build/deb dist
 	lintian --quiet -i dist/*deb
 
-rpm: test clean $(MANIFEST)
-	mkdir -p dist build/$(PV) build/BUILD
-	cp -r $(TOPLEVEL) build/$(PV)
+srpm: clean
+	mkdir -p dist build/$(PV) build/BUILD test/temp
+	cp -r $(TOPLEVEL) test/* .proverc Makefile build/$(PV)
 	mv build/$(PV)/*.spec build/
 	sed -i -e s/VERSION/$(VERSION)/ -e /^Release/s/$$/.$(REVISION)/ build/*.spec
 	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/$(PV)/src/lml/lib/LML/Common.pm
 	tar -czf build/$(PV).tar.gz -C build $(PV)
-	rpmbuild --define="_topdir $(CURDIR)/build" --define="_sourcedir $(CURDIR)/build" --define="_srcrpmdir $(CURDIR)/dist" --nodeps -ba build/*.spec
-	mv -v build/RPMS/*/* dist/
+	rpmbuild --define="_topdir $(CURDIR)/build" --define="_sourcedir $(CURDIR)/build" --define="_srcrpmdir $(CURDIR)/dist" --nodeps -bs build/*.spec
+
+rpm: srpm
+	ln -svf ../dist build/noarch
+	rpmbuild --nodeps --define="_topdir $(CURDIR)/build" --define="_rpmdir %{_topdir}" --rebuild $(CURDIR)/dist/*.src.rpm
+	echo -e '\n\n\n\n\nWARNING! THIS RPM IS NOT INTENDED FOR PRODUCTION USE. PLEASE USE rpmbuild --rebuild dist/*.src.rpm TO CREATE A PRODUCTION RPM PACKAGE!\n\n\n\n\n'
 
 info: rpminfo debinfo
 
