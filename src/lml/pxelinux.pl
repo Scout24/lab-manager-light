@@ -183,11 +183,13 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         my $forceboot_target;    # Will be set in the next step, just to define with my
         my $forceboot              = $VM->{CUSTOMFIELDS}{$forceboot_field};
         my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
-        my $forceboot_target_value = $VM->{CUSTOMFIELDS}{$forceboot_target_field}
-            if defined $forceboot_target_field;
-
-        # normalize to "" if customfield is not defined
-        $forceboot_target_value = "" if not defined $forceboot_target_value;
+        
+        my $forceboot_target_value;
+        if (defined $forceboot_target_field) {
+            $forceboot_target_value = exists $VM->{CUSTOMFIELDS}{$forceboot_target_field} ? $VM->{CUSTOMFIELDS}{$forceboot_target_field} : "";
+        } else {
+            $forceboot_target_value = "";
+        }
 
         # if the user is working with a forceboot_target_field
         # then take this value, ...
