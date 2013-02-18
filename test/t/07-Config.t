@@ -4,14 +4,20 @@ use warnings;
 use Test::More;
 
 BEGIN {
+    use_ok "LML::Common";
     use_ok "LML::Config";
 }
 
-# test if we can load the class
+# test if we can load config from config files
 my $C = new_ok( "LML::Config" => [ "src/lml/default.conf", "test/data/test.conf" ] );
+is_deeply( $C->get( 'hostrules', 'dnscheckzones' ), [ "some.zone", "some.other.zone" ], "should give the value from default.conf (some.zone, some.other.zone)" );
+is( $C->get( 'lml', 'datadir' ), "test/temp", "should give the value from test.conf (test/temp)" );
 
-# now test the get method
-my $test_data = $C->get('dhcp', 'hostsfile');
-ok($test_data, "Should fail, if no value for hostsfile was read");
+# test if old direct way also works
+is( $CONFIG{'lml'}{'datadir'}, "test/temp", "should give the value from test.conf (test/temp) via direct access to CONFIG Hash" );
+
+
+# test if we can load config from the constructor
+is( new LML::Config( { "foo" => { "bar" => "baz" } } )->get( "foo", "bar" ), "baz", "should give value from constructor (baz)" );
 
 done_testing();
