@@ -181,23 +181,27 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
          and not grep { $_ eq uc( $VM->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
     {
         my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot                = $VM->{CUSTOMFIELDS}{$forceboot_field};
-        my $forceboot_target_field   = Config( "vsphere", "forceboot_target_field" );
+        my $forceboot              = $VM->{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
+        my $forceboot_target_value = $VM->{CUSTOMFIELDS}{$forceboot_target_field}
+            if defined $forceboot_target_field;
+
+        # normalize to "" if customfield is not defined
+        $forceboot_target_value = "" if not defined $forceboot_target_value;
 
         # if the user is working with a forceboot_target_field
         # then take this value, ...
         if (     $forceboot_target_field
-             and exists $VM->{CUSTOMFIELDS}{$forceboot_target_field}
-             and $VM->{CUSTOMFIELDS}{$forceboot_target_field} )
+             and $forceboot_target_value )
         {
-            $forceboot_target = $VM->{CUSTOMFIELDS}{$forceboot_target_field};
+            $forceboot_target = $forceboot_target_value;
         }
         # else take the value from the forceboot field as target (old behaviour)
         else {
             # use forceboot default entry, if no target is given but the field exist
             if (    Config( "forceboot", "default" )
-                and exists $VM->{CUSTOMFIELDS}{$forceboot_target_field}
-                and $VM->{CUSTOMFIELDS}{$forceboot_target_field} eq ""
+                and $forceboot_target_value eq ""
+                and not $forceboot eq "fatalerror"        # because 'fatalerror' is hardcoded
                 and not Config( "forceboot", $forceboot ) # because we can have any value for true, so filter out
               )
             {
@@ -210,9 +214,14 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         }
 
         # little exploit protection, could be done more professional :-)
-        $forceboot_target =~ s/\.{2,}//g;               # remove any .. or ...
-        $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;    # normalize to contain only valid path characters
-                                                        # if forceboot contains a path relative to the pxelinux TFTP prefix
+        # remove any .. or ...
+        $forceboot_target =~ s/\.{2,}//g;
+        $forceboot =~ s/\.{2,}//g;
+        # normalize to contain only valid path characters
+        # if forceboot contains a path relative to the pxelinux TFTP prefix
+        $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;
+        $forceboot =~ tr[:/A-Za-z0-9._-][]dc;
+
         # try if a file exists for this forceboot target entry
         if ( -r $pxelinuxcfg_path . "/" . $forceboot_target and !-d $pxelinuxcfg_path . "/" . $forceboot_target ) {
             $pxelinux_config_url = "$tftp_url/$forceboot_target";
@@ -237,11 +246,11 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             # Because we have to differ between the old and new variants in forceboot, check if
             # we hit the else block above (a bit ugly, but it works)
             if ( $forceboot_target eq $forceboot ) {
-                push( @error, "Invalid force boot target '$forceboot_target'" );
+                push( @error, "Invalid force boot target '$forceboot_field'" );
             } else {
-                push( @error, "Please specify a valid force boot target in '$forceboot_target_field'" );
+                push( @error, "Invalid force boot target in '$forceboot_target_field'" );
             }
-        }    # else do nothing to silently ignore invalid force boot targets
+        }   # else do nothing to silently ignore invalid force boot targets
     }
 
     # up till here we have only checks that verify the VM.
