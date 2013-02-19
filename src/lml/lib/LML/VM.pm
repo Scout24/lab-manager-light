@@ -52,8 +52,8 @@ sub name {
 
 sub get_macs {
     my $self = shift;
-    return undef unless (exists $self->{"MAC"});
-    return keys($self->{"MAC"});
+    return undef unless (exists $self->{"MAC"} and ref($self->{"MAC"}) eq "HASH");
+    return keys(%{$self->{"MAC"}});
 }
 
 sub get_macs_for_networks {
