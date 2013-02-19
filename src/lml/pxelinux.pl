@@ -109,63 +109,13 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         $Policy->validate_vm_name,
         $Policy->validate_hostrules_pattern,
         $Policy->validate_dns_zones,
+        $Policy->validate_contact_user,
+        $Policy->validate_expiry,
+        $Policy->validate_vm_dns_name($LAB),
 
     );
 
     #Debug(Data::Dumper->Dump([\@error],["error"]));
-    # check that contact ID is set to a valid UNIX user
-    my $contactuserid_field  = Config( "vsphere", "contactuserid_field" );
-    my $contactuserid_minuid = Config( "vsphere", "contactuserid_minuid" );
-    if (     $contactuserid_field
-         and exists $VM->{CUSTOMFIELDS}{$contactuserid_field}
-         and $contactuserid_minuid )
-    {
-        my $contactuserid = $VM->{CUSTOMFIELDS}{$contactuserid_field};
-        my @pwnaminfo     = getpwnam($contactuserid);
-        unless ( @pwnaminfo and scalar(@pwnaminfo) and $pwnaminfo[2] > $contactuserid_minuid ) {
-            push( @error, "$contactuserid_field '" . $contactuserid . "' does not exist" );
-        }
-    } else {
-        push( @error, "Must set $contactuserid_field to valid username" );
-    }
-
-    # check that expiry date is set and valid
-    my $expires_field = Config( "vsphere", "expires_field" );
-    if ( exists $VM->{CUSTOMFIELDS}{$expires_field} ) {
-        my $vmdate = $VM->{CUSTOMFIELDS}{$expires_field};
-        my $expires;
-        eval { $expires = DateTime::Format::Flexible->parse_datetime( $vmdate, european => ( Config( "vsphere", "expires_european" ) ? 1 : 0 ) ) };
-        if ($@) {
-            push( @error, "Cannot parse $expires_field date '" . $vmdate . "'" );
-        } elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
-            push( @error, "VM expired on " . $expires );
-        }
-
-        # implicit logic: If we got here without errors then the date is parsable and in the future
-    } else {
-        push( @error, "Must set $expires_field to valid date or date/time" );
-    }
-
-    # TODO: The following test fails to notice name conflicts against offline machines that do not have a DNS records at the moment
-    # you might want to increase your lease time to counter this effect or add some code to compare the new name against
-    # the list of known hostnames in $LAB
-    #
-    # if the host changed the name make sure that it does not conflict with an existing name in our domain
-    my $appendomain = Config( "dhcp",      "appenddomain" );
-    my $dnschecknew = Config( "hostrules", "dnschecknew" );
-    my $vm_fqdn = $vm_name . ".$appendomain.";
-    if ( exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) ) {
-        if ( not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}
-             and scalar( gethostbyname($vm_fqdn) ) )
-        {
-            Debug( Dumper( gethostbyname($vm_fqdn) ) ) if ($isDebug);
-            push( @error, "Renamed VM '$vm_fqdn' name exists already in '$appendomain'" );
-        }
-    } elsif ( $dnschecknew and scalar( gethostbyname($vm_fqdn) ) ) {
-
-        # if this is a brand-new machine (e.g. we have no history of it) and new VM checking is enabled
-        push( @error, "New VM name exists already in '$appendomain'" );
-    }
 
     # check force boot configuration
     my $pxelinuxcfg_path = Config( "pxelinux", "pxelinuxcfg_path" );
