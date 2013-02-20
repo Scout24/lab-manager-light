@@ -27,7 +27,7 @@ sub validate_vm_name {
     # check VM name to contain only allowed characters
     my $self    = shift;
     my $vm_name = $self->{VM}->name;
-    Debug("validating vm name '$vm_name'");
+    Debug("validating name '$vm_name' against ^[a-z0-9_-]+\$");
     if ( $vm_name =~ m/^[a-z0-9_-]+$/ ) {
         return;
     }
@@ -41,7 +41,7 @@ sub validate_hostrules_pattern {
     my $vm_name          = $self->{VM}->name;
     my $hostrulespattern = $self->{Config}->get( "hostrules", "pattern" );
     return unless ($hostrulespattern);    # skip if not configured
-    Debug("checking vm name '$vm_name' against $hostrulespattern");
+    Debug("validating name '$vm_name' against $hostrulespattern");
     if ( $vm_name =~ $hostrulespattern ) {
         return;
     }
@@ -58,7 +58,7 @@ sub validate_dns_zones {
     if ( scalar(@dnscheckzones) ) {
         for my $z (@dnscheckzones) {
 
-            Debug( "DNS Lookup " . $vm_name . ".$z." );
+            Debug( "validating name in other DNS domain: " . $vm_name . ".$z." );
             if ( scalar( gethostbyname( $vm_name . ".$z." ) ) ) {
                 push( @error, "Name conflict with '$vm_name.$z.'" );
             }
@@ -82,7 +82,7 @@ sub validate_contact_user {
         if ( exists $self->{VM}{CUSTOMFIELDS}{$contactuserid_field} ) {
             my $contactuserid = $self->{VM}{CUSTOMFIELDS}{$contactuserid_field};
 
-            Debug("checking $contactuserid > $contactuserid_minuid");
+            Debug("validating user $contactuserid > $contactuserid_minuid");
 
             # Ask OS about user
             my @pwnaminfo = getpwnam($contactuserid);
@@ -124,7 +124,7 @@ sub validate_expiry {
         } elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
             push( @error, "VM expired on " . $expires );
         }
-        Debug("checked expires '$vmdate', parsed as '$expires'");
+        Debug("validating expiry '$vmdate', parsed as '$expires'");
 
         # implicit logic: If we got here without errors then the date is parsable and in the future
     } else {
@@ -155,25 +155,19 @@ sub validate_vm_dns_name {
     my $vm_fqdn = $vm_name . ".$appenddomain.";
     my ( $dns_fqdn, $aliases, $addrtype, $length, @addrs ) = gethostbyname($vm_fqdn);
     Debug( "validating name '$vm_name' in managed DNS domain: $appenddomain: " . join( ", ", map { inet_ntoa($_) } @addrs ) );
-    my @error;
 
     if ( exists( $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) ) {
-
         # we have old data
         if ( $vm_name eq $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) {
-
             # old name equals new name
             return;
         } elsif ($dns_fqdn) {
-
             # new VM name exists in DNS
             return "Renamed VM '$vm_fqdn' name exists already in '$appenddomain'";
         }    # else new VM name does not exist in DNS -> all OK
     } else {
-
         # we don't have old data, must be new VM
         if ($dns_fqdn) {
-
             # new VM name conflicts with existing systems in managed domain
             return "New VM name exists already in '$appenddomain'";
         }
