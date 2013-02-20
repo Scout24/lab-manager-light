@@ -25,15 +25,14 @@ use LML::VM;
 use LML::Config;
 use LML::VMpolicy;
 use LML::DHCP;
+use LML::Result;
 use Data::Dumper;
 
 my $C = new LML::Config();    # implicitly also fills %LML::Common::CONFIG
 
 # our URL base from REQUEST_URI
 our $base_url = url();
-$base_url =~ s/\/[^\/]+$//;    # cheap basename()
-my $tftp_url = $base_url;
-$tftp_url =~ s/\/pxelinux.cfg.*$//;    # strip trailing pxelinux.cfg
+$base_url =~ s/\/[^\/]+$//;    # cheap dirname()
 
 # install die handler to report fatal errors
 $SIG{__DIE__} = sub {
@@ -85,6 +84,7 @@ my $pxelinux_config_url;
 my $bootinfo;
 
 my $VM = new LML::VM($search_uuid);
+my $result = new LML::Result( $C, url() );
 
 # if there are VMs and if we find the VM we are looking for:
 if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
@@ -98,119 +98,34 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     }
 
     # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
-    if ( Config( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
+    if ( $C->get( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
         $VM->activate_forcenetboot;
     }
 
     my $Policy = new LML::VMpolicy( $C, $VM );
 
-    push(
-        @error,
+    $result->add_error(
         $Policy->validate_vm_name,
         $Policy->validate_hostrules_pattern,
         $Policy->validate_dns_zones,
         $Policy->validate_contact_user,
         $Policy->validate_expiry,
         $Policy->validate_vm_dns_name($LAB),
-
     );
 
+    $Policy->handle_forceboot($result);
+    @error = $result->{errors};
+    $pxelinux_config_url = "../".$result->{redirect_target};
+    $bootinfo = $result->{bootinfo};
     #Debug(Data::Dumper->Dump([\@error],["error"]));
 
-    # check force boot configuration
-    my $pxelinuxcfg_path = Config( "pxelinux", "pxelinuxcfg_path" );
-    my $forceboot_field  = Config( "vsphere",  "forceboot_field" );
-
-    # this will be the triggers for deactivating forceboot. Every other value will be taken as TRUE!
-    my @disabled_forceboot = ( "OFF", "", 0, "NO", "FALSE" );
-
-    if (     $pxelinuxcfg_path
-         and $forceboot_field
-         and exists $VM->{CUSTOMFIELDS}{$forceboot_field}
-         and $VM->{CUSTOMFIELDS}{$forceboot_field}
-         and not grep { $_ eq uc( $VM->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
-    {
-        my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot              = $VM->{CUSTOMFIELDS}{$forceboot_field};
-        my $forceboot_target_field = Config( "vsphere", "forceboot_target_field" );
-        
-        my $forceboot_target_value;
-        if (defined $forceboot_target_field) {
-            $forceboot_target_value = exists $VM->{CUSTOMFIELDS}{$forceboot_target_field} ? $VM->{CUSTOMFIELDS}{$forceboot_target_field} : "";
-        } else {
-            $forceboot_target_value = "";
-        }
-
-        # if the user is working with a forceboot_target_field
-        # then take this value, ...
-        if (     $forceboot_target_field
-             and $forceboot_target_value )
-        {
-            $forceboot_target = $forceboot_target_value;
-        }
-        # else take the value from the forceboot field as target (old behaviour)
-        else {
-            # use forceboot default entry, if no target is given but the field exist
-            if (    Config( "forceboot", "default" )
-                and $forceboot_target_value eq ""
-                and not $forceboot eq "fatalerror"        # because 'fatalerror' is hardcoded
-                and not Config( "forceboot", $forceboot ) # because we can have any value for true, so filter out
-              )
-            {
-                $forceboot_target = 'default';
-            }
-            # take the forceboot entry directly if nothing is matched above
-            else {
-                $forceboot_target = $forceboot;
-            }
-        }
-
-        # little exploit protection, could be done more professional :-)
-        # remove any .. or ...
-        $forceboot_target =~ s/\.{2,}//g;
-        $forceboot =~ s/\.{2,}//g;
-        # normalize to contain only valid path characters
-        # if forceboot contains a path relative to the pxelinux TFTP prefix
-        $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;
-        $forceboot =~ tr[:/A-Za-z0-9._-][]dc;
-
-        # try if a file exists for this forceboot target entry
-        if ( -r $pxelinuxcfg_path . "/" . $forceboot_target and !-d $pxelinuxcfg_path . "/" . $forceboot_target ) {
-            $pxelinux_config_url = "$tftp_url/$forceboot_target";
-            $bootinfo            = "force boot from VM config (file)";
-        }
-        # if no direct file exist, try if we have a mapping for it
-        elsif ( my $forceboot_dest = Config( "forceboot", $forceboot_target ) ) {
-            $pxelinux_config_url = ( $forceboot_dest =~ m(://) ? "" : $tftp_url . "/" ) . $forceboot_dest;
-            $bootinfo = "force boot from LML config";
-        }
-        # if forceboot is empty
-        elsif ( $forceboot_target =~ m(://) ) {
-            $pxelinux_config_url = $forceboot_target;
-            $bootinfo            = "force boot from VM config (URL)";
-        }
-        # if the user want to provoke a error
-        elsif ( $forceboot_target eq "fatalerror" ) {
-            die("Enjoy this fatal error, you called for it.\n");
-        }
-        # if nothing could be found for the given forceboot entry
-        elsif ( Config( "lml", "failoninvalidforceboot" ) ) {
-            # Because we have to differ between the old and new variants in forceboot, check if
-            # we hit the else block above (a bit ugly, but it works)
-            if ( $forceboot_target eq $forceboot ) {
-                push( @error, "Invalid force boot target '$forceboot_field'" );
-            } else {
-                push( @error, "Invalid force boot target in '$forceboot_target_field'" );
-            }
-        }   # else do nothing to silently ignore invalid force boot targets
-    }
 
     # up till here we have only checks that verify the VM.
     # in case of errors stop processing so that we do not create host records anywhere as long
     # as some conditions are unmet.
 
     # we only modify something if there are no errors
-    if ( not scalar(@error) ) {
+    if ( not $result->get_errors ) {
 
         # add lastseen info to host
         $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN}         = time;
@@ -222,7 +137,7 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         # NOTE: This should be after all other pieces of code that compare with the old host name !!!
         if (    not( exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) and exists( $LAB->{HOSTS}->{$search_uuid}->{MACS} ) )
              or not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}
-             or not @vm_lab_macs ~~@{ $LAB->{HOSTS}->{$search_uuid}->{MACS} } )
+             or not @vm_lab_macs ~~ @{ $LAB->{HOSTS}->{$search_uuid}->{MACS} } )
         {
             $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} = $vm_name;
             $LAB->{HOSTS}->{$search_uuid}->{MACS}     = \@vm_lab_macs;
