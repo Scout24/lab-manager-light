@@ -23,7 +23,6 @@ sub new {
 }
 
 sub validate_vm_name {
-
     # check VM name to contain only allowed characters
     my $self    = shift;
     my $vm_name = $self->{VM}->name;
@@ -35,7 +34,6 @@ sub validate_vm_name {
 }
 
 sub validate_hostrules_pattern {
-
     # check VM name against pattern of allowed names
     my $self             = shift;
     my $vm_name          = $self->{VM}->name;
@@ -49,7 +47,6 @@ sub validate_hostrules_pattern {
 }
 
 sub validate_dns_zones {
-
     # check VM name against other DNS zones to prevent creating duplicate entries
     my $self          = shift;
     my $vm_name       = $self->{VM}->name;
@@ -72,7 +69,6 @@ sub validate_dns_zones {
 }
 
 sub validate_contact_user {
-
     # check VM contact user against local user database
     my $self = shift;
     my @error;
@@ -109,7 +105,6 @@ sub validate_contact_user {
 }
 
 sub validate_expiry {
-
     # check that the VM did not expire
     my $self = shift;
     my @error;
@@ -141,7 +136,6 @@ sub validate_expiry {
 # you might want to increase your lease time to counter this effect or add some code to compare the new name against
 # the list of known hostnames in $LAB
 sub validate_vm_dns_name {
-
     # check if the VM name exists already in our managed DNS domain.
     # the only situation where this is OK is if the VM existed already before and the VM name did not change
     my ( $self, $LAB ) = @_;
@@ -173,5 +167,90 @@ sub validate_vm_dns_name {
         }
     }
     return;
+}
+
+sub handle_forceboot {
+    my ( $self, $result ) = @_;
+    # validate arg
+    croak( "Parameter to " . ( caller(0) )[3] . " must be object of LML::Result type" ) unless ( ref($result) eq "LML::Result" );
+
+    # check force boot configuration
+    my $pxelinuxcfg_path = $self->{Config}->get( "pxelinux", "pxelinuxcfg_path" );
+    my $forceboot_field  = $self->{Config}->get( "vsphere",  "forceboot_field" );
+
+    # this will be the triggers for deactivating forceboot. Every other value will be taken as TRUE!
+    my @disabled_forceboot = ( "OFF", "", 0, "NO", "FALSE" );
+
+    if (     $pxelinuxcfg_path
+         and $forceboot_field
+         and exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_field}
+         and $self->{VM}->{CUSTOMFIELDS}{$forceboot_field}
+         and not grep { $_ eq uc( $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
+    {
+        my $forceboot_target;    # Will be set in the next step, just to define with my
+        my $forceboot              = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot_target_field = $self->{Config}->get( "vsphere", "forceboot_target_field" );
+
+        my $forceboot_target_value;
+        if ($forceboot_target_field) {
+            $forceboot_target_value = exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
+        } else {
+            $forceboot_target_value = "";
+        }
+
+        # die early if the user wants to provoke a error
+        if ( $forceboot eq "fatalerror" or $forceboot_target_value eq "fatalerror" ) {
+            die("Enjoy this fatal error, you called for it.\n");
+        }
+
+        my $compat_mode = 0;    # are we in compat mode?
+                                # if the user is working with a forceboot_target_field
+                                # then take this value, ...
+        if (     $forceboot_target_field
+             and $forceboot_target_value )
+        {
+            $forceboot_target = $forceboot_target_value;
+        }
+        # else take the value from the forceboot field as target (old behaviour)
+        else {
+            # use forceboot default entry, if no target is given but the field exist
+            if (
+                    $self->{Config}->get( "forceboot", "default" )
+                and $forceboot_target_value eq ""
+                and not $self->{Config}->get( "forceboot", $forceboot )    # because we can have any value for true, so filter out
+              )
+            {
+                $forceboot_target = 'default';
+            }
+            # take the forceboot entry directly if nothing is matched above
+            else {
+                $forceboot_target = $forceboot;
+                $compat_mode      = 1;
+            }
+        }
+
+        # little exploit protection, could be done more professional :-)
+        # remove any .. or ...
+        $forceboot_target =~ s/\.{2,}//g;
+        # normalize to contain only valid path characters
+        # if forceboot contains a path relative to the pxelinux TFTP prefix
+        $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;
+
+        # try if we have a mapping for it
+        if ( my $forceboot_dest = $self->{Config}->get( "forceboot", $forceboot_target ) ) {
+            $result->set_redirect_target( $forceboot_dest );
+            $result->set_bootinfo("force boot from LML config");
+        }
+        # if nothing could be found for the given forceboot entry
+        elsif ( $self->{Config}->get( "lml", "failoninvalidforceboot" ) ) {
+            # Because we have to differ between the old and new variants in forceboot, check if
+            # we hit the else block above (a bit ugly, but it works)
+            if ($compat_mode) {
+                $result->add_error("Invalid force boot target '$forceboot_field'");
+            } else {
+                $result->add_error("Invalid force boot target in '$forceboot_target_field'");
+            }
+        }    # else do nothing to silently ignore invalid force boot targets
+    }
 }
 1;
