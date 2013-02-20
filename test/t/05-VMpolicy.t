@@ -7,6 +7,7 @@ use Test::Exception;
 use Test::MockModule;
 use LML::Common;
 use LML::Config;
+use LML::Result;
 
 # load shipped configuration
 my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
@@ -299,4 +300,28 @@ is_deeply(
     [],
     "should return no error as renamed VM name has no conflict with managed domain"
 );
+
+######### handle_forceboot
+#
+#
+
+# Prepare the test
+my $VM = new LML::VM( "4213038e-9203-3a2b-ce9d-123456789abc" );
+my $result = new LML::Result( $C );
+my $Policy = new LML::VMpolicy( $C, $VM );
+$Policy->handle_forceboot( $result );
+
+# test the values in result, which were set via handle_forceboot from VMpolicy.pm
+is($result->{redirect_target}, "menu/server.sl6.txt", "should redirect to menu/server.sl6.txt");
+is($result->{bootinfo}, "force boot from LML config", "should be 'force boot from LML config'");
+
+# test if error handling is working
+$VM->{"CUSTOMFIELDS"}->{"Force Boot Target"} = "foobar";
+$Policy->handle_forceboot( $result );
+is_deeply(
+    $result->{errors},
+    [ "Invalid force boot target in 'Force Boot Target'" ],
+    "Should fail with 'Invalid force boot target in 'Force Boot Target''"
+);
+
 done_testing();

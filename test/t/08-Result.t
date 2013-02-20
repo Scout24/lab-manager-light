@@ -32,5 +32,4 @@ Content-Type: text/plain; charset=ISO-8859-1\r
 ", "should render status with redirect and errors"
 );
 
-
 done_testing();

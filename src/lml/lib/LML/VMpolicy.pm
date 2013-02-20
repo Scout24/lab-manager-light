@@ -258,5 +258,7 @@ sub handle_forceboot {
             }
         }    # else do nothing to silently ignore invalid force boot targets
     }
+    return;
 }
+
 1;
