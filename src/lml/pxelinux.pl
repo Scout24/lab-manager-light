@@ -26,6 +26,7 @@ use LML::Config;
 use LML::VMpolicy;
 use LML::DHCP;
 use LML::Result;
+use LML::Lab;
 use Data::Dumper;
 
 my $C = new LML::Config();    # implicitly also fills %LML::Common::CONFIG
@@ -64,7 +65,7 @@ my @error   = ();
 connect_vi();
 
 # read history to detect renamed VMs and to be able to update the DHCP
-my $LAB = ReadLabFile;
+my $LAB = new LML::Lab;
 
 # prepare some configuration variables
 my @vsphere_networks = ();                                       # list of network names for which LML is responsible.
@@ -91,7 +92,8 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     $vm_name = $VM->name;
 
     # check if we should handle this VM
-    my @vm_lab_macs = $VM->get_macs_for_networks(@vsphere_networks);
+    $VM->set_networks_filter(@vsphere_networks);
+    my @vm_lab_macs = $VM->get_filtered_macs;
     if ( !@vm_lab_macs ) {
         print header( -status => "404 VM does not match LML networks and is out of scope", -type => 'text/plain' );
         exit 0;
@@ -115,9 +117,9 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
     $Policy->handle_forceboot($result);
     @error = $result->{errors};
-    $pxelinux_config_url = "../".$result->{redirect_target};
+    $pxelinux_config_url = "../".$result->{redirect_target} if ($result->{redirect_target});
     $bootinfo = $result->{bootinfo};
-    #Debug(Data::Dumper->Dump([\@error],["error"]));
+    Debug(Data::Dumper->Dump([\@error],["error"]));
 
 
     # up till here we have only checks that verify the VM.
@@ -126,23 +128,7 @@ if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
     # we only modify something if there are no errors
     if ( not $result->get_errors ) {
-
-        # add lastseen info to host
-        $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN}         = time;
-        $LAB->{HOSTS}->{$search_uuid}->{LASTSEEN_DISPLAY} = POSIX::strftime( "%a %b %e %H:%M:%S %Y", localtime );
-
-        # create HOSTS record for DHCP if it has changed (name or networking)
-        # ~~ compares array since perl 5.10!!
-        #
-        # NOTE: This should be after all other pieces of code that compare with the old host name !!!
-        if (    not( exists( $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} ) and exists( $LAB->{HOSTS}->{$search_uuid}->{MACS} ) )
-             or not $vm_name eq $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME}
-             or not @vm_lab_macs ~~ @{ $LAB->{HOSTS}->{$search_uuid}->{MACS} } )
-        {
-            $LAB->{HOSTS}->{$search_uuid}->{HOSTNAME} = $vm_name;
-            $LAB->{HOSTS}->{$search_uuid}->{MACS}     = \@vm_lab_macs;
-            $has_changed                              = 1;
-        }
+        $has_changed = $LAB->update_host($VM);
     }    # no errors in @error
 
 }    # if have $VM
@@ -154,10 +140,10 @@ Util::disconnect();
 
 # write dhcp-hosts.conf if it is configured and if we have host entries to write
 if ($has_changed) {
-    push( @error, UpdateDHCP($LAB) );
+    $result->add_error( UpdateDHCP($LAB) );
 }
 
-if ( scalar(@error) ) {
+if ( @error = $result->get_errors ) {
 
     # have some errors
     print header( -status => "200 Errors: " . join( ", ", @error ), -type => 'text/plain' );

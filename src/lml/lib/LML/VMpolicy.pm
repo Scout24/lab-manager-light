@@ -9,6 +9,7 @@ use LML::VMware;
 use LML::VM;
 use LML::Common;
 use LML::Config;
+use LML::Lab;
 
 sub new {
     my ( $class, $config, $VM ) = @_;
@@ -141,7 +142,7 @@ sub validate_vm_dns_name {
     my ( $self, $LAB ) = @_;
 
     # validate arg
-    croak( "Parameter to " . ( caller(0) )[3] . " must be LAB hash" ) unless ( ref($LAB) eq "HASH" and exists $LAB->{HOSTS} );
+    croak( "Parameter to " . ( caller(0) )[3] . " must be LML::Lab object" ) unless ( ref($LAB) eq "LML::Lab" );
     my $vm_name      = $self->{VM}->name;
     my $vm_uuid      = $self->{VM}->uuid;
     my $appenddomain = $self->{Config}->get( "dhcp", "appenddomain" );

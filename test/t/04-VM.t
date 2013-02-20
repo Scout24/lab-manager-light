@@ -58,7 +58,7 @@ is( $VM,                           undef, "failed constructor should return unde
 is( new LML::VM("foobar"), undef, "constructor should return undef if no VM found for given uuid" );
 
 $VM = new LML::VM("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
-my %VM_DATA = LML::VMware::get_vm_data("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf");
+my %VM_DATA = (LML::VMware::get_vm_data("4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"), "filter_networks", []);
 is_deeply( \%VM_DATA, $VM, "constructor should return hashref with VM datails" );
 
 is( $VM->uuid, "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf", "uuid method should return uuid" );
@@ -66,10 +66,13 @@ is( $VM->uuid, "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf", "uuid method should retur
 is( $VM->name, "tsthst001", "name method should return VM name" );
 
 is_deeply( [ $VM->get_macs() ], [ '01:02:03:04:6e:4e', '01:02:03:04:9e:9e' ], "Get_macs should return a list of mac addresses" );
-is_deeply( [ $VM->get_macs_for_networks() ], [], "get_macs_for_networks should return empty list if called without parameters" );
-is_deeply( [ $VM->get_macs_for_networks( "baz", "foo.bar" ) ], [], "get_macs_for_networks should return empty list if called with a list of wrong networks" );
-is_deeply( [ $VM->get_macs_for_networks("arc.int") ], ["01:02:03:04:6e:4e"], "get_macs_for_networks should return matching mac if called with the right network" );
-is_deeply( [ $VM->get_macs_for_networks( "arc.int", "foo.bar" ) ], ["01:02:03:04:6e:4e"], "get_macs_for_networks should return matching mac if called with a list containing the right network" );
+is_deeply( [ $VM->get_filtered_macs ], [$VM->get_macs() ], "get_macs_for_networks should return all macs if no filter set" );
+$VM->set_networks_filter("baz", "foo.bar");
+is_deeply( [ $VM->get_filtered_macs( ) ], [], "should return empty list if called after setting non-matching networks filter" );
+$VM->set_networks_filter("arc.int");
+is_deeply( [ $VM->get_filtered_macs ], ["01:02:03:04:6e:4e"], "should return matching mac after setting matching network as filter" );
+$VM->set_networks_filter("arc.int", "foo.bar");
+is_deeply( [ $VM->get_filtered_macs ], ["01:02:03:04:6e:4e"], "should return matching mac after setting list containing the right network as filter" );
 
 ok( $VM->forcenetboot,                                                           "should return that forcenetboot is active for managed VM" );
 ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot, "should return that forcenetboot is not active for unmanaged VM" );
