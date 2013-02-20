@@ -5,6 +5,8 @@ use warnings;
 
 use CGI ':standard';
 use LML::Config;
+use Data::Dumper;
+use Carp;
 
 sub new {
     my ( $class, $config, $full_url ) = @_;
@@ -45,8 +47,10 @@ sub set_redirect_target {
 
 sub get_errors {
     my $self = shift;
-    return @{ $self->{errors} };
+    return @{ $self->{errors} } if (wantarray);
+    return scalar(@{ $self->{errors} }); # return amount of errors in scalar context
 }
+
 sub render {
     my $self   = shift;
     my $status = $self->{status};

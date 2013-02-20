@@ -9,6 +9,7 @@ use LML::Common;
 use LML::Config;
 use LML::Result;
 
+
 # load shipped configuration
 my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
 
@@ -55,7 +56,7 @@ $mock->mock(
     }
 );
 use_ok "LML::VM";
-
+use_ok "LML::Lab";
 $isDebug = 1;
 
 use_ok "LML::VMpolicy";
@@ -239,7 +240,7 @@ is_deeply(
                                            }
                           ),
                           new LML::VM( { "NAME" => "www", "UUID" => "01234" } )
-         )->validate_vm_dns_name( { "HOSTS" => { "01234" => {"HOSTNAME" => "www"} } } )
+         )->validate_vm_dns_name( new LML::Lab({ "HOSTS" => { "01234" => {"HOSTNAME" => "www"} } }) )
     ],
     [],
     "should not return error as new VM name equals old VM name"
@@ -253,7 +254,7 @@ is_deeply(
                                            }
                           ),
                           new LML::VM( { "NAME" => "www", "UUID" => "01234" } )
-         )->validate_vm_dns_name( { "HOSTS" => {  } } )
+         )->validate_vm_dns_name( new LML::Lab({ "HOSTS" => {  } }) )
     ],
     [],
     "should not return error as VM is new and has no conflict with managed domain"
@@ -267,7 +268,7 @@ is_deeply(
                                            }
                           ),
                           new LML::VM( { "NAME" => "www", "UUID" => "01234" } )
-         )->validate_vm_dns_name( { "HOSTS" => {  } } )
+         )->validate_vm_dns_name( new LML::Lab({ "HOSTS" => {  } }) )
     ],
     ["New VM name exists already in 'google.com'"],
     "should return error as new VM name conflicts with managed domain"
@@ -281,7 +282,7 @@ is_deeply(
                                            }
                           ),
                           new LML::VM( { "NAME" => "www", "UUID" => "01234" } )
-         )->validate_vm_dns_name( { "HOSTS" => { "01234" => {"HOSTNAME" => "zzz"} } } )
+         )->validate_vm_dns_name( new LML::Lab({ "HOSTS" => { "01234" => {"HOSTNAME" => "zzz"} } }) )
     ],
     ["Renamed VM 'www.google.com.' name exists already in 'google.com'"],
     "should return error as renamed VM name exists in managed domain"
@@ -295,7 +296,7 @@ is_deeply(
                                            }
                           ),
                           new LML::VM( { "NAME" => "frobinicate_foo_bar_baz", "UUID" => "01234" } )
-         )->validate_vm_dns_name( { "HOSTS" => { "01234" => {"HOSTNAME" => "www"} } } )
+         )->validate_vm_dns_name( new LML::Lab({ "HOSTS" => { "01234" => {"HOSTNAME" => "www"} } }) )
     ],
     [],
     "should return no error as renamed VM name has no conflict with managed domain"
