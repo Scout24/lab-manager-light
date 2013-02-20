@@ -320,8 +320,8 @@ is($result->{bootinfo}, "force boot from LML config", "should be 'force boot fro
 $VM->{"CUSTOMFIELDS"}->{"Force Boot Target"} = "foobar";
 $Policy->handle_forceboot( $result );
 is_deeply(
-    $result->{errors},
-    [ "Invalid force boot target in 'Force Boot Target'" ],
+    $result->get_errors,
+    "Invalid force boot target in 'Force Boot Target'",
     "Should fail with 'Invalid force boot target in 'Force Boot Target''"
 );
 
