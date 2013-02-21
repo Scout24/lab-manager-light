@@ -79,7 +79,7 @@ is( $Pbad->validate_hostrules_pattern, "VM name does not match '^[a-z]{6}[0-9]{3
 #### validate_dns_zones
 #
 #
-is( $Pgood->validate_dns_zones, undef, "should return undef as test VM is not present in any zone" );
+is_deeply( [$Pgood->validate_dns_zones], [], "should return undef as test VM is not present in any zone" );
 is_deeply( [ new LML::VMpolicy( new LML::Config( { "hostrules" => { "dnscheckzones" => [ "google.com", "google.de" ] } } ), new LML::VM( { "NAME" => "www" } ) )->validate_dns_zones ], [ "Name conflict with 'www.google.com.'", "Name conflict with 'www.google.de.'" ], "should return two error messages as we test www.google.de and www.google.com" );
 
 #### validate_contact_user
