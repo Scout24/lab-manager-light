@@ -27,7 +27,7 @@ sub new {
 
 sub add_error {
     my $self = shift;
-    push( $self->{errors}, @_ );
+    push( @{$self->{errors}}, @_ );
     return $self->get_errors;
 }
 
