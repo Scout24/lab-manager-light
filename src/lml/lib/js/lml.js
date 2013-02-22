@@ -7,7 +7,8 @@ $(document).ready(function() {
 		arrows: true,
 		width: 500,
 		cluetipClass: 'rounded',
-		ajaxCache: false
+		ajaxCache: false,
+		waitImage: true
 	});
 	$('#tabs').tabsLite();
 });

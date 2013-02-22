@@ -84,4 +84,9 @@ thead#vmlist th {
 
 img {
 	border: 0px;
+	vertical-align:	middle;
+}
+
+div.cluetip-inner img {
+	max-width: 480px;
 }

@@ -72,7 +72,9 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
         }
     }
     print Tr(
-              { -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ) },
+              { 
+                  -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ), 
+              },
               td [
                    a(
                        {
@@ -83,6 +85,16 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
                           -class   => "tip vmhostname"
                        },
                        $LAB->{HOSTS}->{$uuid}->{HOSTNAME}
+                   ) . "\n".
+                   a(
+                       {
+                          -href    => "vmscreenshot.pl?uuid=$uuid",
+                          -title   => "Screenshot",
+                          -onclick => "return false;",
+                          -rel     => "vmscreenshot.pl?uuid=$uuid",
+                          -class   => "tip"
+                       },
+                       img({-src => "lib/images/console_icon.png"})
                    ),
                    $display_vm_path,
                    $contact_user_id,
