@@ -30,7 +30,7 @@ is( $result->set_bootinfo("force boot from LML config"), "force boot from LML co
 
 # check if the render function returns the expected result
 is(
-    $result->render, "Status: 200 OK, Errors: a, b, c, a, b, c\r
+    $result->render, "Status: 200 OK and force boot from LML config, Errors: a, b, c, a, b, c\r
 Location: http://foo.bar/boot/menu/server.txt\r
 Content-Type: text/plain; charset=ISO-8859-1\r
 \r

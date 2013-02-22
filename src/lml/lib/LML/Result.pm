@@ -16,7 +16,7 @@ sub new {
                  config          => $config,
                  status          => "200 OK",
                  errors          => [],
-                 bootinfo        => "",
+                 statusinfo        => "",
                  redirect_target => "",
                  full_url        => $full_url
     };
@@ -27,35 +27,50 @@ sub new {
 
 sub add_error {
     my $self = shift;
-    push( @{$self->{errors}}, @_ );
+    push( @{ $self->{errors} }, @_ );
     return $self->get_errors;
 }
 
 sub set_bootinfo {
     my ( $self, $bootinfo ) = @_;
-    croak("1st parameter should be boot info") unless ($bootinfo);
-    $self->{bootinfo} = $bootinfo;
+    croak("1st parameter should be boot info\n") unless ($bootinfo);
+    $self->{statusinfo} = $bootinfo;
     return $bootinfo;
+}
+
+sub set_status {
+    my ( $self, @status ) = @_;
+    croak("1st parameter should be status\n") unless ( scalar(@status) );
+    $self->{status} = join( " ", @status );
+    return $self->{status};
 }
 
 sub set_redirect_target {
     my ( $self, $redirect_target ) = @_;
-    croak("1st parameter should be redirect target") unless ($redirect_target);
+    croak("1st parameter should be redirect target\n") unless ($redirect_target);
     $self->{redirect_target} = $redirect_target;
     return $redirect_target;
+}
+
+sub redirect_target {
+    my $self = shift;
+    return $self->{redirect_target};
 }
 
 sub get_errors {
     my $self = shift;
     return @{ $self->{errors} } if (wantarray);
-    return scalar(@{ $self->{errors} }); # return amount of errors in scalar context
+    return scalar( @{ $self->{errors} } );    # return amount of errors in scalar context
 }
 
 sub render {
-    my $self   = shift;
+    my ( $self, @body ) = @_;
     my $status = $self->{status};
-    if ( $self->{errors} ) {
-        $status .= ", Errors: " . join( ", ", @{ $self->{errors} } );
+    if ($self->{statusinfo}) {
+        $status .= " and ".$self->{statusinfo};
+    }
+    if ( $self->get_errors ) {
+        $status .= ", Errors: " . join( ", ", $self->get_errors );
     }
     my $header_args = {
                         -status => $status,
@@ -64,10 +79,10 @@ sub render {
 
     if ( $self->{redirect_target} ) {
         my $redirect_base = $self->{full_url};
-        $redirect_base =~ s#pxelinux.cfg/.*$##;    # strip pxelinux.cfg/*
+        $redirect_base =~ s#pxelinux.cfg/.*$##;                       # strip pxelinux.cfg/*
         $header_args->{-location} = $redirect_base . $self->{redirect_target};
     }
-    return header($header_args);
+    return header($header_args) . join( "\n", @body );
 }
 
 1;

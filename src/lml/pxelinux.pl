@@ -3,12 +3,6 @@
 #
 # pxelinux.pl	Lab Manager Light pxelinux interface
 #
-# Authors:
-# GSS		Schlomo Schapiro <lml@schlomo.schapiro.org>
-#
-# Copyright:	Schlomo Schapiro, Immobilien Scout GmbH
-# License:	GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full text
-#
 #
 
 use strict;
@@ -31,19 +25,15 @@ use Data::Dumper;
 
 my $C = new LML::Config();    # implicitly also fills %LML::Common::CONFIG
 
-# our URL base from REQUEST_URI
-our $base_url = url();
-$base_url =~ s/\/[^\/]+$//;    # cheap dirname()
-
 # install die handler to report fatal errors
 $SIG{__DIE__} = sub {
     die @_ if $^S;                     # see http://perldoc.perl.org/functions/die.html at the end
-    return unless ( Config( "lml", "showfatalerrors" ) and Config( "pxelinux", "fatalerror_template" ) );
+    return unless ( $C->get( "lml", "showfatalerrors" ) and Config( "pxelinux", "fatalerror_template" ) );
     my $message = shift;
     chomp($message);                   # remove trailing newlines
     $message =~ s/\n/; /;              # turn message into single line
     print header( -status => '200 Fatal Error', -type => 'text/plain' );
-    my $body = join( "\n", @{ Config( "pxelinux", "fatalerror_template" ) } ) . "\n";
+    my $body = join( "\n", @{ $C->get( "pxelinux", "fatalerror_template" ) } ) . "\n";
     $body =~ s/MESSAGE/$message/;
     print $body;
 };
@@ -64,12 +54,10 @@ my @error   = ();
 # connect to vSphere
 connect_vi();
 
-# read history to detect renamed VMs and to be able to update the DHCP
-my $LAB = new LML::Lab($C->labfile);
 
 # prepare some configuration variables
 my @vsphere_networks = ();                                       # list of network names for which LML is responsible.
-my $config_vsphere_networks = Config( "vsphere", "networks" );
+my $config_vsphere_networks = $C->get( "vsphere", "networks" );
 if ($config_vsphere_networks) {
     if ( ref($config_vsphere_networks) eq "ARRAY" ) {
         @vsphere_networks = @{$config_vsphere_networks};
@@ -78,119 +66,104 @@ if ($config_vsphere_networks) {
     }
 }
 
-my $has_changed = 0;
-
-# keep force boot info for later
-my $pxelinux_config_url;
-my $bootinfo;
-
+# read history to detect renamed VMs and to be able to update the DHCP
+my $LAB = new LML::Lab($C->labfile);
+# find VM
 my $VM = new LML::VM($search_uuid);
 my $result = new LML::Result( $C, url() );
 
+my @body; # body to return to HTTP client
+
 # if there are VMs and if we find the VM we are looking for:
-if ( %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
+if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     $vm_name = $VM->name;
 
     # check if we should handle this VM
     $VM->set_networks_filter(@vsphere_networks);
-    my @vm_lab_macs = $VM->get_filtered_macs;
-    if ( !@vm_lab_macs ) {
+    if ( $VM->get_filtered_macs ) {
+        # This VM uses our managed network
+        
+        # ensure that VM will only boot from network
+        if ( $C->get( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
+            # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
+            $VM->activate_forcenetboot;
+        }
+    
+        my $Policy = new LML::VMpolicy( $C, $VM );
+    
+        $result->add_error(
+            $Policy->validate_vm_name,
+            $Policy->validate_hostrules_pattern,
+            $Policy->validate_dns_zones,
+            $Policy->validate_contact_user,
+            $Policy->validate_expiry,
+            $Policy->validate_vm_dns_name($LAB),
+        );
+    
+        $Policy->handle_forceboot($result);
+        
+        
+        #Debug(Data::Dumper->Dump([\@error],["error"]));
+    
+    
+        # up till here we have only checks that verify the VM.
+        # in case of errors stop processing so that we do not create host records anywhere as long
+        # as some conditions are unmet.
+    
+        # we only modify something if there are no errors
+        if ( not $result->get_errors ) {
+            if ($LAB->update_host($VM)){
+                $result->add_error( UpdateDHCP($LAB) );
+            }
+        }
+    
+        if ( @error = $result->get_errors ) {
+            # got some errors, report to client
+            $result->set_status(200,"for",$vm_name,$search_uuid);
+            
+            # build body with error page
+            push(@body,@{ $C->get( "pxelinux", "error_main" ) });
+            push(@body,"menu title " . $C->get( "pxelinux", "error_title" ) . " " . $vm_name);
+            my $c = 1;
+            foreach my $e (@error) {
+                $e =~ s/\^/^^/g;                                                   # pxelinux menu uses ^ to mark keyboard shortcuts. ^^ comes out as plain ^
+                push(@body,"label l$c","menu label $c. $e");
+                push(@body,@{ $C->get( "pxelinux", "error_item" ) });
+                $c++;
+            }
+        
+            
+        } else {
+            # if the VM is found and all is fine then redirect to default PXE configuration
+            # here we must have a VM as otherwise we already exited before
+            # dump $LAB to file only if all is fine. This makes sure that LML stays with the old view of the lab for some kind of
+            # hard to catch errors.
+            if (not $LAB->write_file("for ".$vm_name." (".$search_uuid.")")) {
+                die "Strangely writing LAB produced a 0-byte file.\n";
+            }
+    
+            $result->set_redirect_target = $C->get("pxelinux","default_redirect") unless ($result->redirect_target); # redirect to default if no redirect is set    
+            $result->set_status(302,"VM is",$vm_name);
+        }
+        
+    } else {
+        # VM does not use any of our managed networks.
         print header( -status => "404 VM does not match LML networks and is out of scope", -type => 'text/plain' );
         exit 0;
     }
+} else {
 
-    # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
-    if ( $C->get( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
-        $VM->activate_forcenetboot;
+    my $message = "No VM found for '$search_uuid'";
+    # if the VM is not found then also give some error text
+    if ( $C->get( "pxelinux", "redirect_unknown_to_default" ) ) {
+        $result->set_status(302,$message);
+        $result->set_redirect_target($C->get("pxelinux","default_redirect"));
+    } else {
+        $result->set_status(404,$message);
     }
-
-    my $Policy = new LML::VMpolicy( $C, $VM );
-
-    $result->add_error(
-        $Policy->validate_vm_name,
-        $Policy->validate_hostrules_pattern,
-        $Policy->validate_dns_zones,
-        $Policy->validate_contact_user,
-        $Policy->validate_expiry,
-        $Policy->validate_vm_dns_name($LAB),
-    );
-
-    $Policy->handle_forceboot($result);
-    @error = $result->{errors};
-    $pxelinux_config_url = "../".$result->{redirect_target} if ($result->{redirect_target});
-    $bootinfo = $result->{bootinfo};
-    Debug(Data::Dumper->Dump([\@error],["error"]));
-
-
-    # up till here we have only checks that verify the VM.
-    # in case of errors stop processing so that we do not create host records anywhere as long
-    # as some conditions are unmet.
-
-    # we only modify something if there are no errors
-    if ( not $result->get_errors ) {
-        $has_changed = $LAB->update_host($VM);
-    }    # no errors in @error
-
-}    # if have $VM
-
+    push(@body,$message);
+}
 # disconnect from VI
 Util::disconnect();
 
-# housekeeping is in tools/lml-maintenance.pl. This script has only the scope of a single VM.
-
-# write dhcp-hosts.conf if it is configured and if we have host entries to write
-if ($has_changed) {
-    $result->add_error( UpdateDHCP($LAB) );
-}
-
-if ( @error = $result->get_errors ) {
-
-    # have some errors
-    print header( -status => "200 Errors: " . join( ", ", @error ), -type => 'text/plain' );
-    print join( "\n", @{ Config( "pxelinux", "error_main" ) } ) . "\n";    # multiline values come as array
-    print "menu title " . Config( "pxelinux", "error_title" ) . " " . $vm_name . "\n";
-    my $c = 1;
-    foreach my $e (@error) {
-        $e =~ s/\^/^^/g;                                                   # pxelinux menu uses ^ to mark keyboard shortcuts. ^^ comes out as plain ^
-        print <<EOF;
-label l$c
-        menu label $c. $e
-EOF
-        print join( "\n", @{ Config( "pxelinux", "error_item" ) } ) . "\n";
-        $c++;
-    }
-
-    # if the VM is found and all is fine then redirect to default PXE configuration
-} elsif ($vm_name) {
-
-    # dump $LAB to file only if all is fine. This makes sure that LML stays with the old view of the lab for some kind of
-    # hard to catch errors.
-    if (not $LAB->write_file) {
-        die "Strangely writing LAB produced a 0-byte file.\n";
-    }
-
-    # these can be set by the force boot handling above
-    $pxelinux_config_url = $base_url . "/default" unless ($pxelinux_config_url);
-    $bootinfo            = "all is fine"          unless ($bootinfo);
-    print header(
-                  -status => "302 VM is $vm_name and $bootinfo" . ( $has_changed ? ", some hosts changed" : "" ),
-                  -type => 'text/plain',
-                  -location => $pxelinux_config_url
-    );
-} else {
-
-    # if the VM is not found then also give some error text
-    if ( Config( "pxelinux", "redirect_unknown_to_default" ) ) {
-        print header(
-                      -status   => '302 VM not found',
-                      -type     => 'text/plain',
-                      -location => $base_url . "/default"
-        );
-    } else {
-        print header( -status => 404,
-                      -type   => 'text/plain' );
-    }
-    print "No VM found for '$search_uuid'\n";
-}
-
-#print Data::Dumper->Dump([\%CONFIG,\%VM,$LAB],[qw(CONFIG VM LAB)]);
+print $result->render(@body);

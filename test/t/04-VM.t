@@ -65,6 +65,8 @@ is( $VM->uuid, "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf", "uuid method should retur
 
 is( $VM->name, "tsthst001", "name method should return VM name" );
 
+is( $VM->vm_id, "vm-1000", "should return vm_id of VM");
+
 is_deeply( [ $VM->get_macs() ], [ '01:02:03:04:6e:4e', '01:02:03:04:9e:9e' ], "Get_macs should return a list of mac addresses" );
 is_deeply( [ $VM->get_filtered_macs ], [$VM->get_macs() ], "get_macs_for_networks should return all macs if no filter set" );
 $VM->set_networks_filter("baz", "foo.bar");

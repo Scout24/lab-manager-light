@@ -50,6 +50,12 @@ sub name {
     return $self->{"NAME"};
 }
 
+sub vm_id {
+    my $self = shift;
+    return undef unless ( exists $self->{"VM_ID"} );
+    return $self->{"VM_ID"};
+}
+
 sub get_macs {
     my $self = shift;
     return undef unless ( exists $self->{"MAC"} and ref( $self->{"MAC"} ) eq "HASH" );
@@ -73,7 +79,8 @@ sub get_filtered_macs {
               push( @matching_macs, $mac );
           }
     }
-    return @matching_macs;
+    return @matching_macs if (wantarray);
+    return scalar(@matching_macs);
 }
 
 sub forcenetboot {

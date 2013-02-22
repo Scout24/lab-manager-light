@@ -314,7 +314,7 @@ $Policy->handle_forceboot( $result );
 
 # test the values in result, which were set via handle_forceboot from VMpolicy.pm
 is($result->{redirect_target}, "menu/server.sl6.txt", "should redirect to menu/server.sl6.txt");
-is($result->{bootinfo}, "force boot from LML config", "should be 'force boot from LML config'");
+is($result->{statusinfo}, "force boot from LML config", "should be 'force boot from LML config'");
 
 # test if error handling is working
 $VM->{"CUSTOMFIELDS"}->{"Force Boot Target"} = "foobar";
