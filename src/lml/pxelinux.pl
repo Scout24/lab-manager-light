@@ -143,7 +143,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
                 die "Strangely writing LAB produced a 0-byte file.\n";
             }
     
-            $result->set_redirect_target = $C->get("pxelinux","default_redirect") unless ($result->redirect_target); # redirect to default if no redirect is set    
+            $result->set_redirect_target($C->get("pxelinux","default_redirect")) unless ($result->redirect_target); # redirect to default if no redirect is set    
             $result->set_status(302,"VM is",$vm_name);
         }
         
