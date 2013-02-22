@@ -113,6 +113,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         # we only modify something if there are no errors
         if ( not $result->get_errors ) {
             if ($LAB->update_host($VM)){
+                # update DHCP only if some host data changed because reloading dhcp server takes a while
                 $result->add_error( UpdateDHCP($LAB) );
             }
         }
@@ -148,8 +149,8 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         
     } else {
         # VM does not use any of our managed networks.
-        print header( -status => "404 VM does not match LML networks and is out of scope", -type => 'text/plain' );
-        exit 0;
+        $result->set_status(404,"VM does not match LML networks and is out of scope");
+        @body = ("VM does not match LML networks and is out of scope");
     }
 } else {
 
