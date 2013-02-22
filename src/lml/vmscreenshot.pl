@@ -56,7 +56,7 @@ unless (caller) {
         my $search_uuid;
         my $response;
         if ( param('uuid') ) {
-            $search_uuid = param('uuid');
+            $search_uuid = lc(param('uuid'));
         } elsif (@ARGV) {
             $search_uuid = lc( $ARGV[0] );
         } else {
