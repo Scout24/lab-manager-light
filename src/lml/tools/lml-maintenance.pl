@@ -4,12 +4,6 @@
 #
 # * Remove obsolete machines from lab.conf
 #
-# Authors:
-# GSS Schlomo Schapiro <lml@schlomo.schapiro.org>
-#
-# Copyright: Schlomo Schapiro, Immobilien Scout GmbH
-# License:   GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full text
-#
 
 use strict;
 use warnings;

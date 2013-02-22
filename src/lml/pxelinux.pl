@@ -65,7 +65,7 @@ my @error   = ();
 connect_vi();
 
 # read history to detect renamed VMs and to be able to update the DHCP
-my $LAB = new LML::Lab;
+my $LAB = new LML::Lab($C->labfile);
 
 # prepare some configuration variables
 my @vsphere_networks = ();                                       # list of network names for which LML is responsible.
@@ -165,12 +165,9 @@ EOF
 
     # dump $LAB to file only if all is fine. This makes sure that LML stays with the old view of the lab for some kind of
     # hard to catch errors.
-    my $labfile = Config( "lml", "datadir" );
-    open( LAB_CONF, ">", "$labfile/lab.conf" ) || die "Could not open '$labfile' for writing\n";
-    flock( LAB_CONF, 2 ) || die;
-    print LAB_CONF "# pxelinux.pl " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " for $vm_name ($search_uuid)\n";
-    print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] );
-    close(LAB_CONF);
+    if (not $LAB->write_file) {
+        die "Strangely writing LAB produced a 0-byte file.\n";
+    }
 
     # these can be set by the force boot handling above
     $pxelinux_config_url = $base_url . "/default" unless ($pxelinux_config_url);

@@ -27,4 +27,9 @@ sub get {
     }
 }
 
+sub labfile {
+    my $self = shift;
+    return $self->get("lml","datadir")."/lab.conf";
+}
+
 1;
