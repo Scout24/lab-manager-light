@@ -70,15 +70,19 @@ unless (caller) {
                 $response = retrieve_vm_screenshot( $C, $search_uuid );
             } else {
                 # no image wanted, give HTML wrapper
-                my $onclick=<<EOF;
+                my $onclick = <<EOF;
                 onclick="this.src=this.src+'&'+Math.random()"
 EOF
-                $response = new HTTP::Response( 200, "OK", new HTTP::Headers( "Content-Type" => "text/html" ), "<html><body><img style='cursor: url(lib/images/reload.png),auto;' $onclick src='".url(-relative=>1,-query=>1)."'/></body></html>" );
+                $onclick = "onclick='this.src=this.src;'";
+                $response = new HTTP::Response( 200, "OK", new HTTP::Headers( "Content-Type" => "text/html" ), "<html><body><img style='cursor: pointer;' $onclick src='" . url( -relative => 1, -query => 1 ) . "'/></body></html>" );
             }
         }
         my %header_args = (
-                            -status => $response->status_line,
-                            -type   => $response->header("Content-Type")
+                            -status        => $response->status_line,
+                            -type          => $response->header("Content-Type"),
+                            -Cache_Control => "no-cache, no-store, must-revalidate",
+                            -Pragma        => "no-cache",
+                            -expires       => "10s" # takes 3 sec to load, prevent F5 DDOS
         );
         if ( $response->header("Content-Length") ) {
             $header_args{"-Content-Length"} = $response->header("Content-Length");
@@ -87,5 +91,5 @@ EOF
         print $response->content;
 
     }
-    exit( $result ? 0 : 1 );    # report status as exit code
+    exit( $result ? 0 : 1 );                                            # report status as exit code
 }
