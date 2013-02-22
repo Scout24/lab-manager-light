@@ -29,7 +29,6 @@ sub retrieve_vm_screenshot {
         if ( my $vm_id = $HOST->{VM_ID} ) {
             my $ua = new LWP::UserAgent();
             $ua->timeout(10);    # 10 secs timeout
-            $ua->ssl_opts( "verify_hostname" => ( $config->get( "vsphere", "disablecertificatevalidation" ) ? 0 : 1 ) );
             $ua->env_proxy;
             my $request = new HTTP::Request( GET => "https://" . $ENV{VI_SERVER} . "/screen?id=" . $vm_id );
             $request->authorization_basic( $ENV{VI_USERNAME}, $ENV{VI_PASSWORD} );    # set credentials
