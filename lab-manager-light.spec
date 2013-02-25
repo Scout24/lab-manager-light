@@ -19,9 +19,10 @@ Requires: perl(Config::IniFiles) >= 2.72
 Requires: perl(DateTime::Format::Flexible)
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON)
+Requires: perl(Image::Magick)
 BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
 BuildRequires: perl(File::Slurp) perl(Text::Diff) perl(DateTime::Format::Flexible) perl(JSON)
-BuildRequires: perl(CGI) perl(Config::IniFiles) perl(VMware::VIRuntime)
+BuildRequires: perl(CGI) perl(Config::IniFiles) perl(VMware::VIRuntime) perl(Image::Magick)
 
 # RHEL6 specific so far
 Requires: httpd, cronie

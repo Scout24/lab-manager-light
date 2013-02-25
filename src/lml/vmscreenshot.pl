@@ -8,87 +8,58 @@ my $LICENSE = "Licensed under the GNU General Public License, see http://www.gnu
 use FindBin;
 use lib "$FindBin::RealBin/lib";
 
-use CGI ':standard';
+use CGI::Push;
 use LML::Config;
-use LML::Common;
-use LML::Lab;
-use Carp;
-
+use LML::VMscreenshot;
 use LWP::UserAgent;
-use HTTP::Request;
-
-# uuid is either "" or undef to denote everything
-sub retrieve_vm_screenshot {
-    my ( $config, $uuid ) = @_;
-    croak( "1st parameter must be LML::Config object in " . ( caller(0) )[3] ) unless ( ref($config) eq "LML::Config" );
-    croak( "2nd parameter must be VM uuid in " . ( caller(0) )[3] ) unless ( ref($uuid) eq "" and $uuid );
-
-    my $LAB = new LML::Lab( $config->labfile );
-
-    if ( my $HOST = $LAB->get_host($uuid) ) {
-        if ( my $vm_id = $HOST->{VM_ID} ) {
-            my $ua = new LWP::UserAgent();
-            $ua->timeout(10);    # 10 secs timeout
-            $ua->env_proxy;
-            my $request = new HTTP::Request( GET => "https://" . $ENV{VI_SERVER} . "/screen?id=" . $vm_id );
-            $request->authorization_basic( $ENV{VI_USERNAME}, $ENV{VI_PASSWORD} );    # set credentials
-            my $res = $ua->request($request);
-            if ( $res->is_error ) {
-                # return errors as something we can give the browser
-                return new HTTP::Response( $res->code, $res->message, new HTTP::Headers( "Content-Type" => "text/html" ), $res->error_as_HTML );
-            } elsif ( $res->is_success ) {
-                return $res;
-            } else {
-                croak( "Unknown LWP::UserAgent error: " . $res->status_line . "\n" );
-            }
-
-        }
-    }
-    return new HTTP::Response( 404, "No VM found", new HTTP::Headers( "Content-Type" => "text/html" ), "<html><body>ERROR: No VM found</body></html>" );
-}
 
 # main() code when running as stand-alone program
 unless (caller) {
     my $C = new LML::Config();
     my $result;
-    if ( $C->get( "lml", "vmscreenshot" ) ) {
+    my $q = new CGI::Push;
+    if ( $C->get( "vmscreenshot", "enabled" ) ) {
         # input parameter, UUID of a VM
-        my $search_uuid;
-        my $response;
-        if ( param('uuid') ) {
-            $search_uuid = lc(param('uuid'));
-        } elsif (@ARGV) {
-            $search_uuid = lc( $ARGV[0] );
-        } else {
-            $search_uuid = undef;                                                                                                                                           # use this to denote everything
-            $response = new HTTP::Response( 404, "No uuid given", new HTTP::Headers( "Content-Type" => "text/html" ), "<html><body>ERROR: No UUID given</body></html>" );
-        }
-
-        if ($search_uuid) {
-            if ( Accept("image/png") >= 0.9 ) {
-                $response = retrieve_vm_screenshot( $C, $search_uuid );
+        if ( my $search_uuid = $q->param('uuid') ) {
+            $search_uuid = lc( $q->param('uuid') );
+            if ( my $screenshot = new LML::VMscreenshot( $C, $search_uuid ) ) {
+                # we could load the VM data from LAB, return image data or HTML document
+                if ( $q->Accept("image/png") >= 0.9 or $q->param('image') ) {
+                    if ( $q->param("stream") ) {
+                        $q->do_push(
+                                     -type      => "dynamic",
+                                     -nph       => 0,
+                                     -delay     => $C->get( "vmscreenshot", "push_delay" ),
+                                     -next_page => sub { return $screenshot->render(@_) } );
+                    } else {
+                        print $screenshot->render( $q, -1 ); # -1 should always be smaller than the max_push parameter
+                    }
+                } else {
+                    print( $q->header,
+                           $q->start_html( "LML VM Screenshot of " . $screenshot->hostname ),
+                           $q->img( {
+                                      -style   => "cursor: pointer;",
+                                      -onclick => "this.src=this.src+'&'+Math.random()",
+                                      -title   => "Click to reload screenshot",
+                                      -src     => $q->url( -relative => 1, -query => 1 ) }
+                           ),
+                           $q->end_html
+                    );
+                }
             } else {
-                # no image wanted, give HTML wrapper
-                my $onclick = <<EOF;
-                onclick="this.src=this.src+'&'+Math.random()"
-EOF
-                $onclick = "onclick='this.src=this.src;'";
-                $response = new HTTP::Response( 200, "OK", new HTTP::Headers( "Content-Type" => "text/html" ), "<html><body><img style='cursor: pointer;' $onclick src='" . url( -relative => 1, -query => 1 ) . "'/></body></html>" );
+                # No data found
+                print( $q->header( -status => "404 No data found" ),
+                       $q->start_html("LML Error"),
+                       $q->h1("LML Error"), $q->p("No data found for $search_uuid."),
+                       $q->end_html );
             }
-        }
-        my %header_args = (
-                            -status        => $response->status_line,
-                            -type          => $response->header("Content-Type"),
-                            -Cache_Control => "no-cache, no-store, must-revalidate",
-                            -Pragma        => "no-cache",
-                            -expires       => "10s" # takes 3 sec to load, prevent F5 DDOS
-        );
-        if ( $response->header("Content-Length") ) {
-            $header_args{"-Content-Length"} = $response->header("Content-Length");
-        }
-        print header(%header_args);
-        print $response->content;
 
+        } else {
+            # no uuid parameter given
+            print( $q->header( -status => "404 No uuid given" ),
+                   $q->start_html("LML Error"),
+                   $q->h1("LML Error"), $q->p("No uuid= parameter given."),
+                   $q->end_html );
+        }
     }
-    exit( $result ? 0 : 1 );                                            # report status as exit code
 }
