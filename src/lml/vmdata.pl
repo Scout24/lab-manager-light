@@ -20,7 +20,7 @@ sub display_vm_data($;$) {
     my %VM_DATA;
 
     my $VM = ReadVmFile();
-    if ( $uuid eq "" or $uuid eq undef ) {
+    if ( not $uuid ) {
         %VM_DATA = %{$VM};
     } elsif ( exists( $VM->{$uuid} ) ) {
         %VM_DATA = %{ $VM->{$uuid} };
