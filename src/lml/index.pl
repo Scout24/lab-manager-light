@@ -14,7 +14,7 @@ use LML::Common;
 LoadConfig();
 
 my $LAB = ReadLabFile;
-my $VM = ReadVmFile;
+my $VM  = ReadVmFile;
 
 print header();
 print <<EOF;
@@ -45,7 +45,15 @@ EOF
 
 print thead(
     { -id => "vmlist" },
-    Tr( { -valign => "top" }, th( { -title => "Click to sort", -class => "table-sortable:alphanumeric filterable" }, 'Hostname' ), th( { -title => "Click to sort", -class => "table-sortable:alphanumeric" }, "VM Path" ), th( { -title => "Click to sort", -class => "table-sortable:alphanumeric table-filterable" }, "Contact User ID" ), th( { -title => "Click to sort", -class => "table-sortable:date" }, "Expires" ), )
+    Tr(
+        { -valign => "top" },
+        th( { -title => "Click to sort", -class => "table-sortable:alphanumeric filterable" }, 'Hostname' ),
+        th( { -title => "Click to sort", -class => "table-sortable:alphanumeric" },            "VM Path" ),
+        th(
+            { -title => "Click to sort", -class => "table-sortable:alphanumeric table-filterable" }, "Contact User ID"
+        ),
+        th( { -title => "Click to sort", -class => "table-sortable:date" }, "Expires" ),
+      )
 
       #		Tr(
       #			th('<input name="filter" size="8" onkeyup="Table.filter(this,this)">').
@@ -60,47 +68,54 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
     my $contact_user_id = "unknown";
     my $display_vm_path = "<em>(no data available)</em>";
     if ( exists( $VM->{$uuid} ) ) {
-        eval { $expires = DateTime::Format::Flexible->parse_datetime( $VM->{$uuid}->{CUSTOMFIELDS}->{ Config( "vsphere", "expires_field" ) }, european => ( Config( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd(); };
+        eval {
+            $expires =
+              DateTime::Format::Flexible->parse_datetime(
+                                               $VM->{$uuid}->{CUSTOMFIELDS}->{ Config( "vsphere", "expires_field" ) },
+                                               european => ( Config( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
+        };
         $display_vm_path = $VM->{$uuid}->{PATH};
         if ( my $display_filter_vm_path = Config( "gui", "display_filter_vm_path" ) ) {
             $display_vm_path =~ s/$display_filter_vm_path/$1/;
         }
 
-        # lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
+# lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
         if ( exists( $VM->{$uuid}->{CUSTOMFIELDS}->{ Config( "vsphere", "contactuserid_field" ) } ) ) {
             $contact_user_id = lc( $VM->{$uuid}->{CUSTOMFIELDS}->{ Config( "vsphere", "contactuserid_field" ) } );
         }
     }
+    my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
-              { 
-                  -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ), 
-              },
-              td [
-                   a(
-                       {
-                          -href    => "vmdata.pl?uuid=$uuid",
-                          -title   => "Details",
-                          -onclick => "return false;",
-                          -rel     => "vmdata.pl?uuid=$uuid",
-                          -class   => "tip vmhostname"
+        { -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ), },
+        td [ (
+               exists $VM->{$uuid}
+               ? a( {
+                      -href    => "vmdata.pl?uuid=$uuid",
+                      -title   => "Details",
+                      -onclick => "return false;",
+                      -rel     => "vmdata.pl?uuid=$uuid",
+                      -class   => "tip vmhostname"
+                    },
+                    $LAB->{HOSTS}->{$uuid}->{HOSTNAME} )
+               : span( { -class => "vmhostname" }, $LAB->{HOSTS}->{$uuid}->{HOSTNAME} )
+            )
+            . "\n"
+              . (
+                  exists $LAB->{HOSTS}{$uuid}{VM_ID}
+                  ? a( {
+                         -href    => $screenshot_url,
+                         -title   => "Screenshot",
+                         -onclick => "return false;",
+                         -rel     => $screenshot_url,
+                         -class   => "tip"
                        },
-                       $LAB->{HOSTS}->{$uuid}->{HOSTNAME}
-                   ) . "\n".
-                   a(
-                       {
-                          -href    => "vmscreenshot.pl?uuid=$uuid",
-                          -title   => "Screenshot",
-                          -onclick => "return false;",
-                          -rel     => "vmscreenshot.pl?uuid=$uuid",
-                          -class   => "tip"
-                       },
-                       img({-src => "lib/images/console_icon.png"})
-                   ),
-                   $display_vm_path,
-                   $contact_user_id,
-                   $expires,
-              ]
-    ) . "\n";
+                       img( { -src => "lib/images/console_icon.png" } ) )
+                  : ""
+              ),
+            $display_vm_path,
+            $contact_user_id,
+            $expires,
+        ] ) . "\n";
 }
 print <<EOF;
 		</tbody>

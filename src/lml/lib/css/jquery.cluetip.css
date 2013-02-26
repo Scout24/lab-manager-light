@@ -25,6 +25,14 @@ div.ui-cluetip {
   height: 11px;
   position: absolute;
   background-image: url(../images/wait.gif);
+  background-color: black;
+  margin: 10px;
+  padding: 10px;
+  -moz-border-radius: 15px;
+  border-radius: 15px;
+  -webkit-background-origin: content-box; /* Safari */
+  background-origin: content-box;
+  background-repeat: no-repeat;
 }
 .cluetip-arrows {
   display: none;
