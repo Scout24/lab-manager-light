@@ -1,26 +1,29 @@
 #logoframe {
-	position: fixed;
-	right: 0px;
+	position: absolute;
+	top: 0px;
+	right: 10px;
 	padding: 5px;
+	padding-right: 10px;
 	background-color: white;
-	border-bottom-left-radius: 20px;
+    z-index: -100;
+	height: 50px;
 }
 
-#uparrowframe {
-	position: fixed;
-	left: 0px;
-	bottom: 0px;
-	padding: 5px;
-	font-weight: bold;
-	font-size: 200%;
+#logoframe img {
+	height: 100%;
+	vertical-align:bottom;
 }
 
 #footer {
-	margin-left: 4ex;
+	border-top: 1px solid black;
+	margin-top: 10px;
+	padding-top: 10px;
+	padding-left: 10px;
+	font-style: italic;
 }
 
 .vm_without_data {
-	color:	grey;
+	color: grey;
 }
 
 .vmhostname {
@@ -28,55 +31,44 @@
 }
 
 /* tabs */
+.main_content {
+	overflow: auto;
+}
 .tabsLite-mainDiv ul {
 	margin: 0;
 	padding: 0;
 }
+
 .tabsLite-tab {
 	list-style-type: none;
 	display: inline;
-	margin-top:	10px;
-	margin-left:	10px;
+	margin-top: 10px;
+	margin-left: 10px;
 	padding: 10px 10px 5px 10px;
 	border: solid 2px #CCC;
 	border-top-left-radius: 10px;
 	border-top-right-radius: 10px;
 	background-color: #E6E6E6;
-	font-size:	140%;
+	font-size: 140%;
 	cursor: pointer;
 }
+
 .tabsLite-tab-selected {
 	background-color: #F6F6F6;
 	border-bottom: solid 2px #F6F6F6;;
 }
+
 .tabsLite-tab a {
 	color: #000;
 	text-decoration: none;
 	font-weight: bold;
 }
-.tabsLite-panel {
-	/*background-color: #F6F6F6;*/
+
+.tabsLite-panel { /*background-color: #F6F6F6;*/
 	padding: 10px;
 	margin-top: 5px;
 	border-top: solid 2px #CCC;
 }
-
-/* VM List */
-tr.alternate {
-	/* striping */
-	background-color:#f0f0f0;
-}
-/* Sorting */
-th.table-sortable {
-	cursor:pointer;
-	background-position:top left;
-	background-repeat:no-repeat;
-	padding-left:12px;
-}
-/* Sort Icon Styles */
-th.table-sortable { background-image:url("../images/01_unsorted.gif"); }
-th.table-sorted-asc { background-image:url("../images/01_ascending.gif"); }
-th.table-sorted-desc { background-image:url("../images/01_descending.gif"); }
 
 thead#vmlist th {
 	border-bottom: thin solid black;
@@ -84,9 +76,17 @@ thead#vmlist th {
 
 img {
 	border: 0px;
-	vertical-align:	middle;
+	vertical-align: middle;
 }
 
 div.cluetip-inner img {
 	max-width: 480px;
+}
+
+thead {
+	background-color: white;
+}
+
+div.DTTT_container {
+	float: left;
 }

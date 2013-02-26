@@ -10,58 +10,61 @@ use lib "$FindBin::RealBin/lib";
 
 use CGI ':standard';
 use LML::Common;
+use LML::Config;
 
-LoadConfig();
-
+my $C   = new LML::Config();
+my $q   = new CGI;
 my $LAB = ReadLabFile;
 my $VM  = ReadVmFile;
 
-print header();
+print $q->header();
+print $q->start_html(
+    -title  => "Lab Manager Light",
+    -script => [
+                 { -src => "lib/js/jquery-1.8.3.min.js" },
+                 { -src => "lib/js/jquery.cluetip.min.js" },
+                 { -src => "lib/js/jquery.tabsLite.js" },
+                 { -src => "lib/js/jquery.dataTables.min.js" },
+                 { -src => "lib/js/TableTools.min.js" },
+                 { -src => "lib/js/lml.js" },
+    ],
+    -style => [
+                { -src   => "lib/css/jquery.cluetip.css", },
+                { -src   => "lib/css/jquery.dataTables.css", },
+                { -src   => "lib/css/TableTools.css", },
+                { -src   => "lib/css/lml.css", },
+                { -media => "print", -src => "lib/css/lml-print.css" },
+    ] );
+
 print <<EOF;
-<html><head>
-	<title>Lab Manager Light - Overview</title>
-	<script type="text/javascript" src="lib/js/table.js"></script>
-	<script type="text/javascript" src="lib/js/jquery-1.8.3.min.js"></script>
-	<script type="text/javascript" src="lib/js/jquery.cluetip.min.js"></script>
-	<script type="text/javascript" src="lib/js/jquery.tabsLite.js"></script>
-	<script type="text/javascript" src="lib/js/lml.js"></script>
-	<link rel="stylesheet" type="text/css" href="lib/css/jquery.cluetip.css" />
-	<link rel="stylesheet" type="text/css" href="lib/css/lml.css" />
-</head><body>
 <div id="logoframe">
-	<a href="#"><img src="lib/images/LabManagerLightlogo-small.png"/></a><br/>
-	Version $LML_VERSION
+    <a href="#"><img src="lib/images/LabManagerLightlogo-small.png"/></a><br/>
 </div>
-<div id="uparrowframe"><a href="#">&#9650;</a></div>
 &nbsp;
 <div id="tabs">
     <ul>
-        <li><a href="#tab-1">Managed Systems</a></li>
-        <li><a href="#tab-2">Configuration</a></li>
+        <li><a href="#overview">VM Overview</a></li>
+        <li><a href="#new">New VM</a></li>
+        <li><a href="#config">Configuration</a></li>
     </ul>
-	<div id="tab-1">
-<table class="table-autostripe table-stripeclass:alternate table-autosort:0 table-autofilter" cellpadding="3" cellspacing="0">
+EOF
+
+print <<EOF;
+	<div id="overview">
+        <table id="vmlist_table" cellpadding="3" cellspacing="0">
 EOF
 
 print thead(
-    { -id => "vmlist" },
-    Tr(
-        { -valign => "top" },
-        th( { -title => "Click to sort", -class => "table-sortable:alphanumeric filterable" }, 'Hostname' ),
-        th( { -title => "Click to sort", -class => "table-sortable:alphanumeric" },            "VM Path" ),
-        th(
-            { -title => "Click to sort", -class => "table-sortable:alphanumeric table-filterable" }, "Contact User ID"
-        ),
-        th( { -title => "Click to sort", -class => "table-sortable:date" }, "Expires" ),
-      )
+             { -id => "vmlist" },
+             Tr(
+                 { -valign => "top" },
+                 th( { -title => "Click to sort" }, 'Hostname' ),
+                 th( { -title => "Click to sort" }, "VM Path" ),
+                 th( { -title => "Click to sort" }, "Contact User ID" ),
+                 th( { -title => "Click to sort" }, "Expires" ),
+             ) ) . "\n\n\t\t<tbody>\n";
 
-      #		Tr(
-      #			th('<input name="filter" size="8" onkeyup="Table.filter(this,this)">').
-      #			th('&nbsp;').
-      #			th('&nbsp;').
-      #			th('&nbsp;')
-      #		)
-) . "\n" . "<tbody>\n";
+my $display_filter_vm_path = Config( "gui", "display_filter_vm_path" );
 
 for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
     my $expires         = "unknown";
@@ -75,7 +78,7 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
                                                european => ( Config( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
         };
         $display_vm_path = $VM->{$uuid}->{PATH};
-        if ( my $display_filter_vm_path = Config( "gui", "display_filter_vm_path" ) ) {
+        if ($display_filter_vm_path) {
             $display_vm_path =~ s/$display_filter_vm_path/$1/;
         }
 
@@ -86,46 +89,48 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
     }
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
-        { -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ), },
-        td [ (
-               exists $VM->{$uuid}
-               ? a( {
-                      -href    => "vmdata.pl?uuid=$uuid",
-                      -title   => "Details",
-                      -onclick => "return false;",
-                      -rel     => "vmdata.pl?uuid=$uuid",
-                      -class   => "tip vmhostname"
-                    },
-                    $LAB->{HOSTS}->{$uuid}->{HOSTNAME} )
-               : span( { -class => "vmhostname" }, $LAB->{HOSTS}->{$uuid}->{HOSTNAME} )
-            )
-            . "\n"
-              . (
-                  exists $LAB->{HOSTS}{$uuid}{VM_ID}
-                  ? a( {
-                         -href    => $screenshot_url,
-                         -title   => "Screenshot",
-                         -onclick => "return false;",
-                         -rel     => $screenshot_url,
-                         -class   => "tip"
-                       },
-                       img( { -src => "lib/images/console_icon.png" } ) )
-                  : ""
-              ),
-            $display_vm_path,
-            $contact_user_id,
-            $expires,
-        ] ) . "\n";
+              { -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ), },
+              td [ (
+                      exists $VM->{$uuid}
+                      ? a( {
+                             -href    => "vmdata.pl?uuid=$uuid",
+                             -title   => "Details",
+                             -onclick => "return false;",
+                             -rel     => "vmdata.pl?uuid=$uuid",
+                             -class   => "tip vmhostname"
+                           },
+                           $LAB->{HOSTS}->{$uuid}->{HOSTNAME} )
+                      : span( { -class => "vmhostname" }, $LAB->{HOSTS}->{$uuid}->{HOSTNAME} ) )
+                   . "\n"
+                     . (
+                         exists $LAB->{HOSTS}{$uuid}{VM_ID}
+                         ? a( {
+                                -href    => $screenshot_url,
+                                -title   => "Screenshot",
+                                -onclick => "return false;",
+                                -rel     => $screenshot_url,
+                                -class   => "tip"
+                              },
+                              img( { -src => "lib/images/console_icon.png" } ) )
+                         : ""
+                     ),
+                   $display_vm_path,
+                   $contact_user_id,
+                   $expires,
+              ] ) . "\n\n";
 }
 print <<EOF;
-		</tbody>
-		</table>
+
+        </tbody></table>
+	</div>
+	<div class="main_content" id="new">
+	   <p>Coming soon... (Help wanted!)</p>
 	</div>
 EOF
 
 my $conffiles = "<ol>\n\t<li>" . join( "</li>\n\t<li>", @CONFIGFILES ) . "</li>\n</ol>\n";
 print <<EOF;
-	<div id="tab-2">
+	<div class="main_content" id="config">
 		<p>The config files are 
 		<code>
 		$conffiles
@@ -143,9 +148,10 @@ print <<EOF;
 		</pre>
 	</div>
 </div><!-- tabs -->
-<hr/>
+
 <div id="footer">
 	<a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
+	Version $LML_VERSION
 </div>
 </body></html>
 EOF

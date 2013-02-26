@@ -37,13 +37,12 @@ use POSIX;
 our $LML_VERSION = "DEVELOPMENT_LML_VERSION";
 
 # debugging
-our $isDebug = defined( $ENV{LML_DEBUG} );
+our $isDebug = (defined( $ENV{LML_DEBUG} ) and $ENV{LML_DEBUG});
 
 sub Debug {
     print STDERR "DEBUG: " . join( "\nDEBUG: ", @_ ) . "\n" if ($isDebug);
 }
-Debug("Our \@INC list looks like this:");
-Debug(@INC);
+Debug("Our \@INC list looks like this:",@INC);
 
 our @CONFIGFILES;
 our %CONFIG;

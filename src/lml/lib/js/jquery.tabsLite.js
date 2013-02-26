@@ -60,6 +60,8 @@
 					.show()
 					.addClass('tabsLite-panel-selected');
 				
+				location.hash=selectedTab; // put tab into url (Schlomo)
+				
 			}).children('a').click(function(event){
 				event.preventDefault();
 			});
