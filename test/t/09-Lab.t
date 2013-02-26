@@ -17,7 +17,7 @@ my $LAB = new_ok( "LML::Lab" => [ $C->labfile ], "should create new Lab object" 
 
 is( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{HOSTNAME}, "tsthst001", "LAB should contain hostname from test data" );
 $LAB->set_filename("test/temp/new_lab.conf");
-is ($LAB->write_file("test","test"),989,"should write 989 bytes");
+is ($LAB->write_file("test","test"),1077,"should write 1077 bytes");
 dies_ok  { new LML::Lab("/dev/null") } "should die on reading invalid LAB file" ;
 $LAB = new_ok(
                "LML::Lab" => [
