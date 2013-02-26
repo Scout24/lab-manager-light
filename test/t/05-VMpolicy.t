@@ -57,7 +57,6 @@ $mock->mock(
 );
 use_ok "LML::VM";
 use_ok "LML::Lab";
-$isDebug = 1;
 
 use_ok "LML::VMpolicy";
 

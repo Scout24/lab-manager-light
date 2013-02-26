@@ -19,7 +19,7 @@ use Image::Magick;
 
 sub new {
     my ( $class, $config, $uuid ) = @_;
-    croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Common::Config object" )
+    croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Config object" )
       unless ( ref($config) eq "LML::Config" );
     croak( "2nd parameter to " . ( caller(0) )[3] . " must be a scalar" ) unless ( ref($uuid) eq "" );
     my $self = {
@@ -28,7 +28,8 @@ sub new {
             push_max => ( $config->get( "vmscreenshot", "push_max" ) ? $config->get( "vmscreenshot", "push_max" ) : 0 ),
     };
     my $LAB = new LML::Lab( $config->labfile );
-    if ( my $HOST = $LAB->get_host($uuid) ) {
+    my $HOST = $LAB->get_host($uuid);
+    if ( $HOST and exists $HOST->{VM_ID}) {
         $self->{vm_id}    = $HOST->{VM_ID};
         $self->{hostname} = $HOST->{HOSTNAME};
     } else {
@@ -52,7 +53,7 @@ sub png {
     my ($self) = @_;
     my $ua = $self->{ua};
     my $request = new HTTP::Request(
-            GET => ( $ENV{VI_SERVER} =~ m#::/# ? "" : "https://" ) . $ENV{VI_SERVER} . "/screen?id=" . $self->{vm_id} );
+            GET => ( $ENV{VI_SERVER} =~ m#://# ? "" : "https://" ) . $ENV{VI_SERVER} . "/screen?id=" . $self->{vm_id} );
     $request->authorization_basic( $ENV{VI_USERNAME}, $ENV{VI_PASSWORD} );    # set credentials
     my $start_time = time;
     my $res        = $ua->request($request);
@@ -77,6 +78,7 @@ sub render {
     croak("BlobToImage failed") unless ( $im->BlobToImage( $self->png ) == 1 );
     Debug("page count $counter");
     if ( $counter <= $self->{push_max} ) {
+        my $last = $counter == $self->{push_max};
         my $e;
         # add time stamp
         $e = $im->Annotate(
@@ -87,7 +89,7 @@ sub render {
                             fill      => 'white',
                             text      => POSIX::strftime( " %Y-%m-%d %H:%M:%S ", localtime ) );
         croak("Annotate error: $e") if ($e);
-        if ( $counter == $self->{push_max} ) {
+        if ( $last ) {
             # last pic, add reload hint
             $e = $im->Annotate(
                                 pointsize   => 40,
@@ -100,7 +102,7 @@ sub render {
             );
         }
         my $png = ( $im->ImageToBlob )[0];
-        return $q->header( -Content_Type => "image/png", -Content_Length => length($png), -expires => "now" )
+        return $q->header( ($last ? (-LML_Page => "last") : () ),  -Content_Type => "image/png", -Content_Length => length($png), -expires => "now" )
           . $png;
     } else {
         Debug( "reached max push of " . $self->{push_max} );

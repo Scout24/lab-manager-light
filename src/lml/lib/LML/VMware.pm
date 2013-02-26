@@ -13,13 +13,13 @@ use vars qw(
   @EXPORT
 );
 
-our @ISA    = qw(Exporter);
-our @EXPORT = qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+our @ISA = qw(Exporter);
+our @EXPORT =
+  qw(connect_vi get_vm_data search_vm custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 
 use VMware::VIRuntime;
 use LML::Common;
 use Carp;
-
 
 ################ Old Interface #############
 #
@@ -31,6 +31,18 @@ use Carp;
 
 our %CUSTOMFIELDIDS;    # internal cache for custom field id->name relation
 
+# these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
+# the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
+our $VM_PROPERTIES = [
+                "name",
+                "config.name",
+                "config.uuid",
+                "config.extraConfig",
+                "config.template",
+                "config.hardware.device",
+                "customValue",
+                
+            ];
 ################################ sub #################
 ##
 ## retrieve_vm_details (<vm>)
@@ -43,14 +55,16 @@ sub retrieve_vm_details ($) {
     my $vm = shift;
     my %VM_DATA;
 
+    # filter out anything that is not a VM
+    return %VM_DATA unless ( ref($vm) eq "VirtualMachine");
     # filter out templates
-    return %VM_DATA if ( $vm->config->template );
+    return %VM_DATA unless ( $vm->get_property("config.template") eq "false" or $vm->get_property("config.template") eq "0");
 
-    $VM_DATA{"UUID"} = $vm->config->uuid;
-    $VM_DATA{"NAME"} = $vm->name;
+    $VM_DATA{"UUID"} = $vm->get_property("config.uuid");
+    $VM_DATA{"NAME"} = $vm->get_property("name");
     $VM_DATA{"PATH"} = Util::get_inventory_path( $vm, $vm->{vim} );
     my @vm_macs = ();
-    foreach my $vm_dev ( @{ $vm->config->hardware->device } ) {
+    foreach my $vm_dev ( @{ $vm->get_property("config.hardware.device") } ) {
         if ( $vm_dev->can("macAddress") and defined( $vm_dev->macAddress ) ) {
             my $mac = $vm_dev->macAddress;
             my $net;
@@ -91,7 +105,10 @@ sub retrieve_vm_details ($) {
 =cut
 
                 my $portgroupkey = $vm_dev->backing->port->portgroupKey;
-                $net = Vim::get_view( mo_ref => new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ) )->config->name;
+                $net =
+                  Vim::get_view( mo_ref =>
+                           new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ) )
+                  ->config->name;
 
             }
 
@@ -113,8 +130,9 @@ sub retrieve_vm_details ($) {
     # don't need it at the moment
     #	$VM{$uuid}{OBJECT}=$vm;
     # store relevant extraConfig
-    for my $extraConfig ( @{ $vm->config->extraConfig } ) {
-        $VM_DATA{EXTRAOPTIONS}{ $extraConfig->key } = $extraConfig->value if ( $extraConfig->key eq "bios.bootDeviceClasses" );
+    for my $extraConfig ( @{ $vm->get_property("config.extraConfig") } ) {
+        $VM_DATA{EXTRAOPTIONS}{ $extraConfig->key } = $extraConfig->value
+          if ( $extraConfig->key eq "bios.bootDeviceClasses" );
     }
     $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
     return %VM_DATA;
@@ -136,7 +154,8 @@ sub walk_mob($$) {
     my $object = shift;
     my $VM     = shift;
     if ( $Util::tracelevel > 1 ) {
-        Util::trace( 1, "Examining '" . $object->name . "' [" . Util::get_inventory_path( $object, $object->{vim} ) . "]\n" );
+        Util::trace( 1,
+                  "Examining '" . $object->name . "' [" . Util::get_inventory_path( $object, $object->{vim} ) . "]\n" );
     }
 
     # walk the children recursively
@@ -163,8 +182,9 @@ sub walk_mob($$) {
     {
 
         # this seems to be a VM
-        my %VM_DATA = retrieve_vm_details($object);
-        $VM->{$uuid} = \%VM_DATA;
+        if (my %VM_DATA = retrieve_vm_details($object)) {
+            $VM->{$uuid} = \%VM_DATA;
+        }
 
     }
 }
@@ -210,7 +230,7 @@ sub connect_vi() {
 ##
 sub custom_fields {
     %CUSTOMFIELDIDS = ();    # reset custom field ID cache
-    my %CUSTOMFIELDS = ();                                                                                  # empty hash for custom fields
+    my %CUSTOMFIELDS = ();   # empty hash for custom fields
     my $custom_fields_manager = Vim::get_view( mo_ref => Vim::get_service_content->customFieldsManager );
 
     # iterate over custom field definitions and build hash array with name->ID mappings
@@ -271,21 +291,14 @@ sub search_vm {
 
 sub get_vm_data {
     my $uuid = shift;
-    my $object = Vim::find_entity_view( view_type => 'VirtualMachine', filter => { 'config.uuid' => $uuid } );
+    my $object =
+      Vim::find_entity_view( 
+            view_type => 'VirtualMachine', 
+            filter => { 'config.uuid' => $uuid }, 
+            properties => $VM_PROPERTIES 
+        );
 
-    # if this is an VM, handle it
-    if (     $object
-         and defined( $object->config )
-         and $object->can("config")
-         and $object->config->can("uuid") )
-    {
-
-        # this seems to be a VM
-        return retrieve_vm_details($object);
-
-    } else {
-        return ();    # return empty hash
-    }
+    return retrieve_vm_details($object);
 }
 
 #
@@ -305,7 +318,8 @@ sub setVmExtraOptsU {
         my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
                                              filter    => { "config.uuid" => $uuid } );
         if ($vm_view) {
-            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
+            my $vm_config_spec =
+              VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
             $vm_view->ReconfigVM( spec => $vm_config_spec );
         }
     };
@@ -340,7 +354,8 @@ sub setVmExtraOptsM {
     eval {
         my $vm_view = Vim::get_view( mo_ref => $mo_ref );
         if ($vm_view) {
-            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
+            my $vm_config_spec =
+              VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
             $vm_view->ReconfigVM( spec => $vm_config_spec );
         }
     };
@@ -439,6 +454,5 @@ END {
         #Debug("Disconnected from vSphere");
     }
 }
-        
-    
+
 1;
