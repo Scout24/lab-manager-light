@@ -11,12 +11,13 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use JSON;
 use LML::Common;
+use GD::Barcode::QRcode;
 
 # uuid is either "" or undef to denote everything
-sub display_vm_data($;$) {
-    my $uuid = shift;
-    my $as_json = shift;
-    
+sub display_vm_data {
+    my ( $uuid, $content_type ) = @_;
+    $content_type = "text/html" unless ($content_type);
+
     my %VM_DATA;
 
     my $VM = ReadVmFile();
@@ -26,15 +27,22 @@ sub display_vm_data($;$) {
         %VM_DATA = %{ $VM->{$uuid} };
     } else {
         return undef;
-    } 
-    
-    # canonical makes the output sorted so that the same input always yields the same output. A bit slower but helps the testing...
+    }
+
+# canonical makes the output sorted so that the same input always yields the same output. A bit slower but helps the testing...
     my $json_data = to_json( \%VM_DATA, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
 
-    if ( $as_json) {
+    if ( $content_type eq "text/json" ) {
         return $json_data;
+    } elsif ( $content_type eq "image/png" ) {
+        return GD::Barcode::QRcode->new($json_data,{ Ecc => 'Q', Version=>23, ModuleSize => 4 })->plot->png;
     } else {
-        return "<html><head><title>Details for $uuid</title></head>\n" . "<body><pre>\n" . escapeHTML($json_data) . "\n" . "</pre></body></html>\n";
+        # html is default and fall-back
+        return
+            "<html><head><title>Details for $uuid</title></head>\n"
+          . "<body><pre>\n"
+          . escapeHTML($json_data) . "\n"
+          . "</pre></body></html>\n";
     }
 }
 
@@ -51,11 +59,22 @@ unless (caller) {
     } else {
         $search_uuid = undef;    # use this to denote everything
     }
-    my $as_json = Accept("text/json") >= 0.9;
+    my $content_type;
+    if ( param("type") ) {
+        $content_type = lc( param("type") );
+    } elsif ( Accept("text/json") >= 0.9 ) {
+        $content_type = "text/json";
+    } elsif ( Accept("image/png") >= 0.9 ) {
+        $content_type = "image/png";
+    } else {
+        $content_type = "text/html";
+    }
 
-    my $result = display_vm_data( $search_uuid, $as_json );
-    print header( -status => ( $result ? 200 : 500 ),
-                  -type => "text/" . ( $as_json ? "json" : "html" ) );
+    my $result = display_vm_data( $search_uuid, $content_type );
+    print header(
+                  -status => ( $result ? 200 : 500 ),
+                  -type => $content_type,
+                  -Content_length => length($result) );
     print $result;
-    exit( $result ? 0 : 1 ); # report status as exit code
+    exit( $result ? 0 : 1 );    # report status as exit code
 }
