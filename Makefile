@@ -28,9 +28,11 @@ deb: clean test
 	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
 	mkdir -p build/deb/usr/share/doc/ build/deb/usr/share/lintian/overrides
 	cp -r doc build/deb/usr/share/doc/lab-manager-light
+	find build/deb/usr/share/doc/lab-manager-light -type f | xargs chmod 0644
 	rm -f build/deb/usr/lib/lml/LICENSE.TXT
 	mv build/deb/DEBIAN/copyright build/deb/usr/share/doc/lab-manager-light/copyright
 	mv build/deb/DEBIAN/overrides build/deb/usr/share/lintian/overrides/lab-manager-light
+	find build/deb/usr/lib/lml/lib -type f | xargs chmod 0644
 	chmod 0755 build/deb/usr/lib/lml/*.pl build/deb/usr/lib/lml/tools/*.pl build/deb/usr/share/doc/lab-manager-light/contrib/*
 	chmod -R go-w build # remove group writeable in case you have it in your umask
 	find build/deb -type f -name \*~ | xargs rm -vf
