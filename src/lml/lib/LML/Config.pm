@@ -29,6 +29,7 @@ sub get {
 
 sub labfile {
     my $self = shift;
+    # TODO deal with the get() returning undef
     return $self->get("lml","datadir")."/lab.conf";
 }
 
