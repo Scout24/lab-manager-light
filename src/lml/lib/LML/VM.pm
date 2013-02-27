@@ -75,7 +75,7 @@ sub get_filtered_macs {
     return $self->get_macs unless ( scalar( @filter_networks ) ); #return filtered macs, no filter set means return all
     my @matching_macs;
     for my $mac ( $self->get_macs ) {
-          if ( grep { $_ eq $self->{"MAC"}->{$mac} } @filter_networks ) {
+          if ( grep { $self->{"MAC"}->{$mac} =~ qr(^$_$) } @filter_networks ) {
               push( @matching_macs, $mac );
           }
     }

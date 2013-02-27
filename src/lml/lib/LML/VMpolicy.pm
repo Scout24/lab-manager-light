@@ -240,7 +240,7 @@ sub handle_forceboot {
         # try if we have a mapping for it
         if ( my $forceboot_dest = $self->{Config}->get( "forceboot", $forceboot_target ) ) {
             $result->set_redirect_target( $forceboot_dest );
-            $result->set_bootinfo("force boot from LML config");
+            $result->set_statusinfo("force boot from LML config");
         }
         # if nothing could be found for the given forceboot entry
         elsif ( $self->{Config}->get( "lml", "failoninvalidforceboot" ) ) {
