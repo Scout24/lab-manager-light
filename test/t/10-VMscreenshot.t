@@ -30,13 +30,13 @@ my $screenshot = new_ok( "LML::VMscreenshot" => [ $C, "4213038e-9203-3a2b-ce9d-c
 my $png_re = qr(\211PNG\r\n\32\n\0\0\0\rIHDR.*\202)s;
 like( $screenshot->png, $png_re, "Should return something like png" );
 like( $screenshot->render( new CGI, -1 ),
-      qr(Expires:.*Date.*Content-length: 273\r\nContent-Type: image/png; charset=ISO-8859-1\r\n\r\n${png_re})s,
+      qr(Expires:.*Date.*Content-length:.*Content-Type: image/png; charset=ISO-8859-1\r\n\r\n${png_re})s,
       "should return HTTP response with PNG like in it" );
 is( $screenshot->render( new CGI, 100000 ),
     undef, "render should return undef if requested page is larger that push_max" );
 like(
     $screenshot->render( new CGI, 25 ),
-qr(Expires:.*Date.*Content-length: 273\r\nLml-page: last\r\nContent-Type: image/png; charset=ISO-8859-1\r\n\r\n${png_re})s,
+qr(Expires:.*Date.*Content-length:.*Lml-page: last\r\nContent-Type: image/png; charset=ISO-8859-1\r\n\r\n${png_re})s,
     "should return  last HTTP response with png in it"
 );
 done_testing();
