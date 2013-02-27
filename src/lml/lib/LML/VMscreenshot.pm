@@ -15,7 +15,7 @@ use LWP::UserAgent;
 use HTTP::Request;
 use Data::Dumper;
 
-use Image::Magick;
+use GD;
 
 sub new {
     my ( $class, $config, $uuid ) = @_;
@@ -72,36 +72,51 @@ sub png {
 # use this to render via CGI ::Push
 sub render {
     my ( $self, $q, $counter ) = @_;
-    croak( "1st parameter to " . ( caller(0) )[3] . " must be CGI object and not " . ref($q) )
-      unless ( ref($q) =~ m/^CGI/ );
-    my $im = new Image::Magick( magick => "png" );
-    croak("BlobToImage failed") unless ( $im->BlobToImage( $self->png ) == 1 );
+    if (ref($q) !~ m/^CGI/ ) {
+        croak( "1st parameter to " . ( caller(0) )[3] . " must be CGI object and not " . ref($q) )
+    }
+    my $gd = new GD::Image($self->png) or croak("new GD failed");
+    my $black = $gd->colorAllocate(0,0,0);
+    my $white = $gd->colorAllocate(255,255,255);
     Debug("page count $counter");
     if ( $counter <= $self->{push_max} ) {
         my $last = $counter == $self->{push_max};
-        my $e;
+
         # add time stamp
-        $e = $im->Annotate(
-                            pointsize => 10,
-                            gravity   => "NorthEast",
-                            antialias => "true",
-                            undercolor => "black",
-                            fill      => 'white',
-                            text      => POSIX::strftime( " %Y-%m-%d %H:%M:%S ", localtime ) );
-        croak("Annotate error: $e") if ($e);
-        if ( $last ) {
-            # last pic, add reload hint
-            $e = $im->Annotate(
-                                pointsize   => 40,
-                                gravity     => "Center",
-                                strokewidth => "2",
-                                antialias   => "true",
-                                stroke      => "white",
-                                fill        => 'black',
-                                text        => "Click to\nrestart streaming"
-            );
+        my $width = $gd->width;
+        my $height = $gd->height;
+        if ($height > 200 and $width > 300) {
+            # if image is large enough to write on it then we do it.
+            my $font = GD::Font->Small;
+            my $text = POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime );
+            my $margin = 5;
+            # this is the space that the actual text needs.
+            my ($textwidth,$textheight) = (length($text) * $font->width, $font->height); 
+            # add the margin to get the dimensions of the frame
+            my ($framewidth,$frameheight) = ($textwidth+2*$margin,$textheight+2*$margin); 
+            # paint white frame filled black in upper right corner, the +1 and -1 shift the
+            # frame by one pixel to NE so that the upper and the right line disappear
+            $gd->filledRectangle($width - $framewidth + 1,-1,$width,$frameheight,$black);
+            $gd->rectangle($width - $framewidth + 1,-1,$width,$frameheight,$white);
+            $gd->string($font, $width - $margin - $textwidth, $margin, $text, $white);
         }
-        my $png = ( $im->ImageToBlob )[0];
+        
+        if ($last) {
+            my $font = GD::Font->Giant;
+            my $text = "Click to restart streaming";
+            my $margin = 10;
+            # this is the space that the actual text needs.
+            my ($textwidth,$textheight) = (length($text) * $font->width, $font->height); 
+            # add the margin to get the dimensions of the frame
+            my $frameheight = $textheight+2*$margin; 
+            # paint black bar with white lines above and below
+            # -1 and +1 make the left and right line disappear
+            my $framey = int($height/2 - $frameheight/2);
+            $gd->filledRectangle(0,$framey,$width,$framey+$frameheight,$black);
+            $gd->rectangle(-1,$framey,$width+1,$framey+$frameheight,$white);
+            $gd->string($font, int($width/2 - $textwidth/2), $framey + $margin, $text, $white);
+        }
+        my $png = $gd->png;
         return $q->header( ($last ? (-LML_Page => "last") : () ),  -Content_Type => "image/png", -Content_Length => length($png), -expires => "now" )
           . $png;
     } else {

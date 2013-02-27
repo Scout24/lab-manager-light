@@ -1,6 +1,6 @@
 Name: lab-manager-light
 Version: VERSION
-Release: 6
+Release: 7
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
 License: GPL
@@ -19,10 +19,10 @@ Requires: perl(Config::IniFiles) >= 2.72
 Requires: perl(DateTime::Format::Flexible)
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON)
-Requires: perl(Image::Magick)
+Requires: perl(GD) perl(GD::Barcode)
 BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
 BuildRequires: perl(File::Slurp) perl(Text::Diff) perl(DateTime::Format::Flexible) perl(JSON)
-BuildRequires: perl(CGI) perl(Config::IniFiles) perl(VMware::VIRuntime) perl(Image::Magick)
+BuildRequires: perl(CGI) perl(Config::IniFiles) perl(VMware::VIRuntime) perl(GD) perl(GD::Barcode)
 
 # RHEL6 specific so far
 Requires: httpd, cronie
