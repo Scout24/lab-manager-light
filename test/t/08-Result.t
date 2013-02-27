@@ -26,7 +26,7 @@ is_deeply( [ $result->get_errors ], [ "a", "b", "c", "a", "b", "c" ], "should re
 
 # test the set functions
 is( $result->set_redirect_target("menu/server.txt"),     "menu/server.txt",            "should return argument" );
-is( $result->set_bootinfo("force boot from LML config"), "force boot from LML config", "should return argument" );
+is( $result->set_statusinfo("force boot from LML config"), "force boot from LML config", "should return argument" );
 
 # check if the render function returns the expected result
 is(

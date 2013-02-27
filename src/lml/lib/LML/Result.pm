@@ -31,11 +31,11 @@ sub add_error {
     return $self->get_errors;
 }
 
-sub set_bootinfo {
-    my ( $self, $bootinfo ) = @_;
-    croak("1st parameter should be boot info\n") unless ($bootinfo);
-    $self->{statusinfo} = $bootinfo;
-    return $bootinfo;
+sub set_statusinfo {
+    my ( $self, $statusinfo ) = @_;
+    croak("1st parameter should be status info\n") unless ($statusinfo);
+    $self->{statusinfo} = $statusinfo;
+    return $statusinfo;
 }
 
 sub set_status {
