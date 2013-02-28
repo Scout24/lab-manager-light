@@ -148,11 +148,11 @@ sub create_vm {
         my %net_settings = get_network( network_name => $network,
                                         poweron      => ${$args{networks}}{$network},
                                         host_view    => $host_view );
-    
+
         # check for errors
         if ( $net_settings{'error'} eq 0 ) {
             push(@vm_devices, $net_settings{'network_conf'});
-    
+
         } elsif ( $net_settings{'error'} eq 1 ) {
             Util::trace( 0, "\nError creating VM '$args{vmname}': "
                           . "Network '$args{nic_network}' not found\n" );
@@ -242,13 +242,19 @@ sub create_vm {
     if ( not $@ ) {
         set_custom_fields( vmname        => $args{vmname},
                            custom_fields => $args{custom_fields} );
-    }
-
-    # finally switch on the virtual machine
-    if ( $args{vm_poweron} ) {
-        my $vm_views = VMUtils::get_vms ('VirtualMachine', $args{vmname});
-        my $vm_view = shift @{$vm_views};
-        $vm_view->PowerOnVM();
+        # finally switch on the virtual machine
+        if ( $args{vm_poweron} ) {
+            my $vm_views = VMUtils::get_vms ('VirtualMachine', $args{vmname});
+            my $vm_view = shift @{$vm_views};
+            eval {
+                $vm_view->PowerOnVM();
+                Util::trace(0, "Successfully switched on virtual machine: '$args{vmname}'\n");
+            };
+            # handle errors
+            if ( $@ ) {
+                Util::trace(0, "Unable to switch on virtual machine: '$args{vmname}'\n");
+            }
+        }
     }
 }
 
@@ -586,9 +592,8 @@ Create five new virtual machines with the following configuration:
       Disk size                       : 8 GB
       Memory                          : 1 GB
       Number of CPUs                  : 1
-      Nic-Network                     : VM Network 1
-      Nic-Network                     : VM Network 2
-      VM-Poweron                      : 1
+      Network                         : VM Network
+      nic_poweron flag                : 1
       Custom Field (Contact User ID)  : user1
       Custom Field (Expires)          : 01.01.2014
       Custom Field (Force Boot)       : ON
