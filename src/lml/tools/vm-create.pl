@@ -476,7 +476,7 @@ __END__
 =head1 NAME
 
 vm-create.pl - Create virtual machines according to the specifications
-              provided in the input XML file.
+               provided in the input XML file.
 
 =head1 SYNOPSIS
 
@@ -514,59 +514,59 @@ be used from the "../schema" directory. This file need not be modified by the us
 The parameters for creating the virtual machine are specified in an XML
 file. The structure of the input XML file is:
 
-   <virtual-machines>
-      <VM>
+   <Virtual-Machines>
+      <Virtual-Machine>
          <!--Several parameters like machine name, guest OS, memory etc-->
-      </VM>
+      </Virtual-Machine>
       .
       .
       .
-      <VM>
-      </VM>
-   </virtual-machines>
+      <Virtual-Machine>
+      </Virtual-Machine>
+   </Virtual-Machines>
 
 Following are the input parameters:
 
 =over
 
-=item B<vmname>
+=item B<Name>
 
 Required. Name of the virtual machine to be created.
 
-=item B<vmhost>
+=item B<Host>
 
 Required. Name of the host.
 
-=item B<datacenter>
+=item B<Datacenter>
 
 Required. Name of the datacenter.
 
-=item B<guestid>
+=item B<Guest-Id>
 
 Optional. Guest operating system identifier. Default: 'winXPProGuest'.
 
-=item B<datastore>
+=item B<Datastore>
 
 Optional. Name of the datastore. Default: Any accessible datastore with free
 space greater than the disksize specified.
 
-=item B<disksize>
+=item B<Disksize>
 
 Optional. Capacity of the virtual disk (in KB). Default: 4096
 
-=item B<memory>
+=item B<Memory>
 
 Optional. Size of virtual machine's memory (in MB). Default: 256
 
-=item B<num_cpus>
+=item B<Number-of-Processor>
 
 Optional. Number of virtual processors in a virtual machine. Default: 1
 
-=item B<nic_network>
+=item B<Nic-Network>
 
 Optional. Network name. Default: Any accessible network.
 
-=item B<nic_poweron>
+=item B<Nic-Poweron>
 
 Optional. Flag to specify whether or not to connect the device
 when the virtual machine starts. Default: 1
@@ -578,151 +578,59 @@ when the virtual machine starts. Default: 1
 Create five new virtual machines with the following configuration:
 
  Machine 1:
-      Name             : Virtual_1
-      Host             : 192.168.111.2
-      Datacenter       : Dracula
-      Guest Os         : Windows Server 2003, Enterprise Edition
-      Datastore        : storage1
-      Disk size        : 4096 KB
-      Memory           : 256 MB
-      Number of CPUs   : 1
-      Network          : VM Network
-      nic_poweron flag : 0
-
- Machine 2:
-      Name             : Virtual_2
-      Host             : <Any Invalid Name, say Host123>
-      Datacenter       : Dracula
-      Guest Os         : Red Hat Enterprise Linux 4
-      Datastore        : storage1
-      Disk size        : 4096 KB
-      Memory           : 256 MB
-      Number of CPUs   : 1
-      Network          : VM Network
-      nic_poweron flag : 0
-
- Machine 3:
-      Name             : Virtual_3
-      Host             : 192.168.111.2
-      Datacenter       : Dracula
-      Guest Os         : Windows XP Professional
-      Datastore        : <Invalid datastore name, say DataABC>
-      Disk size        : 4096 KB
-      Memory           : 256 MB
-      Number of CPUs   : 1
-      Network          : VM Network
-      nic_poweron flag : 0
-
- Machine 4:
-      Name             : Virtual_4
-      Host             : 192.168.111.2
-      Datacenter       : Dracula
-      Guest Os         : Solaris 9
-      Datastore        : storage1
-      Disk size        : <No disk size; default value will be used>
-      Memory           : 128 MB
-      Number of CPUs   : 1
-      Network          : VM Network
-      nic_poweron flag : 0
-
- Machine 5:
-      Name             : Virtual_5
-      Host             : 192.168.111.2
-      Datacenter       : Dracula
-      Guest Os         : <No guest OS, default will be used>
-      Datastore        : storage1
-      Disk size        : 2048 KB
-      Memory           : 128 MB
-      Number of CPUs   : 1
-      Network          : <No network name, default will be used>
-      nic_poweron flag : 1
+      Name                            : server01
+      Host                            : esx01.domain.loc
+      Datacenter                      : SGI
+      Guest Os                        : Red Hat 6 (64bit)
+      Datastore                       : datastore1
+      Disk size                       : 8 GB
+      Memory                          : 1 GB
+      Number of CPUs                  : 1
+      Nic-Network                     : VM Network 1
+      Nic-Network                     : VM Network 2
+      VM-Poweron                      : 1
+      Custom Field (Contact User ID)  : user1
+      Custom Field (Expires)          : 01.01.2014
+      Custom Field (Force Boot)       : ON
+      Custom Field (Force Boot Target): server
+      Target-Folder                   : /Users/user1/
 
 To create five virtual machines as specified, use the following input XML file:
 
  <?xml version="1.0"?>
- <virtual-machines>
-   <VM>
-      <vmname>Virtual_1</vmname>
-      <vmhost>192.168.111.2</vmhost>
-      <datacenter>Dracula</datacenter>
-      <guestid>winNetEnterpriseGuest</guestid>
-      <datastore>storage1</datastore>
-      <disksize>4096</disksize>
-      <memory>256</memory>
-      <num_cpus>1</num_cpus>
-      <nic_network>VM Network</nic_network>
-      <nic_poweron>0</nic_poweron>
-   </VM>
-   <VM>
-      <vmname>Virtual_2</vmname>
-      <vmhost>Host123</vmhost>
-      <datacenter>Dracula</datacenter>
-      <guestid>rhel4Guest</guestid>
-      <datastore>storage1</datastore>
-      <disksize>4096</disksize>
-      <memory>256</memory>
-      <num_cpus>1</num_cpus>
-      <nic_network>VM Network</nic_network>
-      <nic_poweron>0</nic_poweron>
-   </VM>
-   <VM>
-      <vmname>Virtual_3</vmname>
-      <vmhost>192.168.111.2</vmhost>
-      <datacenter>Dracula</datacenter>
-      <guestid>winXPProGuest</guestid>
-      <datastore>DataABC</datastore>
-      <disksize>4096</disksize>
-      <memory>256</memory>
-      <num_cpus>1</num_cpus>
-      <nic_network>VM Network</nic_network>
-      <nic_poweron>0</nic_poweron>
-   </VM>
-   <VM>
-      <vmname>Virtual_4</vmname>
-      <vmhost>192.168.111.2</vmhost>
-      <datacenter>Dracula</datacenter>
-      <guestid>solaris9Guest</guestid>
-      <datastore>storage1</datastore>
-      <disksize></disksize>
-      <memory>128</memory>
-      <num_cpus>1</num_cpus>
-      <nic_network>VM Network</nic_network>
-      <nic_poweron>0</nic_poweron>
-   </VM>
-   <VM>
-      <vmname>Virtual_5</vmname>
-      <vmhost>192.168.111.2</vmhost>
-      <datacenter>Dracula</datacenter>
-      <guestid></guestid>
-      <datastore>storage1</datastore>
-      <disksize>2048</disksize>
-      <memory>128</memory>
-      <num_cpus>1</num_cpus>
-      <nic_network></nic_network>
-      <nic_poweron>1</nic_poweron>
-   </VM>
- </virtual-machines>
+ <Virtual-Machines>
+    <Virtual-Machine>
+       <Name>server01</Name>
+       <VM-Poweron>1</VM-Poweron>
+       <Host>esx01.domain.loc</Host>
+       <Datacenter>SGI</Datacenter>
+       <Guest-Id>rhel6_64Guest</Guest-Id>
+       <Datastore>esx04:datastore1</Datastore>
+       <Disksize>8388608</Disksize>
+       <Memory>1024</Memory>
+       <Number-of-Processor>1</Number-of-Processor>
+       <Networks>
+          <Nic-Network name="VM Network 1" poweron="1"/>
+          <Nic-Network name="VM Network 2" poweron="1"/>
+       </Networks>
+       <Custom-Values>
+          <Value name="Contact User ID">user1</Value>
+          <Value name="Expires">01.01.2014</Value>
+          <Value name="Force Boot">ON</Value>
+          <Value name="Force Boot Target">server</Value>
+       </Custom-Values>
+       <Target-Folder>/Users/user1/</Target-Folder>
+   </Virtual-Machine>
+ </Virtual-Machines>
 
 The command to run the vm-create script is:
 
- vm-create.pl --url https://192.168.111.52:443/sdk/webService
+ vm-create.pl --url https://vsphere.domain.loc/sdk/webService
              --username administrator --password mypassword
              --filename create_vm.xml --schema schema.xsd
 
 The script continues to create the next virtual machine even if
-a previous machine creation process failed.  Sample output of the command:
-
- --------------------------------------------------------------
- Successfully created virtual machine: 'Virtual_1'
-
- Error creating VM 'Virtual_2': Host 'Host123' not found
-
- Error creating VM 'Virtual_3': Datastore DataABC not available.
-
- Successfully created virtual machine: 'Virtual_4'
-
- Successfully created virtual machine: 'Virtual_5'
- --------------------------------------------------------------
+a previous machine creation process failed.
 
 =head1 SUPPORTED PLATFORMS
 
