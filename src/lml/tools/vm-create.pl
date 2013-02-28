@@ -13,6 +13,7 @@ use VMware::VIRuntime;
 use XML::LibXML;
 use AppUtil::XMLInputUtil;
 use AppUtil::HostUtil;
+use AppUtil::VMUtil;
 use Data::Dumper;
 
 $Util::script_version = "1.0";
@@ -59,6 +60,7 @@ sub create_vms {
         my $disksize = 4096;  # in KB
         my $nic_poweron = 1;
         my %custom_fields;
+        my %networks;
 
         # If the properties are specified, the default values are not used.
         if ($_->findvalue('Guest-Id')) {
@@ -82,6 +84,12 @@ sub create_vms {
                 $custom_fields{$entry->getAttribute('name')} = $entry->textContent();
             }
         }
+        # go through the section of Networks
+        if ($_->findvalue('Networks')) {
+            for my $entry ($_->findnodes('Networks/Nic-Network')) {
+                $networks{$entry->getAttribute('name')} = $entry->getAttribute('poweron');
+            }
+        }
 
         create_vm( vmname        => $_->findvalue('Name'),
                    vmhost        => $_->findvalue('Host'),
@@ -91,10 +99,11 @@ sub create_vms {
                    disksize      => $disksize,
                    memory        => $memory,
                    num_cpus      => $num_cpus,
-                   nic_network   => $_->findvalue('Nic-Network'),
                    nic_poweron   => $nic_poweron,
                    custom_fields => \%custom_fields,
-                   target_folder => $_->findvalue('Target-Folder') );
+                   target_folder => $_->findvalue('Target-Folder'),
+                   vm_poweron    => $_->findvalue('VM-Poweron'),
+                   networks      => \%networks );
     }
 }
 
@@ -134,17 +143,21 @@ sub create_vm {
     my $disk_vm_dev_conf_spec =
         create_virtual_disk(ds_path => $ds_path, disksize => $args{disksize});
 
-    my %net_settings = get_network( network_name => $args{nic_network},
-                                    poweron => $args{nic_poweron},
-                                    host_view => $host_view );
-
-    # check for errors
-    if ( $net_settings{'error'} eq 0 ) {
-        push(@vm_devices, $net_settings{'network_conf'});
-    } elsif ($net_settings{'error'} eq 1) {
-        Util::trace( 0, "\nError creating VM '$args{vmname}': "
-                      . "Network '$args{nic_network}' not found\n" );
-        return;
+    # add all configured networks
+    foreach my $network ( sort keys(%{$args{networks}}) ) {
+        my %net_settings = get_network( network_name => $network,
+                                        poweron      => ${$args{networks}}{$network},
+                                        host_view    => $host_view );
+    
+        # check for errors
+        if ( $net_settings{'error'} eq 0 ) {
+            push(@vm_devices, $net_settings{'network_conf'});
+    
+        } elsif ( $net_settings{'error'} eq 1 ) {
+            Util::trace( 0, "\nError creating VM '$args{vmname}': "
+                          . "Network '$args{nic_network}' not found\n" );
+            return;
+        }
     }
 
     push( @vm_devices, $controller_vm_dev_conf_spec );
@@ -229,6 +242,13 @@ sub create_vm {
     if ( not $@ ) {
         set_custom_fields( vmname        => $args{vmname},
                            custom_fields => $args{custom_fields} );
+    }
+
+    # finally switch on the virtual machine
+    if ( $args{vm_poweron} ) {
+        my $vm_views = VMUtils::get_vms ('VirtualMachine', $args{vmname});
+        my $vm_view = shift @{$vm_views};
+        $vm_view->PowerOnVM();
     }
 }
 
@@ -323,26 +343,27 @@ sub create_conf_spec {
 # create virtual device config spec for disk
 # ==========================================
 sub create_virtual_disk {
-    my %args = @_;
-    my $ds_path = $args{ds_path};
-    my $disksize = $args{disksize};
+   my %args = @_;
+   my $ds_path = $args{ds_path};
+   my $disksize = $args{disksize};
 
-    my $disk_backing_info =
-        VirtualDiskFlatVer2BackingInfo->new(diskMode => 'persistent',
-                                            fileName => $ds_path);
+   my $disk_backing_info =
+      VirtualDiskFlatVer2BackingInfo->new(diskMode => 'persistent',
+                                          fileName => $ds_path);
 
-    my $disk = VirtualDisk->new( backing       => $disk_backing_info,
-                                 controllerKey => 0,
-                                 key           => 0,
-                                 unitNumber    => 0,
-                                 capacityInKB  => $disksize );
+   my $disk = VirtualDisk->new(backing => $disk_backing_info,
+                               controllerKey => 0,
+                               key => 0,
+                               unitNumber => 0,
+                               capacityInKB => $disksize);
 
-    my $disk_vm_dev_conf_spec =
-        VirtualDeviceConfigSpec->new( device        => $disk,
-                                      fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
-                                      operation     => VirtualDeviceConfigSpecOperation->new('add'));
-    return $disk_vm_dev_conf_spec;
+   my $disk_vm_dev_conf_spec =
+      VirtualDeviceConfigSpec->new(device => $disk,
+               fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
+               operation => VirtualDeviceConfigSpecOperation->new('add'));
+   return $disk_vm_dev_conf_spec;
 }
+
 
 # get network configuration
 # =========================
@@ -416,37 +437,38 @@ sub validate {
 # check missing values of mandatory fields
 # ========================================
 sub check_missing_value {
-    my $valid = 1;
-    my $filename = Opts::get_option('filename');
-    my $parser = XML::LibXML->new();
-    my $tree = $parser->parse_file($filename);
-    my $root = $tree->getDocumentElement;
-
-    # defect 223162
-    if($root->nodeName eq 'Virtual-Machines') {
-        my @vms = $root->findnodes('Virtual-Machine');
-        foreach (@vms) {
-            if (!$_->findvalue('Name')) {
-                Util::trace(0, "\nERROR in '$filename':\n<Name> value missing " .
-                               "in one of the VM specifications\n");
-                $valid = 0;
-            }
-            if (!$_->findvalue('Host')) {
-                Util::trace(0, "\nERROR in '$filename':\n<Host> value missing " .
-                               "in one of the VM specifications\n");
-                $valid = 0;
-            }
-            if (!$_->findvalue('Datacenter')) {
-                Util::trace(0, "\nERROR in '$filename':\n<Datacenter> value missing " .
-                               "in one of the VM specifications\n");
-                $valid = 0;
-            }
-        }
-    } else {
-        Util::trace(0, "\nERROR in '$filename': Invalid root element ");
-        $valid = 0;
-    }
-    return $valid;
+   my $valid = 1;
+   my $filename = Opts::get_option('filename');
+   my $parser = XML::LibXML->new();
+   my $tree = $parser->parse_file($filename);
+   my $root = $tree->getDocumentElement;
+   
+   # defect 223162
+   if($root->nodeName eq 'Virtual-Machines') {
+      my @vms = $root->findnodes('Virtual-Machine');
+      foreach (@vms) {
+         if (!$_->findvalue('Name')) {
+            Util::trace(0, "\nERROR in '$filename':\n<Name> value missing " .
+                           "in one of the VM specifications\n");
+            $valid = 0;
+         }
+         if (!$_->findvalue('Host')) {
+            Util::trace(0, "\nERROR in '$filename':\n<Host> value missing " .
+                           "in one of the VM specifications\n");
+            $valid = 0;
+         }
+         if (!$_->findvalue('Datacenter')) {
+            Util::trace(0, "\nERROR in '$filename':\n<Datacenter> value missing " .
+                           "in one of the VM specifications\n");
+            $valid = 0;
+         }
+      }
+   }
+   else {
+      Util::trace(0, "\nERROR in '$filename': Invalid root element ");
+      $valid = 0;
+   }
+   return $valid;
 }
 
 __END__
@@ -454,7 +476,7 @@ __END__
 =head1 NAME
 
 vm-create.pl - Create virtual machines according to the specifications
-               provided in the input XML file.
+              provided in the input XML file.
 
 =head1 SYNOPSIS
 
@@ -492,59 +514,59 @@ be used from the "../schema" directory. This file need not be modified by the us
 The parameters for creating the virtual machine are specified in an XML
 file. The structure of the input XML file is:
 
-   <Virtual-Machines>
-      <Virtual-Machine>
+   <virtual-machines>
+      <VM>
          <!--Several parameters like machine name, guest OS, memory etc-->
-      </Virtual-Machine>
+      </VM>
       .
       .
       .
-      <Virtual-Machine>
-      </Virtual-Machine>
-   </Virtual-Machines>
+      <VM>
+      </VM>
+   </virtual-machines>
 
 Following are the input parameters:
 
 =over
 
-=item B<Name>
+=item B<vmname>
 
 Required. Name of the virtual machine to be created.
 
-=item B<Host>
+=item B<vmhost>
 
 Required. Name of the host.
 
-=item B<Datacenter>
+=item B<datacenter>
 
 Required. Name of the datacenter.
 
-=item B<Guest-Id>
+=item B<guestid>
 
 Optional. Guest operating system identifier. Default: 'winXPProGuest'.
 
-=item B<Datastore>
+=item B<datastore>
 
 Optional. Name of the datastore. Default: Any accessible datastore with free
 space greater than the disksize specified.
 
-=item B<Disksize>
+=item B<disksize>
 
 Optional. Capacity of the virtual disk (in KB). Default: 4096
 
-=item B<Memory>
+=item B<memory>
 
 Optional. Size of virtual machine's memory (in MB). Default: 256
 
-=item B<Number-of-Processor>
+=item B<num_cpus>
 
 Optional. Number of virtual processors in a virtual machine. Default: 1
 
-=item B<Nic-Network>
+=item B<nic_network>
 
 Optional. Network name. Default: Any accessible network.
 
-=item B<Nic-Poweron>
+=item B<nic_poweron>
 
 Optional. Flag to specify whether or not to connect the device
 when the virtual machine starts. Default: 1
@@ -556,55 +578,151 @@ when the virtual machine starts. Default: 1
 Create five new virtual machines with the following configuration:
 
  Machine 1:
-      Name                            : server01
-      Host                            : esx01.domain.loc
-      Datacenter                      : SGI
-      Guest Os                        : Red Hat 6 (64bit)
-      Datastore                       : datastore1
-      Disk size                       : 8 GB
-      Memory                          : 1 GB
-      Number of CPUs                  : 1
-      Network                         : VM Network
-      nic_poweron flag                : 1
-      Custom Field (Contact User ID)  : user1
-      Custom Field (Expires)          : 01.01.2014
-      Custom Field (Force Boot)       : ON
-      Custom Field (Force Boot Target): server
-      Target-Folder                   : /Users/user1/
+      Name             : Virtual_1
+      Host             : 192.168.111.2
+      Datacenter       : Dracula
+      Guest Os         : Windows Server 2003, Enterprise Edition
+      Datastore        : storage1
+      Disk size        : 4096 KB
+      Memory           : 256 MB
+      Number of CPUs   : 1
+      Network          : VM Network
+      nic_poweron flag : 0
+
+ Machine 2:
+      Name             : Virtual_2
+      Host             : <Any Invalid Name, say Host123>
+      Datacenter       : Dracula
+      Guest Os         : Red Hat Enterprise Linux 4
+      Datastore        : storage1
+      Disk size        : 4096 KB
+      Memory           : 256 MB
+      Number of CPUs   : 1
+      Network          : VM Network
+      nic_poweron flag : 0
+
+ Machine 3:
+      Name             : Virtual_3
+      Host             : 192.168.111.2
+      Datacenter       : Dracula
+      Guest Os         : Windows XP Professional
+      Datastore        : <Invalid datastore name, say DataABC>
+      Disk size        : 4096 KB
+      Memory           : 256 MB
+      Number of CPUs   : 1
+      Network          : VM Network
+      nic_poweron flag : 0
+
+ Machine 4:
+      Name             : Virtual_4
+      Host             : 192.168.111.2
+      Datacenter       : Dracula
+      Guest Os         : Solaris 9
+      Datastore        : storage1
+      Disk size        : <No disk size; default value will be used>
+      Memory           : 128 MB
+      Number of CPUs   : 1
+      Network          : VM Network
+      nic_poweron flag : 0
+
+ Machine 5:
+      Name             : Virtual_5
+      Host             : 192.168.111.2
+      Datacenter       : Dracula
+      Guest Os         : <No guest OS, default will be used>
+      Datastore        : storage1
+      Disk size        : 2048 KB
+      Memory           : 128 MB
+      Number of CPUs   : 1
+      Network          : <No network name, default will be used>
+      nic_poweron flag : 1
 
 To create five virtual machines as specified, use the following input XML file:
 
  <?xml version="1.0"?>
- <Virtual-Machines>
-    <Virtual-Machine>
-       <Name>server01</Name>
-       <Host>esx01.domain.loc</Host>
-       <Datacenter>SGI</Datacenter>
-       <Guest-Id>rhel6_64Guest</Guest-Id>
-       <Datastore>esx04:datastore1</Datastore>
-       <Disksize>8388608</Disksize>
-       <Memory>1024</Memory>
-       <Number-of-Processor>1</Number-of-Processor>
-       <Nic-Network>VM Network</Nic-Network>
-       <Nic-Poweron>1</Nic-Poweron>
-       <Custom-Values>
-          <Value name="Contact User ID">user1</Value>
-          <Value name="Expires">01.01.2014</Value>
-          <Value name="Force Boot">ON</Value>
-          <Value name="Force Boot Target">server</Value>
-       </Custom-Values>
-       <Target-Folder>/Users/user1/</Target-Folder>
-   </Virtual-Machine>
- </Virtual-Machines>
+ <virtual-machines>
+   <VM>
+      <vmname>Virtual_1</vmname>
+      <vmhost>192.168.111.2</vmhost>
+      <datacenter>Dracula</datacenter>
+      <guestid>winNetEnterpriseGuest</guestid>
+      <datastore>storage1</datastore>
+      <disksize>4096</disksize>
+      <memory>256</memory>
+      <num_cpus>1</num_cpus>
+      <nic_network>VM Network</nic_network>
+      <nic_poweron>0</nic_poweron>
+   </VM>
+   <VM>
+      <vmname>Virtual_2</vmname>
+      <vmhost>Host123</vmhost>
+      <datacenter>Dracula</datacenter>
+      <guestid>rhel4Guest</guestid>
+      <datastore>storage1</datastore>
+      <disksize>4096</disksize>
+      <memory>256</memory>
+      <num_cpus>1</num_cpus>
+      <nic_network>VM Network</nic_network>
+      <nic_poweron>0</nic_poweron>
+   </VM>
+   <VM>
+      <vmname>Virtual_3</vmname>
+      <vmhost>192.168.111.2</vmhost>
+      <datacenter>Dracula</datacenter>
+      <guestid>winXPProGuest</guestid>
+      <datastore>DataABC</datastore>
+      <disksize>4096</disksize>
+      <memory>256</memory>
+      <num_cpus>1</num_cpus>
+      <nic_network>VM Network</nic_network>
+      <nic_poweron>0</nic_poweron>
+   </VM>
+   <VM>
+      <vmname>Virtual_4</vmname>
+      <vmhost>192.168.111.2</vmhost>
+      <datacenter>Dracula</datacenter>
+      <guestid>solaris9Guest</guestid>
+      <datastore>storage1</datastore>
+      <disksize></disksize>
+      <memory>128</memory>
+      <num_cpus>1</num_cpus>
+      <nic_network>VM Network</nic_network>
+      <nic_poweron>0</nic_poweron>
+   </VM>
+   <VM>
+      <vmname>Virtual_5</vmname>
+      <vmhost>192.168.111.2</vmhost>
+      <datacenter>Dracula</datacenter>
+      <guestid></guestid>
+      <datastore>storage1</datastore>
+      <disksize>2048</disksize>
+      <memory>128</memory>
+      <num_cpus>1</num_cpus>
+      <nic_network></nic_network>
+      <nic_poweron>1</nic_poweron>
+   </VM>
+ </virtual-machines>
 
 The command to run the vm-create script is:
 
- vm-create.pl --url https://vsphere.domain.loc/sdk/webService
+ vm-create.pl --url https://192.168.111.52:443/sdk/webService
              --username administrator --password mypassword
              --filename create_vm.xml --schema schema.xsd
 
 The script continues to create the next virtual machine even if
-a previous machine creation process failed.
+a previous machine creation process failed.  Sample output of the command:
+
+ --------------------------------------------------------------
+ Successfully created virtual machine: 'Virtual_1'
+
+ Error creating VM 'Virtual_2': Host 'Host123' not found
+
+ Error creating VM 'Virtual_3': Datastore DataABC not available.
+
+ Successfully created virtual machine: 'Virtual_4'
+
+ Successfully created virtual machine: 'Virtual_5'
+ --------------------------------------------------------------
 
 =head1 SUPPORTED PLATFORMS
 
