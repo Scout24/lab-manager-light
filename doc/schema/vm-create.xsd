@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-<!-- definition of simple elements -->
+<!-- definition of single elements -->
 <xs:element name="Name" type="xs:string"/>
 <xs:element name="Host" type="xs:string"/>
 <xs:element name="Datacenter" type="xs:string"/>
 <xs:element name="Guest-Id" type="xs:string"/>
 <xs:element name="Datastore" type="xs:string"/>
+<xs:element name="Target-Folder" type="xs:string"/>
 <xs:element name="Disksize" type="xs:integer"/>
 <xs:element name="Memory" type="xs:integer"/>
 <xs:element name="Number-of-Processor" type="xs:integer"/>
-<xs:element name="Nic-Network" type="xs:string"/>
-<xs:element name="Nic-Poweron">
+<xs:element name="VM-Poweron">
   <xs:simpleType>
     <xs:restriction base="xs:integer">
       <xs:enumeration value="0"/>
@@ -28,9 +28,26 @@
     </xs:simpleContent>
   </xs:complexType>
 </xs:element>
-<xs:element name="Target-Folder" type="xs:string"/>
+<xs:element name="Nic-Network">
+  <xs:complexType>
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="poweron">
+          <xs:simpleType>
+            <xs:restriction base="xs:integer">
+              <xs:enumeration value="0"/>
+              <xs:enumeration value="1"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:element>
 
-<!-- definition of complex elements -->
+<!-- definition of parent elements -->
+
 <xs:element name="Custom-Values">
   <xs:complexType>
     <xs:sequence>
@@ -39,10 +56,19 @@
   </xs:complexType>
 </xs:element>
 
+<xs:element name="Networks">
+  <xs:complexType>
+    <xs:sequence>
+      <xs:element ref="Nic-Network" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
 <xs:element name="Virtual-Machine">
   <xs:complexType>
     <xs:sequence>
       <xs:element ref="Name"/>
+      <xs:element ref="VM-Poweron"/>
       <xs:element ref="Host"/>
       <xs:element ref="Datacenter"/>
       <xs:element ref="Guest-Id"/>
@@ -50,13 +76,14 @@
       <xs:element ref="Disksize"/>
       <xs:element ref="Memory"/>
       <xs:element ref="Number-of-Processor"/>
-      <xs:element ref="Nic-Network"/>
-      <xs:element ref="Nic-Poweron"/>
+      <xs:element ref="Networks"/>
       <xs:element ref="Custom-Values"/>
       <xs:element ref="Target-Folder"/>
     </xs:sequence>
   </xs:complexType>
 </xs:element>
+
+<!-- definition of the root -->
 
 <xs:element name="Virtual-Machines">
   <xs:complexType>

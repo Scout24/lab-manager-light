@@ -13,6 +13,7 @@ use VMware::VIRuntime;
 use XML::LibXML;
 use AppUtil::XMLInputUtil;
 use AppUtil::HostUtil;
+use AppUtil::VMUtil;
 use Data::Dumper;
 
 $Util::script_version = "1.0";
@@ -59,6 +60,7 @@ sub create_vms {
         my $disksize = 4096;  # in KB
         my $nic_poweron = 1;
         my %custom_fields;
+        my %networks;
 
         # If the properties are specified, the default values are not used.
         if ($_->findvalue('Guest-Id')) {
@@ -82,6 +84,12 @@ sub create_vms {
                 $custom_fields{$entry->getAttribute('name')} = $entry->textContent();
             }
         }
+        # go through the section of Networks
+        if ($_->findvalue('Networks')) {
+            for my $entry ($_->findnodes('Networks/Nic-Network')) {
+                $networks{$entry->getAttribute('name')} = $entry->getAttribute('poweron');
+            }
+        }
 
         create_vm( vmname        => $_->findvalue('Name'),
                    vmhost        => $_->findvalue('Host'),
@@ -91,10 +99,11 @@ sub create_vms {
                    disksize      => $disksize,
                    memory        => $memory,
                    num_cpus      => $num_cpus,
-                   nic_network   => $_->findvalue('Nic-Network'),
                    nic_poweron   => $nic_poweron,
                    custom_fields => \%custom_fields,
-                   target_folder => $_->findvalue('Target-Folder') );
+                   target_folder => $_->findvalue('Target-Folder'),
+                   vm_poweron    => $_->findvalue('VM-Poweron'),
+                   networks      => \%networks );
     }
 }
 
@@ -134,17 +143,21 @@ sub create_vm {
     my $disk_vm_dev_conf_spec =
         create_virtual_disk(ds_path => $ds_path, disksize => $args{disksize});
 
-    my %net_settings = get_network( network_name => $args{nic_network},
-                                    poweron => $args{nic_poweron},
-                                    host_view => $host_view );
+    # add all configured networks
+    foreach my $network ( sort keys(%{$args{networks}}) ) {
+        my %net_settings = get_network( network_name => $network,
+                                        poweron      => ${$args{networks}}{$network},
+                                        host_view    => $host_view );
 
-    # check for errors
-    if ( $net_settings{'error'} eq 0 ) {
-        push(@vm_devices, $net_settings{'network_conf'});
-    } elsif ($net_settings{'error'} eq 1) {
-        Util::trace( 0, "\nError creating VM '$args{vmname}': "
-                      . "Network '$args{nic_network}' not found\n" );
-        return;
+        # check for errors
+        if ( $net_settings{'error'} eq 0 ) {
+            push(@vm_devices, $net_settings{'network_conf'});
+
+        } elsif ( $net_settings{'error'} eq 1 ) {
+            Util::trace( 0, "\nError creating VM '$args{vmname}': "
+                          . "Network '$args{nic_network}' not found\n" );
+            return;
+        }
     }
 
     push( @vm_devices, $controller_vm_dev_conf_spec );
@@ -229,6 +242,19 @@ sub create_vm {
     if ( not $@ ) {
         set_custom_fields( vmname        => $args{vmname},
                            custom_fields => $args{custom_fields} );
+        # finally switch on the virtual machine
+        if ( $args{vm_poweron} ) {
+            my $vm_views = VMUtils::get_vms ('VirtualMachine', $args{vmname});
+            my $vm_view = shift @{$vm_views};
+            eval {
+                $vm_view->PowerOnVM();
+                Util::trace(0, "Successfully switched on virtual machine: '$args{vmname}'\n");
+            };
+            # handle errors
+            if ( $@ ) {
+                Util::trace(0, "Unable to switch on virtual machine: '$args{vmname}'\n");
+            }
+        }
     }
 }
 
@@ -323,26 +349,27 @@ sub create_conf_spec {
 # create virtual device config spec for disk
 # ==========================================
 sub create_virtual_disk {
-    my %args = @_;
-    my $ds_path = $args{ds_path};
-    my $disksize = $args{disksize};
+   my %args = @_;
+   my $ds_path = $args{ds_path};
+   my $disksize = $args{disksize};
 
-    my $disk_backing_info =
-        VirtualDiskFlatVer2BackingInfo->new(diskMode => 'persistent',
-                                            fileName => $ds_path);
+   my $disk_backing_info =
+      VirtualDiskFlatVer2BackingInfo->new(diskMode => 'persistent',
+                                          fileName => $ds_path);
 
-    my $disk = VirtualDisk->new( backing       => $disk_backing_info,
-                                 controllerKey => 0,
-                                 key           => 0,
-                                 unitNumber    => 0,
-                                 capacityInKB  => $disksize );
+   my $disk = VirtualDisk->new(backing => $disk_backing_info,
+                               controllerKey => 0,
+                               key => 0,
+                               unitNumber => 0,
+                               capacityInKB => $disksize);
 
-    my $disk_vm_dev_conf_spec =
-        VirtualDeviceConfigSpec->new( device        => $disk,
-                                      fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
-                                      operation     => VirtualDeviceConfigSpecOperation->new('add'));
-    return $disk_vm_dev_conf_spec;
+   my $disk_vm_dev_conf_spec =
+      VirtualDeviceConfigSpec->new(device => $disk,
+               fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
+               operation => VirtualDeviceConfigSpecOperation->new('add'));
+   return $disk_vm_dev_conf_spec;
 }
+
 
 # get network configuration
 # =========================
@@ -416,37 +443,38 @@ sub validate {
 # check missing values of mandatory fields
 # ========================================
 sub check_missing_value {
-    my $valid = 1;
-    my $filename = Opts::get_option('filename');
-    my $parser = XML::LibXML->new();
-    my $tree = $parser->parse_file($filename);
-    my $root = $tree->getDocumentElement;
-
-    # defect 223162
-    if($root->nodeName eq 'Virtual-Machines') {
-        my @vms = $root->findnodes('Virtual-Machine');
-        foreach (@vms) {
-            if (!$_->findvalue('Name')) {
-                Util::trace(0, "\nERROR in '$filename':\n<Name> value missing " .
-                               "in one of the VM specifications\n");
-                $valid = 0;
-            }
-            if (!$_->findvalue('Host')) {
-                Util::trace(0, "\nERROR in '$filename':\n<Host> value missing " .
-                               "in one of the VM specifications\n");
-                $valid = 0;
-            }
-            if (!$_->findvalue('Datacenter')) {
-                Util::trace(0, "\nERROR in '$filename':\n<Datacenter> value missing " .
-                               "in one of the VM specifications\n");
-                $valid = 0;
-            }
-        }
-    } else {
-        Util::trace(0, "\nERROR in '$filename': Invalid root element ");
-        $valid = 0;
-    }
-    return $valid;
+   my $valid = 1;
+   my $filename = Opts::get_option('filename');
+   my $parser = XML::LibXML->new();
+   my $tree = $parser->parse_file($filename);
+   my $root = $tree->getDocumentElement;
+   
+   # defect 223162
+   if($root->nodeName eq 'Virtual-Machines') {
+      my @vms = $root->findnodes('Virtual-Machine');
+      foreach (@vms) {
+         if (!$_->findvalue('Name')) {
+            Util::trace(0, "\nERROR in '$filename':\n<Name> value missing " .
+                           "in one of the VM specifications\n");
+            $valid = 0;
+         }
+         if (!$_->findvalue('Host')) {
+            Util::trace(0, "\nERROR in '$filename':\n<Host> value missing " .
+                           "in one of the VM specifications\n");
+            $valid = 0;
+         }
+         if (!$_->findvalue('Datacenter')) {
+            Util::trace(0, "\nERROR in '$filename':\n<Datacenter> value missing " .
+                           "in one of the VM specifications\n");
+            $valid = 0;
+         }
+      }
+   }
+   else {
+      Util::trace(0, "\nERROR in '$filename': Invalid root element ");
+      $valid = 0;
+   }
+   return $valid;
 }
 
 __END__
@@ -578,6 +606,7 @@ To create five virtual machines as specified, use the following input XML file:
  <Virtual-Machines>
     <Virtual-Machine>
        <Name>server01</Name>
+       <VM-Poweron>1</VM-Poweron>
        <Host>esx01.domain.loc</Host>
        <Datacenter>SGI</Datacenter>
        <Guest-Id>rhel6_64Guest</Guest-Id>
@@ -585,8 +614,10 @@ To create five virtual machines as specified, use the following input XML file:
        <Disksize>8388608</Disksize>
        <Memory>1024</Memory>
        <Number-of-Processor>1</Number-of-Processor>
-       <Nic-Network>VM Network</Nic-Network>
-       <Nic-Poweron>1</Nic-Poweron>
+       <Networks>
+          <Nic-Network name="VM Network 1" poweron="1"/>
+          <Nic-Network name="VM Network 2" poweron="1"/>
+       </Networks>
        <Custom-Values>
           <Value name="Contact User ID">user1</Value>
           <Value name="Expires">01.01.2014</Value>
