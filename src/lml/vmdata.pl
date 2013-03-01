@@ -74,7 +74,8 @@ unless (caller) {
     if ( user_agent("PXE") or param("pxelinux")) {
         $content_type = "text/plain";
         $result = join("\n",@{$CONFIG{"pxelinux"}{"qrdata_template"}});
-        $result =~ s/URL/url(-query=>1)/e;
+        my $url = url()."?uuid=$search_uuid;type=image/png";
+        $result =~ s/URL/$url/;
     } else {
         $result = display_vm_data( $search_uuid, $content_type );
     }
