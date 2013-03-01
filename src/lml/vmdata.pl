@@ -35,7 +35,7 @@ sub display_vm_data {
     if ( $content_type eq "text/json" ) {
         return $json_data;
     } elsif ( $content_type eq "image/png" ) {
-        return GD::Barcode::QRcode->new($json_data,{ Ecc => 'Q', Version=>23, ModuleSize => 4 })->plot->png;
+        return GD::Barcode::QRcode->new( $json_data, { Ecc => 'Q', Version => 23, ModuleSize => 4 } )->plot->png;
     } else {
         # html is default and fall-back
         return
@@ -70,7 +70,13 @@ unless (caller) {
         $content_type = "text/html";
     }
 
-    my $result = display_vm_data( $search_uuid, $content_type );
+    my $result;
+    if ( user_agent("PXE") or param("pxelinux")) {
+        $content_type = "text/plain";
+        $result = join("\n",@{$CONFIG{"pxelinux"}{"qrdata_template"}}) =~ s/URL/url(-query=>1)/re;
+    } else {
+        $result = display_vm_data( $search_uuid, $content_type );
+    }
     print header(
                   -status => ( $result ? 200 : 500 ),
                   -type => $content_type,

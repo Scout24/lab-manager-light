@@ -13,8 +13,8 @@ use LML::Lab;
 
 sub new {
     my ( $class, $config, $VM ) = @_;
-    croak( "1st parameterto " . ( caller(0) )[3] . " must be a LML::Common::Config object" ) unless ( ref($config) eq "LML::Config" );
-    croak( "2nd parameterto " . ( caller(0) )[3] . " must be a LML::VMware::VM object" )     unless ( ref($VM)     eq "LML::VM" );
+    croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Common::Config object" ) unless ( ref($config) eq "LML::Config" );
+    croak( "2nd parameter to " . ( caller(0) )[3] . " must be a LML::VMware::VM object" )     unless ( ref($VM)     eq "LML::VM" );
     my $self = {
                  Config => $config,
                  VM     => $VM,
@@ -237,8 +237,13 @@ sub handle_forceboot {
         # if forceboot contains a path relative to the pxelinux TFTP prefix
         $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;
 
+        # first check for the built in targets
+        if ($forceboot_target eq "qrdata") {
+            $result->set_redirect_target("/lml/vmdata.pl?uuid=".$self->{VM}->uuid);
+            $result->set_statusinfo("force boot from LML builtin");
+        }
         # try if we have a mapping for it
-        if ( my $forceboot_dest = $self->{Config}->get( "forceboot", $forceboot_target ) ) {
+        elsif ( my $forceboot_dest = $self->{Config}->get( "forceboot", $forceboot_target ) ) {
             $result->set_redirect_target( $forceboot_dest );
             $result->set_statusinfo("force boot from LML config");
         }

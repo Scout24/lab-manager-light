@@ -8,7 +8,10 @@ use LML::Common;
 sub new {
     my $class = shift;
     my $self;
-    if (ref($_[0]) eq "HASH" ) {
+    if (ref($_[0]) eq "LML::Config" ) {
+        
+    }
+    elsif (ref($_[0]) eq "HASH" ) {
         $self = shift;
     } else {
         my %C = LoadConfig(@_);
@@ -25,6 +28,12 @@ sub get {
     } else {
         return undef;
     }
+}
+
+sub set {
+    my ($self,$section,$key,$value) = @_;
+    $self->{$section}->{$key} = $value;
+    return $value;
 }
 
 sub labfile {

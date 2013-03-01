@@ -12,29 +12,29 @@ use CGI ':standard';
 use LML::Common;
 use LML::Config;
 
-my $C   = new LML::Config();
+my $C = new LML::Config();
 
 my $LAB = ReadLabFile;
 my $VM  = ReadVmFile;
 
 print header();
 print start_html(
-    -title  => $C->get("vsphere","server"). " Lab Manager Light",
-    -script => [
-                 { -src => "lib/js/jquery-1.8.3.min.js" },
-                 { -src => "lib/js/jquery.cluetip.min.js" },
-                 { -src => "lib/js/jquery.tabsLite.js" },
-                 { -src => "lib/js/jquery.dataTables.min.js" },
-                 { -src => "lib/js/TableTools.min.js" },
-                 { -src => "lib/js/lml.js" },
-    ],
-    -style => [
-                { -src   => "lib/css/jquery.cluetip.css", },
-                { -src   => "lib/css/jquery.dataTables.css", },
-                { -src   => "lib/css/TableTools.css", },
-                { -src   => "lib/css/lml.css", },
-                { -media => "print", -src => "lib/css/lml-print.css" },
-    ] );
+                  -title  => $C->get( "vsphere", "server" ) . " Lab Manager Light",
+                  -script => [
+                               { -src => "lib/js/jquery-1.8.3.min.js" },
+                               { -src => "lib/js/jquery.cluetip.min.js" },
+                               { -src => "lib/js/jquery.tabsLite.js" },
+                               { -src => "lib/js/jquery.dataTables.min.js" },
+                               { -src => "lib/js/TableTools.min.js" },
+                               { -src => "lib/js/lml.js" },
+                  ],
+                  -style => [
+                              { -src   => "lib/css/jquery.cluetip.css", },
+                              { -src   => "lib/css/jquery.dataTables.css", },
+                              { -src   => "lib/css/TableTools.css", },
+                              { -src   => "lib/css/lml.css", },
+                              { -media => "print", -src => "lib/css/lml-print.css" },
+                  ] );
 
 print <<EOF;
 <div id="logoframe">
@@ -64,8 +64,8 @@ print thead(
                  th( { -title => "Click to sort" }, "Expires" ),
              ) ) . "\n\n\t\t<tbody>\n";
 
-my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
-my $contactuser_field = $C->get( "vsphere", "contactuserid_field" );
+my $display_filter_vm_path = $C->get( "gui",     "display_filter_vm_path" );
+my $contactuser_field      = $C->get( "vsphere", "contactuserid_field" );
 
 for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
     my $expires         = "unknown";
@@ -75,8 +75,8 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
         eval {
             $expires =
               DateTime::Format::Flexible->parse_datetime(
-                                               $VM->{$uuid}->{CUSTOMFIELDS}->{ $C->get( "vsphere", "expires_field" ) },
-                                               european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
+                                              $VM->{$uuid}->{CUSTOMFIELDS}->{ $C->get( "vsphere", "expires_field" ) },
+                                              european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
         };
         $display_vm_path = $VM->{$uuid}->{PATH};
         if ($display_filter_vm_path) {
@@ -84,8 +84,8 @@ for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
         }
 
 # lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
-        if ( exists( $VM->{$uuid}->{CUSTOMFIELDS}->{ $contactuser_field  } ) ) {
-            $contact_user_id = lc( $VM->{$uuid}->{CUSTOMFIELDS}->{ $contactuser_field } );
+        if ( exists( $VM->{$uuid}->{CUSTOMFIELDS}->{$contactuser_field} ) ) {
+            $contact_user_id = lc( $VM->{$uuid}->{CUSTOMFIELDS}->{$contactuser_field} );
         }
     }
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
@@ -140,7 +140,7 @@ print <<EOF;
 		<pre>
 EOF
 # mask password in config dump
-$CONFIG{vsphere}{password} = "***** hidden *****" if ( $C->get( "vsphere", "password" ) );
+$C->set( "vsphere", "password", "***** hidden *****" ) if ( $C->get( "vsphere", "password" ) );
 my $confdump;
 open( *CONFDUMP, ">", \$confdump ) or die "Could not open memory file: $!";
 tied(%CONFIG)->OutputConfigToFileHandle(*CONFDUMP);
