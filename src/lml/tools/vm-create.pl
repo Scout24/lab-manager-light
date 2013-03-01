@@ -2,6 +2,9 @@
 #
 # Copyright (c) 2007 VMware, Inc.  All rights reserved.
 #
+# Patched by authors:  
+#     Stefan Neben <stefan.neben@gmail.com>
+#
 
 use strict;
 use warnings;
@@ -207,28 +210,28 @@ sub create_vm {
     eval {
         $target_folder_view->CreateVM( config => $vm_config_spec,
                                        pool   => $comp_res_view->resourcePool );
-        Util::trace(0, "\nSuccessfully created virtual machine: "
+        Util::trace(0, "\nSuccessfully created VM: "
                       ."'$args{vmname}' under host $args{vmhost}\n");
     };
 
     if ( $@ ) {
         Util::trace(0, "\nError creating VM '$args{vmname}': ");
-        if (ref($@) eq 'SoapFault') {
-            if (ref($@->detail) eq 'PlatformConfigFault') {
+        if ( ref($@) eq 'SoapFault' ) {
+            if ( ref($@->detail) eq 'PlatformConfigFault' ) {
                 Util::trace(0, "Invalid VM configuration: "
                              . ${$@->detail}{'text'} . "\n");
-            } elsif (ref($@->detail) eq 'InvalidDeviceSpec') {
+            } elsif ( ref($@->detail) eq 'InvalidDeviceSpec' ) {
                 Util::trace(0, "Invalid Device configuration: "
                              . ${$@->detail}{'property'} . "\n");
-            } elsif (ref($@->detail) eq 'DatacenterMismatch') {
+            } elsif ( ref($@->detail) eq 'DatacenterMismatch' ) {
                 Util::trace(0, "DatacenterMismatch, the input arguments had entities "
                              . "that did not belong to the same datacenter\n");
-            } elsif (ref($@->detail) eq 'HostNotConnected') {
+            } elsif ( ref($@->detail) eq 'HostNotConnected' ) {
                 Util::trace(0, "Unable to communicate with the remote host,"
                              . " since it is disconnected\n");
-            } elsif (ref($@->detail) eq 'InvalidState') {
+            } elsif ( ref($@->detail) eq 'InvalidState' ) {
                 Util::trace(0, "The operation is not allowed in the current state\n");
-            } elsif (ref($@->detail) eq 'DuplicateName') {
+            } elsif ( ref($@->detail) eq 'DuplicateName' ) {
                 Util::trace(0, "Virtual machine already exists.\n");
             } else {
                 Util::trace(0, "\n" . $@ . "\n");
@@ -244,15 +247,15 @@ sub create_vm {
                            custom_fields => $args{custom_fields} );
         # finally switch on the virtual machine
         if ( $args{vm_poweron} ) {
-            my $vm_views = VMUtils::get_vms ('VirtualMachine', $args{vmname});
+            my $vm_views = VMUtils::get_vms( 'VirtualMachine', $args{vmname} );
             my $vm_view = shift @{$vm_views};
             eval {
                 $vm_view->PowerOnVM();
-                Util::trace(0, "Successfully switched on virtual machine: '$args{vmname}'\n");
+                Util::trace(0, "Successfully switched on VM: '$args{vmname}'\n");
             };
             # handle errors
             if ( $@ ) {
-                Util::trace(0, "Unable to switch on virtual machine: '$args{vmname}'\n");
+                Util::trace(0, "Unable to switch on VM: '$args{vmname}'\n");
             }
         }
     }
