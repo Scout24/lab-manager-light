@@ -73,7 +73,8 @@ unless (caller) {
     my $result;
     if ( user_agent("PXE") or param("pxelinux")) {
         $content_type = "text/plain";
-        $result = join("\n",@{$CONFIG{"pxelinux"}{"qrdata_template"}}) =~ s/URL/url(-query=>1)/re;
+        $result = join("\n",@{$CONFIG{"pxelinux"}{"qrdata_template"}});
+        $result =~ s/URL/url(-query=>1)/e;
     } else {
         $result = display_vm_data( $search_uuid, $content_type );
     }
