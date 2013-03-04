@@ -5,12 +5,15 @@ use File::Slurp;
 use Test::More;
 use Test::Warn;
 use Text::Diff;
+use LML::Config;
 use LML::Common;
 BEGIN {
     require_ok "src/lml/vmdata.pl";
 }
 
-LoadConfig( "src/lml/default.conf", "test/data/test.conf" );
+my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
+
+unshift(@INC,"src/lml/lib"); # we find our images from this
 
 # NOTE: Indentation with 3 spaces! Use print STDERR $result to get a fresh copy of the display_vm_data result.
 my $vm_json=<<EOF;
@@ -111,11 +114,11 @@ my $vm_json=<<EOF;
 }
 EOF
 chomp($vm_json);
-my $result = display_vm_data("","text/json");
+my $result = display_vm_data($C,"","text/json");
 chomp($result);
 is ($result,$vm_json,"all data");
-$result = display_vm_data("");
+$result = display_vm_data($C,"");
 like ($result,qr(.*html.*),"all data as html");
-$result = display_vm_data("4213c435-a176-a533-e07e-38644cf43390","image/png");
+$result = display_vm_data($C,"4213c435-a176-a533-e07e-38644cf43390","image/png");
 like ($result,qr(\211PNG\r\n\32\n\0\0\0\rIHDR.*\202)s,"single VM as png");
 done_testing;

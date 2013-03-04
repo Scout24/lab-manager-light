@@ -239,7 +239,7 @@ sub handle_forceboot {
 
         # first check for the built in targets
         if ($forceboot_target eq "qrdata") {
-            $result->set_redirect_target("/lml/vmdata.pl?uuid=".$self->{VM}->uuid);
+            $result->set_redirect_target("/lml/vmdata.pl/".$self->{VM}->uuid.".pxelinux");
             $result->set_statusinfo("force boot from LML builtin");
         }
         # try if we have a mapping for it
