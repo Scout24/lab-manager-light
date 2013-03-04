@@ -10,6 +10,7 @@ use strict;
 use warnings;
 
 use FindBin;
+use lib glob("{/opt/vmware/,/usr/lib/vmware-}vcli/?pps"); # the ? makes sure that only existing paths will match.
 use lib "$FindBin::Bin/../";
 
 use VMware::VIRuntime;
