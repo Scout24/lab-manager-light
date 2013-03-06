@@ -23,15 +23,14 @@ sub new {
     } else {
 
         unless ($uuid) {
-            carp("Give the VM uuid as arg to the constructor");
+            carp("Give the VM uuid as arg to the constructor in ".(caller(0))[3]);
             return undef;
         }
-        my %VM_DATA = get_vm_data($uuid);
-        if ( !%VM_DATA ) {
+        $self = get_vm_data($uuid);
+        if ( not ref($self) eq "HASH" ) {
             Debug("Could not load any data for uuid '$uuid'");
             return undef;
         }
-        $self = \%VM_DATA;
     }
     $self->{filter_networks} = [];
     bless( $self, $class );
@@ -56,6 +55,30 @@ sub vm_id {
     return $self->{"VM_ID"};
 }
 
+sub mac {
+    my $self = shift;
+    return undef unless ( exists $self->{"MAC"} );
+    return $self->{"MAC"};
+}
+
+sub path {
+    my $self = shift;
+    return undef unless (exists $self->{"PATH"});
+    return $self->{"PATH"};
+}
+
+sub host {
+    my $self = shift;
+    return undef unless (exists $self->{"HOST"});
+    return $self->{"HOST"};
+}
+
+sub customfields {
+    my $self = shift;
+    return undef unless ( exists $self->{"CUSTOMFIELDS"} );
+    return $self->{"CUSTOMFIELDS"};
+}
+
 sub get_macs {
     my $self = shift;
     return undef unless ( exists $self->{"MAC"} and ref( $self->{"MAC"} ) eq "HASH" );
@@ -64,7 +87,7 @@ sub get_macs {
 
 sub set_networks_filter {
     my ( $self, @filter_networks ) = @_;
-    croak("Give a list of networks to set filter") unless (@filter_networks);
+    croak("Give a list of networks to set filter in ".(caller(0))[3]) unless (@filter_networks);
     Debug("setting networks filter '".join(",",@filter_networks)."'");
     $self->{filter_networks} = \@filter_networks;
 }
@@ -85,7 +108,7 @@ sub get_filtered_macs {
 
 sub forcenetboot {
       my $self = shift;
-      return exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and "$self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'}" eq "allow:net";
+      return exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} eq "allow:net";
 }
 
 sub activate_forcenetboot {

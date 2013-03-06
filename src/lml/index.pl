@@ -11,11 +11,30 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use LML::Common;
 use LML::Config;
+use LML::Lab;
+
+use User::pwent;
+
+my $GECOS = {};    # cache for gecos lookups
+# get full name of userid
+sub get_gecos {
+    my ($userid) = @_;
+    return "" unless ($userid);
+    Debug "Looking up $userid";
+    if ( not exists $GECOS->{$userid} ) {
+        if ( my $pwnam = getpwnam($userid) ) {
+            $GECOS->{$userid} = $pwnam->gecos;
+        } else {
+            $GECOS->{$userid} = "Could not lookup user";
+        }
+        Debug "Caching $userid = " . $GECOS->{$userid};
+    }
+    return $GECOS->{$userid};
+}
 
 my $C = new LML::Config();
 
-my $LAB = ReadLabFile;
-my $VM  = ReadVmFile;
+my $LAB = new LML::Lab( $C->labfile );
 
 print header();
 print start_html(
@@ -62,62 +81,67 @@ print thead(
                  th( { -title => "Click to sort" }, "VM Path" ),
                  th( { -title => "Click to sort" }, "Contact User ID" ),
                  th( { -title => "Click to sort" }, "Expires" ),
+                 th( { -title => "Click to sort" }, "ESX Host" ),
              ) ) . "\n\n\t\t<tbody>\n";
 
 my $display_filter_vm_path = $C->get( "gui",     "display_filter_vm_path" );
 my $contactuser_field      = $C->get( "vsphere", "contactuserid_field" );
+my $expires_field          = $C->get( "vsphere", "expires_field" );
 
-for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
+while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
+    Debug( "Handling " . Data::Dumper->Dump( [$VM] ) );
+    next unless ( exists $VM->{UUID} );
     my $expires         = "unknown";
     my $contact_user_id = "unknown";
     my $display_vm_path = "<em>(no data available)</em>";
-    if ( exists( $VM->{$uuid} ) ) {
+    my $esxhost         = "unknown";
+    if ( $expires_field and exists $VM->{CUSTOMFIELDS}->{$expires_field} ) {
         eval {
             $expires =
-              DateTime::Format::Flexible->parse_datetime(
-                                              $VM->{$uuid}->{CUSTOMFIELDS}->{ $C->get( "vsphere", "expires_field" ) },
+              DateTime::Format::Flexible->parse_datetime( $VM->{CUSTOMFIELDS}->{$expires_field},
                                               european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
         };
-        $display_vm_path = $VM->{$uuid}->{PATH};
+    }
+    if ( exists $VM->{PATH} ) {
+        $display_vm_path = $VM->{PATH};
+
         if ($display_filter_vm_path) {
             $display_vm_path =~ s/$display_filter_vm_path/$1/;
         }
+    }
+
+    if ( exists $VM->{HOST} ) {
+        $esxhost = $VM->{HOST};
+    }
 
 # lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
-        if ( exists( $VM->{$uuid}->{CUSTOMFIELDS}->{$contactuser_field} ) ) {
-            $contact_user_id = lc( $VM->{$uuid}->{CUSTOMFIELDS}->{$contactuser_field} );
-        }
+    if ( $contactuser_field and exists( $VM->{CUSTOMFIELDS}->{$contactuser_field} ) ) {
+        $contact_user_id = lc( $VM->{CUSTOMFIELDS}->{$contactuser_field} );
     }
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
-              { -class => ( exists( $VM->{$uuid} ) ? 'vm_with_data' : 'vm_without_data' ), },
-              td [ (
-                      exists $VM->{$uuid}
-                      ? a( {
-                             -href    => "vmdata.pl?uuid=$uuid",
-                             -title   => "Details",
-                             -onclick => "return false;",
-                             -rel     => "vmdata.pl?uuid=$uuid",
-                             -class   => "tip vmhostname"
-                           },
-                           $LAB->{HOSTS}->{$uuid}->{HOSTNAME} )
-                      : span( { -class => "vmhostname" }, $LAB->{HOSTS}->{$uuid}->{HOSTNAME} ) )
-                   . "\n"
-                     . (
-                         exists $LAB->{HOSTS}{$uuid}{VM_ID}
-                         ? a( {
-                                -href    => $screenshot_url,
-                                -title   => "Screenshot",
-                                -onclick => "return false;",
-                                -rel     => $screenshot_url,
-                                -class   => "tip"
-                              },
-                              img( { -src => "lib/images/console_icon.png" } ) )
-                         : ""
+              td [
+                   a( {
+                        -href    => "vmdata.pl/$uuid",
+                        -title   => "Details",
+                        -onclick => "return false;",
+                        -rel     => "vmdata.pl/$uuid",
+                        -class   => "tip vmhostname"
+                      },
+                      $VM->{HOSTNAME} )
+                     . "\n"
+                     . a( {
+                            -href    => $screenshot_url,
+                            -title   => "Screenshot",
+                            -onclick => "return false;",
+                            -rel     => $screenshot_url,
+                            -class   => "tip"
+                          },
+                          img( { -src => "lib/images/console_icon.png" } )
                      ),
                    $display_vm_path,
-                   $contact_user_id,
-                   $expires,
+                   span( { -title => get_gecos($contact_user_id) }, $contact_user_id ),
+                   $expires, $esxhost
               ] ) . "\n\n";
 }
 print <<EOF;

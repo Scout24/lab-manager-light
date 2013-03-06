@@ -19,19 +19,98 @@ my $mock            = new Test::MockModule('LML::VMware');
 my $off_value       = undef;
 my $extraopts_key   = undef;
 my $extraopts_value = undef;
+my $VM_ALL = {
+                    "42130272-a509-8010-6e85-4e01cb1b7284" => {
+                                                          "CUSTOMFIELDS" => {
+                                                                              "Contact User ID" => "User1",
+                                                                              "Expires"         => "31.12.2013"
+                                                          },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
+                                                          "MAC"          => { "01:02:03:04:00:15"      => "arc.int" },
+                                                          "NAME"         => "lochst001",
+                                                          "HOST"         => "testesx01.domain",
+                                                          "NETWORKING"   => [ {
+                                                                              "MAC"     => "01:02:03:04:00:15",
+                                                                              "NETWORK" => "arc.int"
+                                                                            }
+                                                          ],
+                                                          "PATH"  => "development/vm/path/lochst001",
+                                                          "VM_ID" => "vm-0500",
+                                                          "UUID"  => "42130272-a509-8010-6e85-4e01cb1b7284"
+                    },
+                    "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf" => {
+                                                          "CUSTOMFIELDS" => {
+                                                                              "Contact User ID" => "User2",
+                                                                              "Expires"         => "31.01.2013",
+                                                                              "Force Boot"      => ""
+                                                          },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
+                                                          "MAC"          => {
+                                                                     "01:02:03:04:6e:4e" => "arc.int",
+                                                                     "01:02:03:04:9e:9e" => "foo"
+                                                          },
+                                                          "NAME"       => "tsthst001",
+                                                          "HOST"         => "testesx01.domain",
+                                                          "NETWORKING" => [ {
+                                                                              "MAC"     => "01:02:03:04:6e:4e",
+                                                                              "NETWORK" => "arc.int"
+                                                                            },
+                                                                            {
+                                                                              "MAC"     => "01:02:03:04:9e:9e",
+                                                                              "NETWORK" => "foo"
+                                                                            }
+                                                          ],
+                                                          "PATH"  => "development/vm/otherpath/tsthst001",
+                                                          "VM_ID" => "vm-1000",
+                                                          "UUID"  => "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"
+                    },
+                    "4213038e-9203-3a2b-ce9d-123456789abc" => {
+                                                          "CUSTOMFIELDS" => {
+                                                                              "Contact User ID"   => "User3",
+                                                                              "Expires"           => "31.01.2010",
+                                                                              "Force Boot"        => "garbage",
+                                                                              "Force Boot Target" => "server"
+                                                          },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
+                                                          "MAC"          => { "01:02:03:04:6e:5c"      => "arc.int" },
+                                                          "NAME"         => "tsthst099",
+                                                          "HOST"         => "testesx01.domain",
+                                                          "NETWORKING"   => [ {
+                                                                              "MAC"     => "01:02:03:04:6e:5c",
+                                                                              "NETWORK" => "arc.int"
+                                                                            }
+                                                          ],
+                                                          "PATH"  => "development/vm/otherpath/tsthst099",
+                                                          "VM_ID" => "vm-2000",
+                                                          "UUID"  => "4213038e-9203-3a2b-ce9d-123456789abc"
+                    },
+                    "4213c435-a176-a533-e07e-38644cf43390" => {
+                                                        "CUSTOMFIELDS" => {
+                                                                            "Contact User ID" => "unrelated1",
+                                                                            "Expires"         => "01.01.2015"
+                                                        },
+                                                        "MAC"        => { "01:02:03:04:2e:73" => "vlan_902" },
+                                                        "NAME"       => "Some VM123",
+                                                        "HOST"         => "testesx01.domain",
+                                                        "NETWORKING" => [ {
+                                                                            "MAC"     => "01:02:03:04:2e:73",
+                                                                            "NETWORK" => "vlan_123"
+                                                                          }
+                                                        ],
+                                                        "PATH" => "development/vm/Unrelated/VMPath/Web-Java/Some VM123",
+                                                        "UUID" => "4213c435-a176-a533-e07e-38644cf43390",
+                                                        "VM_ID" => "vm-9876"
+                    } };
 
 $mock->mock(
     'get_vm_data',
     sub {
-        my $uuid   = shift;
-        my %VM_ALL = %{ ReadVmFile() };
-
+        my $uuid = shift;
         #diag("Mock get_vm_data($uuid):\n");
-        return () unless ( exists $VM_ALL{$uuid} );
-        return %{ $VM_ALL{$uuid} };
+        return \() unless ( exists $VM_ALL->{$uuid} );
+        return $VM_ALL->{$uuid};
 
-    }
-);
+    } );
 
 $mock->mock(
     'setVmCustomValueU',
@@ -42,20 +121,18 @@ $mock->mock(
 
         #diag("Mock setVmCustomValueU($uuid,$forceboot_field,$off_value)\n");
         return 1;
-    }
-);
+    } );
 
 $mock->mock(
     'setVmExtraOptsU',
     sub {
         my $uuid;
         ( $uuid, $extraopts_key, $extraopts_value ) = @_;
-
         #diag("Mock setVmExtraOptsU($uuid,$extraopts_key,$extraopts_value)\n");
         return 1;
-    }
-);
+    } );
 use_ok "LML::VM";
+
 use_ok "LML::Lab";
 
 use_ok "LML::VMpolicy";

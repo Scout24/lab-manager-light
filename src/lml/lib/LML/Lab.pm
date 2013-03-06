@@ -22,7 +22,9 @@ sub new {
         $self = $arg;
     } elsif ( ref($arg) eq "" ) {
         # arg is not a reference but a scalar, should be file name of lab file
-        my $LAB->{HOSTS} = {};
+        my $LAB = {
+                    "HOSTS"    => {},
+                    "ESXHOSTS" => {} };
         if ( -r $arg ) {
             local $/ = undef;
             open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
@@ -31,12 +33,17 @@ sub new {
             eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
             close(LAB_CONF);
         }
-        croak '$LAB is not a hashref or empty, your $arg file must be broken.\n' unless ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) );
+        croak '$LAB is not a hashref or empty, your $arg file must be broken.\n'
+          unless ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) );
         $self = $LAB;
         $self->{filename} = $arg;    # keep filename if we read the data from a file
     } else {
-        croak "Parameter to " . ( caller(0) )[3] . " should be hashref with LAB data or filename of LAB file and not " . ref($arg) . "\n";
+        croak "Parameter to "
+          . ( caller(0) )[3]
+          . " should be hashref with LAB data or filename of LAB file and not "
+          . ref($arg) . "\n";
     }
+    $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
     bless( $self, $class );
     return $self;
 }
@@ -53,6 +60,11 @@ sub filename {
     return undef;
 }
 
+sub list_hosts {
+    my ($self) = @_;
+    return sort( keys( %{ $self->{HOSTS} } ) );
+}
+
 sub get_host {
     my ( $self, $uuid ) = @_;
     croak( "Must give VM uuid as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($uuid);
@@ -63,40 +75,67 @@ sub get_host {
     }
 }
 
+sub remove {
+    my ( $self, $uuid ) = @_;
+    croak( "Must give UUID to remove " . ( caller(0) )[3] ) unless ($uuid);
+    if ( delete $self->{HOSTS}{$uuid} ) {
+        Debug("Removing $uuid from LAB");
+    }
+
+    return 1;
+}
+
+# update the list of ESX hosts
+sub update_hosts {
+    my ( $self, $hosts ) = @_;
+    $self->{ESXHOSTS} = $hosts;
+}
+
 # update data about single host from given VM object
-sub update_host {
+sub update_vm {
     my ( $self, $VM ) = @_;
-    croak( "Must give LML:VM object as first parameter in " . ( caller(0) )[3] . "\n" ) unless ( ref($VM) eq "LML::VM" );
+    croak( "Must give LML:VM object as first parameter in " . ( caller(0) )[3] . "\n" )
+      unless ( ref($VM) eq "LML::VM" );
     my $uuid        = $VM->uuid;
     my $name        = $VM->name;
     my $vm_id       = $VM->vm_id;
     my @vm_lab_macs = $VM->get_filtered_macs;
-    Debug( "update LAB for '$name' with '" . join( ", ", @vm_lab_macs ) . "'" );
-    # add lastseen info to host
-    $self->{HOSTS}->{$uuid}->{LASTSEEN} = time;
-    $self->{HOSTS}->{$uuid}->{LASTSEEN_DISPLAY} = POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime );
+
+    Debug( "Updating LAB for '$name' with '" . join( ", ", @vm_lab_macs ) . "'" );
+    
+    # add timestamp so that we know when the host was last time updated with fresh data
 
     # create HOSTS record for DHCP if it has changed (name or networking)
     # ~~ compares array since perl 5.10!!
     #
-    # NOTE: This should be after all other pieces of code that compare with the old host name !!!
-    if (
-         not(     exists( $self->{HOSTS}->{$uuid}->{HOSTNAME} )
-              and exists( $self->{HOSTS}->{$uuid}->{MACS} )
-              and exists( $self->{HOSTS}->{$uuid}->{VM_ID} ) )
-         or not $name eq $self->{HOSTS}->{$uuid}->{HOSTNAME}
-         or not @vm_lab_macs ~~ @{ $self->{HOSTS}->{$uuid}->{MACS} }
-         or not $vm_id eq $self->{HOSTS}->{$uuid}->{VM_ID}
-      )
-    {
-        $self->{HOSTS}->{$uuid}->{HOSTNAME} = $name;
-        $self->{HOSTS}->{$uuid}->{MACS}     = \@vm_lab_macs;
-        $self->{HOSTS}->{$uuid}->{VM_ID}    = $vm_id;
-        Debug("set new VM data in LAB");
-        return 1;
-    } else {
-        return;                                                # return nothing to indicate that nothing changed
+    # NOTE: Hostname and MACs are relevant for DHCP servers
+    my $update_dhcp = (
+                        not(     exists( $self->{HOSTS}->{$uuid}->{HOSTNAME} )
+                             and exists( $self->{HOSTS}->{$uuid}->{MACS} ) )
+                          or not $name eq $self->{HOSTS}->{$uuid}->{HOSTNAME}
+                          or not @vm_lab_macs ~~ @{ $self->{HOSTS}->{$uuid}->{MACS} } ) ? 1 : 0;    # set to 0 or 1
+    if ($update_dhcp) {
+        push( @{ $self->{vms_to_update} }, $uuid );
     }
+    $self->{HOSTS}->{$uuid} = {
+        UPDATED => time,
+        UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime ),
+        UUID => $uuid,
+        HOSTNAME => $name,
+        MACS => \@vm_lab_macs,
+        VM_ID => $vm_id,
+        MAC => $VM->mac,
+        CUSTOMFIELDS => $VM->customfields,
+        PATH => $VM->path,
+        HOST => $VM->host,
+    };
+
+    return $update_dhcp;
+}
+
+sub vms_to_update {
+    my ($self) = @_;
+    return wantarray ? @{ $self->{vms_to_update} } : scalar( @{ $self->{vms_to_update} } );
 }
 
 sub write_file {
@@ -107,7 +146,9 @@ sub write_file {
     flock( LAB_CONF, 2 ) || croak "Could not lock '$filename': $!\n";
     print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
     my $LAB = {};
-    $LAB->{HOSTS} = $self->{HOSTS};                            # copy just hosts part (by reference)
+    # copy just hosts part (by reference)
+    $LAB->{HOSTS}    = $self->{HOSTS};
+    $LAB->{ESXHOSTS} = $self->{ESXHOSTS};
     print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] ) or croak "Could not write to '$filename': $!\n";
     my $bytes_written = tell LAB_CONF;
     close(LAB_CONF);

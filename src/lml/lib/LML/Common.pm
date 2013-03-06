@@ -8,7 +8,7 @@ use vars qw(
   @EXPORT
 );
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config ReadVmFile ReadLabFile ReadDataFile write_vm_file $isDebug Debug $LML_VERSION);
+our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config $isDebug Debug $LML_VERSION);
 
 use FindBin;
 
@@ -112,71 +112,6 @@ sub Config($$) {
     } else {
         return undef;
     }
-}
-
-# read data file
-# $1 is file in data dir
-# $2 is hashref to work on - must match the one used in the data file
-# NOTE: THIS DOES NOT YET WORK, NEED TO MAKE SURE THAT THE HASHREF IS CALLED THE SAME AS IN THE DATA FILE. OR MIGRATE TO JSON STORAGE...
-sub ReadDataFile($%) {
-    my $datafile = Config( "lml", "datadir" ) . "/" . shift;
-    my $hashref = shift;
-    if ( -r $datafile ) {
-        local $/ = undef;
-        open( DATAFILE, "<", $datafile ) || die "Could not open $datafile for reading.\n";
-        flock( DATAFILE, 1 ) || die;
-        binmode DATAFILE;
-        eval <DATAFILE> || die "Could not parse $datafile:\n$@\n";
-        close(DATAFILE);
-    }
-}
-
-sub ReadLabFile() {
-    # $LAB describes our internal view of the lab that lml manages
-    # used mainly to react to renamed VMs or VMs with changed MAC adresses
-    my $LAB->{HOSTS} = {};
-    my $labfile = Config( "lml", "datadir" ) . "/lab.conf";
-    if ( -r $labfile ) {
-        local $/ = undef;
-        open( LAB_CONF, "<", $labfile ) || die "Could not open $labfile for reading.\n";
-        flock( LAB_CONF, 1 ) || die;
-        binmode LAB_CONF;
-        eval <LAB_CONF> || die "Could not parse $labfile:\n$@\n";
-        close(LAB_CONF);
-    }
-    die '$LAB is empty, your $labfile must be broken.\n' unless ( scalar( %{$LAB} ) );
-    return $LAB;
-}
-
-sub ReadVmFile() {
-    my $VM = {};
-    my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
-    if ( -r $vmfile ) {
-        local $/ = undef;
-        open( VM_CONF, "<$vmfile" ) || die "Could not open $vmfile for reading.\n";
-        flock( VM_CONF, 1 ) || die;
-        binmode VM_CONF;
-        eval <VM_CONF> || die "Could not parse $vmfile:\n$@\n";
-        close(VM_CONF);
-    }
-    return $VM;
-}
-
-sub write_vm_file($) {
-    # Purpose: Takes an hashref with vm data and dump it to
-    #          the appropriate file
-    # Returns: TRUE if ok, FALSE if errors occured
-
-    # get the parameter
-    my $VM = shift;
-
-    # open and write
-    my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
-    open( VM_CONF, ">", $vmfile ) || die "Could not open '$vmfile' for writing\n";
-    flock( VM_CONF, 2 ) || die;
-    print VM_CONF "# " . __FILE__ . " " . POSIX::strftime( "%Y-%m-%d %H:%M:%S\n", localtime() ) . "\n";
-    print VM_CONF Data::Dumper->Dump( [$VM], [qw(VM)] );
-    close(VM_CONF);
 }
 
 1;

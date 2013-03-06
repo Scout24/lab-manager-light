@@ -15,6 +15,7 @@ is_deeply( $C->get( 'hostrules', 'dnscheckzones' ),
            "should give the value from default.conf (some.zone, some.other.zone)" );
 is( $C->get( 'lml', 'datadir' ), "test/temp", "should give the value from test.conf (test/temp)" );
 is( $C->labfile, "test/temp/lab.conf", "should give lab file from test data" );
+is_deeply( [ $C->vsphere_networks ], ["arc.int"], "should give list of managed networks" );
 # update config
 $C->set( "foo", "bar", "baz" );
 is( $C->get( "foo", "bar" ), "baz", "should give config item we just set" );

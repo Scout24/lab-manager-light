@@ -16,60 +16,62 @@ use CGI ':standard';
 use LML::Common;
 use LML::VMware;
 use LML::DHCP;
+use LML::Lab;
+use LML::VM;
+use Carp;
 
-sub maintain_labfile($) {
-    # Purpose:
-    # Returns:
+sub write_vm_file {
+    # Purpose: Takes an hashref with vm data and dump it to
+    #          the appropriate file
+    # Returns: TRUE if ok, FALSE if errors occured
 
+    # get the parameter
+    my $VM = shift;
+
+    # open and write
+    my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
+    open( VM_CONF, ">", $vmfile ) || die "Could not open '$vmfile' for writing\n";
+    flock( VM_CONF, 2 ) || die;
+    print VM_CONF "# " . __FILE__ . " " . POSIX::strftime( "%Y-%m-%d %H:%M:%S\n", localtime() ) . "\n";
+    print VM_CONF Data::Dumper->Dump( [$VM], [qw(VM)] );
+    close(VM_CONF);
+}
+
+sub maintain_labfile($$) {
     # initialize needed variables
-    my $VM      = shift;
-    my $LAB     = {};
-    my $labfile = Config( "lml", "datadir" ) . "/lab.conf";
+    my $C = shift;
+    carp( "1st argument must be LML::Config object and not " . ref($C) ) unless ( ref($C) eq "LML::Config" );
+    my $VM_ALL      = shift; # this is a hash of LML::VM data structures
+    my $labfile = $C->labfile;
     my @error   = ();
 
     if ( -r $labfile ) {
-        # reset INPUT_RECORD_SEPARATOR
-        local $/ = undef;
-
-        # open the labfile and lock it
-        open( LAB_CONF, "+<", $labfile )
-          || die "Could not open '$labfile' for reading and writing\n";
-        flock( LAB_CONF, 2 ) || die;
-        binmode LAB_CONF;
-        eval <LAB_CONF> || die "Could not parse $labfile\n";
-
-        # $LAB is defined in labfile, test if we got it
-        die '$LAB is empty' unless ( scalar( %{$LAB} ) );
-
+        my $LAB = new LML::Lab($labfile);
         # go through our known VM list and delete host from that list
         # if they are not in the actual VM list we got previously
         my $hosts_removed = 0;
-        for my $uuid ( keys( %{ $LAB->{HOSTS} } ) ) {
-            if ( !exists( $$VM{$uuid} ) ) {
-                print "Removing $uuid " . $LAB->{HOSTS}->{$uuid}->{HOSTNAME} . " from inventory\n";
+        for my $uuid ( $LAB->list_hosts ) {
+            if ( exists( $VM_ALL->{$uuid} ) ) {
+                my $VM = new LML::VM( $VM_ALL->{$uuid} );
+                $VM->set_networks_filter($C->vsphere_networks); # set network filter
+                $LAB->update_vm( $VM ) ;
+            } else {
                 # remember that we deleted a host
                 $hosts_removed++;
                 # delete the host from the lab hash
-                delete( $LAB->{HOSTS}->{$uuid} );
+                $LAB->remove($uuid);                
             }
         }
 
         # dump $LAB to file only if all is fine. This makes sure that LML stays with
         # the old view of the lab for some kind of hard to catch errors.
-        if ( $hosts_removed > 0 ) {
-            # empty the file
-            seek( LAB_CONF, 0, 0 );
-            # dump the adjusted lab hash
-            print LAB_CONF "# lml-maintenance.pl " .
-              POSIX::strftime( "%Y-%m-%d %H:%M:%S\n", localtime() ) . "\n";
-            print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] );
-            truncate( LAB_CONF, tell(LAB_CONF) );
+        if ( $hosts_removed > 0 or $LAB->vms_to_update ) {
+            $LAB->write_file( "by " . __FILE__ );
         }
-        close(LAB_CONF);
-
-        # rewrite the DHCP configuration with the new data
-        # the 
-        push( @error, UpdateDHCP($LAB) );
+        if ( $LAB->vms_to_update ) {
+            # rewrite the DHCP configuration with the new data
+            push( @error, LML::DHCP::UpdateDHCP( $C, $LAB ) );
+        }
     } else {
         push( @error, "'$labfile' not found\n" );
     }
@@ -80,7 +82,7 @@ sub maintain_labfile($) {
 
 # main() code when running as stand-alone program
 unless (caller) {
-    LoadConfig();
+    my $C = new LML::Config;
 
     # connect to vSphere
     connect_vi();
@@ -90,14 +92,14 @@ unless (caller) {
     my @error   = ();
 
     # get a complete dump from vSphere - this is expensive and takes some time
-    my %VM = search_vm();
+    my $VM = get_all_vm_data();
 
-    # dump %VM to file
-    write_vm_file( \%VM );
+    # dump %VM to file, ATM we don't use this information any more.
+    write_vm_file($VM);
 
     # $LAB describes our internal view of the lab that lml manages
     # used mainly to react to renamed VMs or VMs with changed MAC adresses
-    push( @error, maintain_labfile( \%VM ) );
+    push( @error, maintain_labfile( $C, $VM ) );
 
     # if errors occured, print them out
     if ( scalar(@error) ) {

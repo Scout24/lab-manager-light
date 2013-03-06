@@ -54,17 +54,6 @@ my @error   = ();
 # connect to vSphere
 connect_vi();
 
-# prepare some configuration variables
-my @vsphere_networks = ();                                        # list of network names for which LML is responsible.
-my $config_vsphere_networks = $C->get( "vsphere", "networks" );
-if ($config_vsphere_networks) {
-    if ( ref($config_vsphere_networks) eq "ARRAY" ) {
-        @vsphere_networks = @{$config_vsphere_networks};
-    } else {
-        @vsphere_networks = ($config_vsphere_networks);
-    }
-}
-
 # read history to detect renamed VMs and to be able to update the DHCP
 my $LAB = new LML::Lab( $C->labfile );
 # find VM
@@ -78,7 +67,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     $vm_name = $VM->name;
 
     # check if we should handle this VM
-    $VM->set_networks_filter(@vsphere_networks);
+    $VM->set_networks_filter($C->vsphere_networks);
     if ( $VM->get_filtered_macs ) {
         # This VM uses our managed network
 
@@ -106,9 +95,9 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
         # we only modify something if there are no errors
         if ( not $result->get_errors ) {
-            if ( $LAB->update_host($VM) ) {
+            if ( $LAB->update_vm($VM) ) {
                 # update DHCP only if some host data changed because reloading dhcp server takes a while
-                $result->add_error( UpdateDHCP($LAB) );
+                $result->add_error( LML::DHCP::UpdateDHCP($C,$LAB) );
             }
         }
 
@@ -133,6 +122,9 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
             # dump $LAB to file only if all is fine. This makes sure that LML stays with the old view
             # of the lab for some kind of hard to catch errors.
+            
+            # first update the info about ESX hosts
+            $LAB->update_hosts(get_hosts);
             if ( not $LAB->write_file( "for " . $vm_name . " (" . $search_uuid . ")" ) ) {
                 die "Strangely writing LAB produced a 0-byte file.\n";
             }
@@ -172,7 +164,5 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         push( @body, $message );
     }
 }
-# disconnect from VI
-Util::disconnect();
 
 print $result->render(@body);

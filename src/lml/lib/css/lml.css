@@ -22,12 +22,9 @@
 	font-style: italic;
 }
 
-.vm_without_data {
-	color: grey;
-}
-
 .vmhostname {
 	font-family: monospace;
+	font-size: 115%;
 }
 
 /* tabs */

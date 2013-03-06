@@ -5,15 +5,18 @@ use File::Slurp;
 use Test::More;
 use Test::Warn;
 use LML::Common;
+use LML::Config;
+use LML::Lab;
 BEGIN {
     use_ok "LML::DHCP";
 }
 
-LoadConfig( "src/lml/default.conf", "test/data/test.conf" );
+my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
 
-my $dhcpconf = Config( "dhcp", "hostsfile" );
+my $dhcpconf = $C->get( "dhcp", "hostsfile" );
 ok( $dhcpconf, "dhcp hostsfile is set" );
-ok( Config( "dhcp", "triggercommand" ), "dhcp triggercommand is set" );
+ok ( -r $C->labfile, "LAB file is set and readable");
+ok( $C->get( "dhcp", "triggercommand" ), "dhcp triggercommand is set" );
 
 # test writing out dhcp config
 # the following corresponds to $LAB_TESTDATA in 00-Common.t
@@ -38,14 +41,14 @@ host 4213059e-70c2-6f34-1986-50463d0222f8 {
 EOF
 
 # read data file created from $LAB_TESTDATA in 00-Common.t
-my %LAB    = %{ ReadLabFile() };
-my @errors = UpdateDHCP( \%LAB );
+my $LAB    = new LML::Lab($C->labfile);
+my @errors = LML::DHCP::UpdateDHCP( $C, $LAB );
 ok( scalar(@errors) == 0, "create dhcp hosts file" );
 is( $expected_dhcp_hosts, read_file($dhcpconf), "dhcp hosts file matches test data" );
 ok( -r "test/temp/triggercommand.txt", "dhcp triggercommand ran" );
 
 # negative test for triggercommand
 $CONFIG{"dhcp"}{"triggercommand"} = "false";
-warning_like  { @errors = UpdateDHCP( \%LAB ) } qr(trigger command), "warn if trigger command failes" ;
+warning_like  { @errors = LML::DHCP::UpdateDHCP( $C,$LAB ) } qr(trigger command), "warn if trigger command failes" ;
 is( $errors[0], "Could not trigger DHCP server, please call for help", "dhcp triggercommand false failed" );
 done_testing;

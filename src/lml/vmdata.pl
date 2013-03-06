@@ -12,6 +12,7 @@ use CGI ':standard';
 use JSON;
 use LML::Config;
 use LML::Common;
+use LML::Lab;
 use GD::Barcode::QRcode;
 use GD::Image;
 use Carp;
@@ -22,25 +23,29 @@ sub display_vm_data {
     croak("1st parameter must be LML::Config object") unless ( ref($C) eq "LML::Config" );
     $content_type = "text/html" unless ($content_type);
 
-    my %VM_DATA;
+    my $data;
 
     # TODO: Read LAB file instead of VM file so that this works right after a new VM has been created!
-    my $VM = ReadVmFile();
+    my $LAB = new LML::Lab( $C->labfile );
+
+    my $VM;
+
     if ( not $uuid ) {
-        %VM_DATA = %{$VM};
-        $uuid    = "all VM";    # use this later for output
-    } elsif ( exists( $VM->{$uuid} ) ) {
-        %VM_DATA = %{ $VM->{$uuid} };
+        $data = $LAB->{HOSTS};
+        $uuid = "all VM";        # use this later for output
+    } elsif ( exists( $LAB->{HOSTS}{$uuid} ) ) {
+        $data = $VM = $LAB->{HOSTS}{$uuid};
     } else {
         return "";
     }
 
 # canonical makes the output sorted so that the same input always yields the same output. A bit slower but helps the testing...
-    my $json_data = to_json( \%VM_DATA, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
+    my $json_data = to_json( $data, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
 
     if ( $content_type eq "text/json" ) {
         return $json_data;
-    } elsif ( exists( $VM->{$uuid} ) and $content_type eq "image/png" ) {
+    } elsif ( $VM and $content_type eq "image/png" ) {
+        #Debug(Data::Dumper->Dump([$VM]));
        # return data as PNG only if we return data for a single VM, otherwise it would be too much data for the QR code.
         my $im = new GD::Image( 640, 480 );    # always return VGA-sized image
         my $orange = $im->colorAllocate( 224, 102, 102 );
@@ -53,19 +58,17 @@ sub display_vm_data {
         my $y = 70;
         # NOTE: With %{..} we dereference the hashref and use the fact that in perl a hash is also an array!
         foreach (
-            "Name:", $VM->{$uuid}->{NAME},
-            "",
-            exists $VM->{$uuid}->{MAC} ? ( "Network:", %{ $VM->{$uuid}->{MAC} } ) : (),
-            "",
-            exists $VM->{$uuid}->{CUSTOMFIELDS} ? ( "Custom Fields:", %{ $VM->{$uuid}->{CUSTOMFIELDS} } ) : (),
-            "",
-            exists $VM->{$uuid}->{VM_ID} ? ( "Mo-Ref:", $VM->{$uuid}->{VM_ID} ) : (),
+                  "Name:", $VM->{HOSTNAME},
+                  "",      exists $VM->{MAC} ? ( "Network:", %{ $VM->{MAC} } ) : (),
+                  "",      exists $VM->{CUSTOMFIELDS} ? ( "Custom Fields:", %{ $VM->{CUSTOMFIELDS} } ) : (),
+                  "",      exists $VM->{VM_ID} ? ( "Mo-Ref:", $VM->{VM_ID} ) : (),
+                  "",      exists $VM->{HOST} ? ( "Host:", $VM->{HOST} ) : (),
           )
         {
+            #Debug("Writing $_");
             $im->string( GD::Font->Giant, 480, $y, $_, $orange );
             $y += GD::Font->Giant->height;
         }
-        Debug(@INC);
         my $logo = new GD::Image( $INC[0] . "/images/LabManagerLightlogo-small.png" );    # logo is 200x75
         $im->copy( $logo, 481, 0, 0, 0, 160, 60 );
 
@@ -93,7 +96,7 @@ unless (caller) {
         $search_uuid = param('uuid');
     } elsif ( path_info() ) {
         # or from path_info
-        ( $search_uuid, $suffix ) = path_info() =~ m#/([^.]+)\.(.+)#;
+        ( $search_uuid, $suffix ) = path_info() =~ m#/([^.]+)\.?(.*)#;
         $suffix = lc($suffix);
     } else {
         # or default to nothing

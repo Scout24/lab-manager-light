@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-
 use strict;
 use warnings;
 
@@ -10,29 +9,28 @@ use lib "$FindBin::RealBin/lib";
 
 use CGI ':standard';
 use LML::Common;
-use LML::VMware;
+use LML::Config;
 use LML::VMmodify;
+use LML::VMware;
 
 # load the configuration. Is provided by %CONFIG then
-LoadConfig();
+my $C = new LML::Config;
 
 # connect to vSphere
 connect_vi();
 
 # input parameter, UUID of a VM
-my $search_uuid = param('uuid') ? lc( param('uuid') ) : ( scalar(@ARGV) ? lc( $ARGV[0] ) : "" );
-
-die "No forceboot_field parameter set in [vsphere] section\n" unless ( Config( "vsphere", "forceboot_field" ) );
+my $search_uuid = param('uuid') ? lc( param('uuid') ) : "";
 
 if ($search_uuid) {
-    print header('text/plain');
-
     # Deactivate forceboot
-    remove_forceboot($search_uuid);
-
+    my $result =
+      remove_forceboot( $C, $search_uuid ) ? "200 Successfully removed forceboot" : "400 Could not remve force boot";
+    print header(
+                  -status => $result,
+                  -type   => "text/plain"
+    ) . $result . "\n";
 } else {
     print header( -status => 404, -type => 'text/plain' );
-    print "Give UUID address as query parameter 'uuid' or as command line parameter\n";
+    print "Give UUID address as query parameter 'uuid'\n";
 }
-
-Util::disconnect();
