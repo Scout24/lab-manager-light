@@ -58,10 +58,10 @@ sub create_vms {
     foreach ( @vms ) {
         # default values will be used in case
         # the user do not specify some parameters
-        my $memory = 256;  # in MB
+        my $memory = 1024;  # in MB
         my $num_cpus = 1;
         my $guestid = 'rhel6_64Guest';
-        my $disksize = 4096;  # in KB
+        my $disksize = 8129;  # in KB
         my $nic_poweron = 1;
         my %custom_fields;
         my %networks;
