@@ -23,32 +23,42 @@ print( "Connecting to VI" . "\n" );
 connect_vi();
 
 # display custom fields
-my @customfields = keys(get_custom_fields());
-print("Custom Attributes:\n\t".join("\n\t",@customfields)."\n");
+if ( my @customfields = keys(%{get_custom_fields()}) ) {
+    print( "Custom Attributes:\n\t" . join( "\n\t", @customfields ) . "\n" );
+} else {
+    print("No Custom Attributes defined - You will not have much fun using LML without them.\n");
+}
 
 # display hosts
-my @hosts = keys(get_hosts);
-print("ESX Hosts:\n\t".join("\n\t",@hosts)."\n");
+if ( my @hosts = keys(%{get_hosts()}) ) {
+    print( "ESX Hosts:\n\t" . join( "\n\t", @hosts ) . "\n" );
+} else {
+    print("No ESX Hosts found - You will not have much fun using LML without them.\n");
+}
 
 # search for VM
 print( "Searching for VMs" . "\n" );
-my $VM = get_all_vm_data(
-                          @ARGV ? ( "config.name" => qr($ARGV[0])i ) : ()
-);
+my $VM = get_all_vm_data( @ARGV ? ( "config.name" => qr($ARGV[0])i ) : () );
 # bail out if no VMs found
-die("No VMs found to work with - check your search criteria !") unless ( scalar( keys( %{$VM} ) ) );
+die( "No VMs found " . ( @ARGV ? "matching '" . $ARGV[0] . "'  - check your search criteria" : "to work with" ) . " !\n" )
+  unless ( scalar( keys( %{$VM} ) ) );
 
 print("\n");
 print( " UUID                                  PATH" . "\n" );
 print("\n");
 
+my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
 # go over virtual machines and do the job
 foreach my $uuid ( keys( %{$VM} ) ) {
     # human-readable name for VM
-    my $vmname = $VM->{$uuid}{NAME};
-    my $vmpath = $VM->{$uuid}{PATH};
+    my $vmname          = $VM->{$uuid}{NAME};
+    my $display_vm_path = $VM->{$uuid}{PATH};
 
-    printf( "%s  %s\n", $uuid, $vmpath );
+    if ($display_filter_vm_path) {
+        $display_vm_path =~ s/$display_filter_vm_path/$1/;
+    }
+
+    printf( "%s  %s\n", $uuid, $display_vm_path );
 }
 print("\n");
 printf( "Found %d VMs\n", scalar( keys( %{$VM} ) ) );
