@@ -5,12 +5,20 @@
 # $1 = full path to vm.conf
 # $2 = host for http://<host>/boot/pxelinux.cfg/<uuid> calls
 
-if  [[ -r "$1" && "$2" ]] && 
-    type -p GET >/dev/null &&
-    GET -d http://$2/boot/pxelinux.cfg/default ; then
-        sed -n -e '/UUID/s#^.*"\(.*-.*-.*\)"#\1#p' $1 | while read uuid ; do 
+function get_http_response_status {
+    # $1 is host
+    # $2 is path
+    exec 3<>/dev/tcp/$1/80
+    echo -en >&3 "HEAD $2 HTTP/1.0\r\nConnection: close\r\n\r\n"
+    mapfile -t -n 2 -u 3 response
+    exec 3>&-
+    echo ${response/HTTP????/}
+}
+    
+if  [[ -r "$1" && "$2" ]] ; then
+        sed -n -e '/UUID/s#^.*"\([a-f0-9-]\+\)".*$#\1#p' $1 | while read uuid ; do 
             echo -n "$uuid: "
-            GET -s -d http://$2/boot/pxelinux.cfg/$uuid
+            get_http_response_status $2 /boot/pxelinux.cfg/$uuid
         done
 else
     echo "Usage: $0 <vm.conf> <pxelinux host>"
