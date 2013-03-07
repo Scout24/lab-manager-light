@@ -42,7 +42,7 @@ sub display_vm_data {
 # canonical makes the output sorted so that the same input always yields the same output. A bit slower but helps the testing...
     my $json_data = to_json( $data, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
 
-    if ( $content_type eq "text/json" ) {
+    if ( $content_type eq "application/json" ) {
         return $json_data;
     } elsif ( $VM and $content_type eq "image/png" ) {
         #Debug(Data::Dumper->Dump([$VM]));
@@ -108,9 +108,9 @@ unless (caller) {
     if ( param("type") ) {
         # from request parameter
         $content_type = lc( param("type") );
-    } elsif ( Accept("text/json") >= 0.9 or $suffix eq "json" ) {
+    } elsif ( Accept("application/json") >= 0.9 or Accept("text/json") >= 0.9 or $suffix eq "json" ) {
         # set content-type from Accept header or from path suffix
-        $content_type = "text/json";
+        $content_type = "application/json";
     } elsif ( Accept("image/png") >= 0.9 or $suffix eq "png" ) {
         # set content-type from Accept header or from path suffix
         $content_type = "image/png";
