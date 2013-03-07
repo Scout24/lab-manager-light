@@ -15,7 +15,7 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(connect_vi get_all_vm_data get_vm_data get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+  qw(connect_vi get_all_vm_data get_vm_data get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -111,10 +111,8 @@ sub retrieve_vm_details ($) {
 
                 my $portgroupkey = $vm_dev->backing->port->portgroupKey;
                 $net =
-                  Vim::get_view(
-                          mo_ref =>
-                            new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ),
-                          properties => ["config.name"] )->get_property("config.name");
+                  Vim::get_view( mo_ref     => new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ),
+                                 properties => ["config.name"] )->get_property("config.name");
 
             }
 
@@ -196,13 +194,19 @@ sub get_custom_fields {
         %CUSTOMFIELDS   = ();
         my $custom_fields_manager = Vim::get_view( mo_ref => Vim::get_service_content->customFieldsManager );
 
-        # iterate over custom field definitions and build hash array with name->ID mappings
-        foreach my $field ( @{ $custom_fields_manager->field } ) {
-            #Debug( Data::Dumper->Dump( [ $field ], [ "field" ] ) );
-            # we care only about VM custom fields
-            next unless ( $field->managedObjectType eq "VirtualMachine" );
-            $CUSTOMFIELDS{ $field->name }  = $field->key;
-            $CUSTOMFIELDIDS{ $field->key } = $field->name;
+        # don't die on the border case that there are not custom fields defined.
+        if (     $custom_fields_manager
+             and $custom_fields_manager->can("field")
+             and scalar( @{ $custom_fields_manager->field } ) )
+        {
+            # iterate over custom field definitions and build hash array with name->ID mappings
+            foreach my $field ( @{ $custom_fields_manager->field } ) {
+                #Debug( Data::Dumper->Dump( [ $field ], [ "field" ] ) );
+                # we care only about VM custom fields and not about Global custom fields
+                next unless ( $field->managedObjectType eq "VirtualMachine" );
+                $CUSTOMFIELDS{ $field->name }  = $field->key;
+                $CUSTOMFIELDIDS{ $field->key } = $field->name;
+            }
         }
     }
     return \%CUSTOMFIELDS;
@@ -237,6 +241,18 @@ sub get_hosts {
         }
     }
     return \%HOSTS;
+}
+
+################################ sub #################
+##
+## get_hosts
+##
+## returns a hash of name->id pairs of defined custom fields
+##
+sub get_hostids {
+
+    get_hosts;
+    return \%HOSTIDS;
 }
 
 ################################ sub #################
@@ -299,8 +315,7 @@ sub setVmExtraOptsU {
         my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
                                              filter    => { "config.uuid" => $uuid } );
         if ($vm_view) {
-            my $vm_config_spec =
-              VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
+            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
             $vm_view->ReconfigVM( spec => $vm_config_spec );
         }
     };
@@ -335,8 +350,7 @@ sub setVmExtraOptsM {
     eval {
         my $vm_view = Vim::get_view( mo_ref => $mo_ref );
         if ($vm_view) {
-            my $vm_config_spec =
-              VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
+            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
             $vm_view->ReconfigVM( spec => $vm_config_spec );
         }
     };
@@ -418,9 +432,9 @@ sub setVmCustomValueU {
     my $key   = shift;
     my $value = shift;
     my $vm_view = Vim::find_entity_view(
-                             view_type  => 'VirtualMachine',
-                             filter     => { "config.uuid" => $uuid },
-                             properties => [],                           # don't need any properties to set custom value
+                                         view_type  => 'VirtualMachine',
+                                         filter     => { "config.uuid" => $uuid },
+                                         properties => [],                           # don't need any properties to set custom value
     );
     if ($vm_view) {
         return setVmCustomValue( $vm_view, $key, $value );
