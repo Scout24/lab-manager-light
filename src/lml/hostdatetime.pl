@@ -126,7 +126,7 @@ while ( my ( $host, $data ) = each %{ $result->{systems} } ) {
     }
 }
 $result->{badsystems} = \@badsystems;
-$result->{message} = join(" ",@badsystems);
+$result->{message} = (@badsystems ? "System time more than $alloweddeviation seconds out of sync or no NTP servers set: " : "").join(" ",@badsystems);
 $result->{status} = @badsystems > 0 ? 2 : 0;
 $result->{version} = "$LML_VERSION";
 print header( -type => "application/json" ) . to_json( $result, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
