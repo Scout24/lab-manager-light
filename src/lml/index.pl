@@ -64,6 +64,7 @@ print <<EOF;
     <ul>
         <li><a href="#overview">VM Overview</a></li>
         <li><a href="#new">New VM</a></li>
+        <li><a href="#tools">Tools</a></li>
         <li><a href="#config">Configuration</a></li>
     </ul>
 EOF
@@ -151,6 +152,18 @@ print <<EOF;
 	<div class="main_content" id="new">
 	   <p>Coming soon... (Help wanted!)</p>
 	</div>
+	
+	<div class="main_content" id="tools">
+       <p>
+            <span id="clear_button" class="button" title="Clear tool output">Clear</span>
+            <a id="hostdatetime_button" class="button" href="hostdatetime.pl" title="vSphere Time Sync Check">vSphere Time Sync Check</a>
+            <a id="license_button" class="button" href="LICENSE.TXT" title="Software License">Software License</a>
+       </p>
+       <fieldset id="tools_frame"><legend id="tools_title"></legend>
+            <div id="tools_content">
+            </div>
+       </fieldset>
+    </div>
 EOF
 
 my $conffiles = "<ol>\n\t<li>" . join( "</li>\n\t<li>", @CONFIGFILES ) . "</li>\n</ol>\n";
