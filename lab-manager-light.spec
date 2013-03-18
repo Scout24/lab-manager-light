@@ -75,5 +75,6 @@ rm -rf $RPM_BUILD_ROOT
 /etc/httpd/conf.d/*
 /etc/cron.d/*
 /etc/lml
+/usr/share/lab-manager-light/schema/*
 %defattr(-,apache,apache,-)
 %dir /var/lib/lml
