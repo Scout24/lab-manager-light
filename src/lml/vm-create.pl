@@ -11,14 +11,34 @@ use warnings;
 
 use FindBin;
 use lib glob("{/opt/vmware/,/usr/lib/vmware-}vcli/?pps"); # the ? makes sure that only existing paths will match.
-use lib "$FindBin::Bin/../";
+use lib "$FindBin::RealBin/lib";
 
+use CGI ':standard';
 use VMware::VIRuntime;
 use XML::LibXML;
 use AppUtil::XMLInputUtil;
 use AppUtil::HostUtil;
 use AppUtil::VMUtil;
 use Data::Dumper;
+
+use LML::Config;
+my $C = new LML::Config();
+
+# default paramter
+my $xsd_file = "/usr/share/lab-manager-light/schema/vm-create.xsd";
+
+# look if we got data over CGI
+my $post_xml_content = "";
+if ( param('xml') ) {
+    # write temporary file
+    my $tmp_xml_file = "/tmp/vm-create-data-".time().".xml";
+    open( TMP_XML, ">", $tmp_xml_file ) || die "Could not open '$tmp_xml_file' for writing\n";
+    flock( TMP_XML, 2 ) || die;
+    print TMP_XML param('xml');
+    close(TMP_XML);
+    # set xml filename to the temporary one
+    $post_xml_content = $tmp_xml_file;
+}
 
 $Util::script_version = "1.0";
 
@@ -27,13 +47,13 @@ my %opts = (
         type     => "=s",
         help     => "The location of the input xml file",
         required => 0,
-        default  => "../sampledata/vmcreate.xml",
+        default  => $post_xml_content,
     },
     schema => {
         type     => "=s",
         help     => "The location of the schema file",
         required => 0,
-        default  => "../schema/vmcreate.xsd",
+        default  => $xsd_file,
     }
 );
 
@@ -258,6 +278,8 @@ sub create_vm {
             if ( $@ ) {
                 Util::trace(0, "Unable to switch on VM: '$args{vmname}'\n");
             }
+            # finally hand out the uuid
+            print "UUID of the new machine: " . $vm_view->config->uuid . "\n";
         }
     }
 }
@@ -479,6 +501,12 @@ sub check_missing_value {
       $valid = 0;
    }
    return $valid;
+}
+
+# cleanup temporary generated files
+END {
+    # TODO: ATM we have only one file, so make use of the "global" variable
+    unlink($post_xml_content) if ($post_xml_content);
 }
 
 __END__
