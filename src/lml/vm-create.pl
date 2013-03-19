@@ -140,8 +140,8 @@ sub create_vm {
                                            filter    => {'name' => $args{vmhost}} );
 
     if ( ! $host_view ) {
-        Util::trace(0, "\nError creating VM '$args{vmname}': "
-                     . "Host '$args{vmhost}' not found\n");
+        print "NEW_VM_STATUS=\"ERROR: "
+            . "Host '$args{vmhost}' not found\"\n";
         return;
     }
 
@@ -151,13 +151,13 @@ sub create_vm {
 
     if ($ds_info{mor} eq 0) {
         if ($ds_info{name} eq 'datastore_error') {
-            Util::trace(0, "\nError creating VM '$args{vmname}': "
-                         . "Datastore $args{datastore} not available.\n");
+            print "NEW_VM_STATUS=\"ERROR: "
+                . "Datastore $args{datastore} not available.\"\n";
             return;
         }
         if ($ds_info{name} eq 'disksize_error') {
-            Util::trace(0, "\nError creating VM '$args{vmname}': The free space "
-                         . "available is less than the specified disksize.\n");
+            print "NEW_VM_STATUS=\"ERROR: The free space "
+                . "available is less than the specified disksize.\"\n";
             return;
         }
     }
@@ -178,8 +178,8 @@ sub create_vm {
             push(@vm_devices, $net_settings{'network_conf'});
 
         } elsif ( $net_settings{'error'} eq 1 ) {
-            Util::trace( 0, "\nError creating VM '$args{vmname}': "
-                          . "Network '$args{nic_network}' not found\n" );
+            print "NEW_VM_STATUS=\"ERROR: "
+                . "Network '$args{nic_network}' not found\"\n";
             return;
         }
     }
@@ -204,14 +204,14 @@ sub create_vm {
                                  filter    => { name => $args{datacenter}} );
 
     unless (@$datacenter_views) {
-        Util::trace(0, "\nError creating VM '$args{vmname}': "
-                     . "Datacenter '$args{datacenter}' not found\n");
+        print "NEW_VM_STATUS=\"ERROR: "
+            . "Datacenter '$args{datacenter}' not found\"\n";
         return;
     }
 
     if ( $#{$datacenter_views} != 0 ) {
-        Util::trace(0, "\nError creating VM '$args{vmname}': "
-                     . "Datacenter '$args{datacenter}' not unique\n");
+        print "NEW_VM_STATUS=\"ERROR: "
+            . "Datacenter '$args{datacenter}' not unique\"\n";
         return;
     }
 
@@ -231,56 +231,57 @@ sub create_vm {
     eval {
         $target_folder_view->CreateVM( config => $vm_config_spec,
                                        pool   => $comp_res_view->resourcePool );
-        Util::trace(0, "\nSuccessfully created VM: "
-                      ."'$args{vmname}' under host $args{vmhost}\n");
+        
     };
 
     if ( $@ ) {
-        Util::trace(0, "\nError creating VM '$args{vmname}': ");
         if ( ref($@) eq 'SoapFault' ) {
             if ( ref($@->detail) eq 'PlatformConfigFault' ) {
-                Util::trace(0, "Invalid VM configuration: "
-                             . ${$@->detail}{'text'} . "\n");
+                print "NEW_VM_STATUS=\"ERROR: Invalid VM configuration: "
+                    . ${$@->detail}{'text'} . "\"\n";
             } elsif ( ref($@->detail) eq 'InvalidDeviceSpec' ) {
-                Util::trace(0, "Invalid Device configuration: "
-                             . ${$@->detail}{'property'} . "\n");
+                print "NEW_VM_STATUS=\"ERROR: Invalid Device configuration: "
+                    . ${$@->detail}{'property'} . "\"\n";
             } elsif ( ref($@->detail) eq 'DatacenterMismatch' ) {
-                Util::trace(0, "DatacenterMismatch, the input arguments had entities "
-                             . "that did not belong to the same datacenter\n");
+                print "NEW_VM_STATUS=\"ERROR: DatacenterMismatch, the input arguments had entities "
+                    . "that did not belong to the same datacenter\"\n";
             } elsif ( ref($@->detail) eq 'HostNotConnected' ) {
-                Util::trace(0, "Unable to communicate with the remote host,"
-                             . " since it is disconnected\n");
+                print "NEW_VM_STATUS=\"ERROR: Unable to communicate with the remote host,"
+                    . " since it is disconnected\"\n";
             } elsif ( ref($@->detail) eq 'InvalidState' ) {
-                Util::trace(0, "The operation is not allowed in the current state\n");
+                print "NEW_VM_STATUS=\"ERROR: The operation is not allowed in the current state\"\n";
             } elsif ( ref($@->detail) eq 'DuplicateName' ) {
-                Util::trace(0, "Virtual machine already exists.\n");
+                print "NEW_VM_STATUS=\"ERROR: Virtual machine already exists\"\n";
             } else {
-                Util::trace(0, "\n" . $@ . "\n");
+                print "NEW_VM_STATUS=\"ERROR: " . $@ . "\"\n";
             }
         } else {
-            Util::trace(0, "\n" . $@ . "\n");
+            print "NEW_VM_STATUS=\"ERROR: " . $@ . "\"\n";
         }
     }
 
     # only begin to fill the custom fields, if no error occured
     if ( not $@ ) {
+        # set the custom fields with defined values
         set_custom_fields( vmname        => $args{vmname},
                            custom_fields => $args{custom_fields} );
+        # get the view of the previously created vm
+        my $vm_views = VMUtils::get_vms( 'VirtualMachine', $args{vmname} );
+        my $vm_view = shift @{$vm_views};
+        # hand out the uuid
+        print "NEW_VM_UUID=\"" . $vm_view->config->uuid . "\"\n";
         # finally switch on the virtual machine
         if ( $args{vm_poweron} ) {
-            my $vm_views = VMUtils::get_vms( 'VirtualMachine', $args{vmname} );
-            my $vm_view = shift @{$vm_views};
             eval {
                 $vm_view->PowerOnVM();
-                Util::trace(0, "Successfully switched on VM: '$args{vmname}'\n");
             };
             # handle errors
             if ( $@ ) {
-                Util::trace(0, "Unable to switch on VM: '$args{vmname}'\n");
+                print "NEW_VM_STATUS=\"ERROR: Switch on\"\n";
             }
-            # finally hand out the uuid
-            print "UUID of the new machine: " . $vm_view->config->uuid . "\n";
         }
+        # if everything went find give an status
+        print "NEW_VM_STATUS=\"SUCCESS: VM created and switched on\"\n";
     }
 }
 
@@ -480,24 +481,24 @@ sub check_missing_value {
       my @vms = $root->findnodes('Virtual-Machine');
       foreach (@vms) {
          if (!$_->findvalue('Name')) {
-            Util::trace(0, "\nERROR in '$filename':\n<Name> value missing " .
-                           "in one of the VM specifications\n");
+            print "NEW_VM_STATUS=\"ERROR: Error in '$filename': <Name> value missing " .
+                           "in one of the VM specifications\"\n";
             $valid = 0;
          }
          if (!$_->findvalue('Host')) {
-            Util::trace(0, "\nERROR in '$filename':\n<Host> value missing " .
-                           "in one of the VM specifications\n");
+            print "NEW_VM_STATUS=\"ERROR: Error in '$filename':\n<Host> value missing " .
+                           "in one of the VM specifications\"\n";
             $valid = 0;
          }
          if (!$_->findvalue('Datacenter')) {
-            Util::trace(0, "\nERROR in '$filename':\n<Datacenter> value missing " .
-                           "in one of the VM specifications\n");
+            print "NEW_VM_STATUS=\"ERROR: Error in '$filename':\n<Datacenter> value missing " .
+                           "in one of the VM specifications\"\n";
             $valid = 0;
          }
       }
    }
    else {
-      Util::trace(0, "\nERROR in '$filename': Invalid root element ");
+      print "NEW_VM_STATUS=\"ERROR: Error in '$filename': Invalid root element ";
       $valid = 0;
    }
    return $valid;
