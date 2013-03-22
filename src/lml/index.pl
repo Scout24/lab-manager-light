@@ -85,10 +85,10 @@ print thead(
                  th( { -title => "Click to sort" }, "ESX Host" ),
              ) ) . "\n\n\t\t<tbody>\n";
 
-my $display_filter_vm_path = $C->get( "gui",     "display_filter_vm_path" );
-my $contactuser_field      = $C->get( "vsphere", "contactuserid_field" );
-my $expires_field          = $C->get( "vsphere", "expires_field" );
-my $screenshot_enabled     = $C->get("vmscreenshot", "enabled");
+my $display_filter_vm_path = $C->get( "gui",          "display_filter_vm_path" );
+my $contactuser_field      = $C->get( "vsphere",      "contactuserid_field" );
+my $expires_field          = $C->get( "vsphere",      "expires_field" );
+my $screenshot_enabled     = $C->get( "vmscreenshot", "enabled" );
 
 while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
     Debug( "Handling " . Data::Dumper->Dump( [$VM] ) );
@@ -101,7 +101,7 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
         eval {
             $expires =
               DateTime::Format::Flexible->parse_datetime( $VM->{CUSTOMFIELDS}->{$expires_field},
-                                              european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
+                                                          european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
         };
     }
     if ( exists $VM->{PATH} ) {
@@ -116,35 +116,39 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
         $esxhost = $VM->{HOST};
     }
 
-# lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
+    # lowercase contact user id so that SSchapiro and sschapiro will show up as the same and not as two in the drop-down box.
     if ( $contactuser_field and exists( $VM->{CUSTOMFIELDS}->{$contactuser_field} ) ) {
         $contact_user_id = lc( $VM->{CUSTOMFIELDS}->{$contactuser_field} );
     }
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
-              td [
-                   a( {
-                        -href    => "vmdata.pl/$uuid",
-                        -title   => "Details",
-                        -onclick => "return false;",
-                        -rel     => "vmdata.pl/$uuid",
-                        -class   => "tip vmhostname"
-                      },
-                      $VM->{HOSTNAME} )
-                     . "\n"
-                     . $screenshot_enabled ? a( {
-                            -href    => $screenshot_url,
-                            -title   => "Screenshot",
-                            -onclick => "return false;",
-                            -rel     => $screenshot_url,
-                            -class   => "tip"
-                          },
-                          img( { -src => "lib/images/console_icon.png" } )
-                     ) : "",
-                   $display_vm_path,
-                   span( { -title => get_gecos($contact_user_id) }, $contact_user_id ),
-                   $expires, $esxhost
-              ] ) . "\n\n";
+        td [
+            a( {
+                   -href    => "vmdata.pl/$uuid",
+                   -title   => "Details",
+                   -onclick => "return false;",
+                   -rel     => "vmdata.pl/$uuid",
+                   -class   => "tip vmhostname"
+                },
+                $VM->{HOSTNAME} )
+              . "\n"
+              . (
+                  $screenshot_enabled
+                  ? a( {
+                         -href    => $screenshot_url,
+                         -title   => "Screenshot",
+                         -onclick => "return false;",
+                         -rel     => $screenshot_url,
+                         -class   => "tip"
+                       },
+                       img( { -src => "lib/images/console_icon.png" } ) )
+                  : ""
+              ),
+            $display_vm_path,
+            span( { -title => get_gecos($contact_user_id) }, $contact_user_id ),
+            $expires,
+            $esxhost
+        ] ) . "\n\n";
 }
 print <<EOF;
 
