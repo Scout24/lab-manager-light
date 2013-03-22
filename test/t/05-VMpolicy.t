@@ -196,6 +196,41 @@ is_deeply(
            ["ci_field 'root' is not allowed"],
            "should return error that user root is not allowed"
 );
+is_deeply(
+           [
+              new LML::VMpolicy(
+                                 new LML::Config(
+                                                  {
+                                                    "vsphere" => {
+                                                                   "contactuserid_field"  => "ci_field",
+                                                                   "contactuserid_minuid" => "9999",
+                                                    }
+                                                  }
+                                 ),
+                                 new LML::VM( { "CUSTOMFIELDS" => { "ci_field" => "" } } )
+                )->validate_contact_user
+           ],
+           ["ci_field '' does not exist"],
+           "should return error that empty user does not exist"
+);
+is_deeply(
+           [
+              new LML::VMpolicy(
+                                 new LML::Config(
+                                                  {
+                                                    "vsphere" => {
+                                                                   "contactuserid_field"  => "ci_field",
+                                                                   "contactuserid_minuid" => "9999",
+                                                    }
+                                                  }
+                                 ),
+                                 new LML::VM( { "CUSTOMFIELDS" => { "ci_field" => "invalid user" } } )
+                )->validate_contact_user
+           ],
+           ["ci_field 'invalid user' does not exist"],
+           "should return error that empty user does not exist"
+);
+
 
 ######## validate_expiry
 #

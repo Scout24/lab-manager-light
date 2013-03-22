@@ -31,6 +31,7 @@ sub validate_vm_name {
     if ( $vm_name =~ m/^[a-z0-9_-]+$/ ) {
         return;
     }
+    Debug("Result: VM name may only contain a-z0-9_- characters");
     return "VM name may only contain a-z0-9_- characters";
 }
 
@@ -44,6 +45,7 @@ sub validate_hostrules_pattern {
     if ( $vm_name =~ $hostrulespattern ) {
         return;
     }
+    Debug("Result: VM name does not match '$hostrulespattern' pattern");
     return "VM name does not match '$hostrulespattern' pattern";
 }
 
@@ -62,6 +64,7 @@ sub validate_dns_zones {
             }
         }
     }
+    Debug( "Result: " . join( ", ", @error ) );
     if (@error) {
         return @error;
     } else {
@@ -98,6 +101,7 @@ sub validate_contact_user {
             push( @error, "Must set $contactuserid_field to valid username" );
         }
     }    # else test not configured
+    Debug( "Result: " . join( ", ", @error ) );
     if (@error) {
         return @error;
     } else {
@@ -126,6 +130,7 @@ sub validate_expiry {
     } else {
         push( @error, "Must set $expires_field to valid date or date/time" );
     }
+    Debug( "Result: " . join( ", ", @error ) );
     if (@error) {
         return @error;
     } else {
@@ -140,7 +145,7 @@ sub validate_vm_dns_name {
     # check if the VM name exists already in our managed DNS domain.
     # the only situation where this is OK is if the VM existed already before and the VM name did not change
     my ( $self, $LAB ) = @_;
-
+    my $result;
     # validate arg
     croak( "Parameter to " . ( caller(0) )[3] . " must be LML::Lab object" ) unless ( ref($LAB) eq "LML::Lab" );
     my $vm_name      = $self->{VM}->name;
@@ -158,14 +163,18 @@ sub validate_vm_dns_name {
             return;
         } elsif ($dns_fqdn) {
             # new VM name exists in DNS
-            return "Renamed VM '$vm_fqdn' name exists already in '$appenddomain'";
+            $result = "Renamed VM '$vm_fqdn' name exists already in '$appenddomain'";
         }    # else new VM name does not exist in DNS -> all OK
     } else {
         # we don't have old data, must be new VM
         if ($dns_fqdn) {
             # new VM name conflicts with existing systems in managed domain
-            return "New VM name exists already in '$appenddomain'";
+            $result = "New VM name exists already in '$appenddomain'";
         }
+    }
+    if ($result) {
+        Debug("Result: $result");
+        return $result;
     }
     return;
 }
@@ -189,12 +198,13 @@ sub handle_forceboot {
          and not grep { $_ eq uc( $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
     {
         my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot              = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
         my $forceboot_target_field = $self->{Config}->get( "vsphere", "forceboot_target_field" );
 
         my $forceboot_target_value;
         if ($forceboot_target_field) {
-            $forceboot_target_value = exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
+            $forceboot_target_value =
+              exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
         } else {
             $forceboot_target_value = "";
         }
@@ -238,13 +248,13 @@ sub handle_forceboot {
         $forceboot_target =~ tr[:/A-Za-z0-9._-][]dc;
 
         # first check for the built in targets
-        if ($forceboot_target eq "qrdata") {
-            $result->set_redirect_target("/lml/vmdata.pl/".$self->{VM}->uuid.".pxelinux");
+        if ( $forceboot_target eq "qrdata" ) {
+            $result->set_redirect_target( "/lml/vmdata.pl/" . $self->{VM}->uuid . ".pxelinux" );
             $result->set_statusinfo("force boot from LML builtin");
         }
         # try if we have a mapping for it
         elsif ( my $forceboot_dest = $self->{Config}->get( "forceboot", $forceboot_target ) ) {
-            $result->set_redirect_target( $forceboot_dest );
+            $result->set_redirect_target($forceboot_dest);
             $result->set_statusinfo("force boot from LML config");
         }
         # if nothing could be found for the given forceboot entry
