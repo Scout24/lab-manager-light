@@ -28,13 +28,21 @@ is_deeply( [ $result->get_errors ], [ "a", "b", "c", "a", "b", "c" ], "should re
 is( $result->set_redirect_target("menu/server.txt"),     "menu/server.txt",            "should return argument" );
 is( $result->set_statusinfo("force boot from LML config"), "force boot from LML config", "should return argument" );
 
-# check if the render function returns the expected result
 is(
     $result->render, "Status: 200 OK and force boot from LML config, Errors: a, b, c, a, b, c\r
+Content-Type: text/plain; charset=ISO-8859-1\r
+\r
+", "should render status with errors and without redirect"
+);
+
+$result = new_ok( "LML::Result" => [ new LML::Config( {} ), "http://foo.bar/boot/pxelinux.cfg/12345-123-123" ] );
+$result->set_redirect_target("menu/server.txt");
+$result->set_statusinfo("force boot from LML config");
+is(
+    $result->render, "Status: 200 OK and force boot from LML config\r
 Location: http://foo.bar/boot/menu/server.txt\r
 Content-Type: text/plain; charset=ISO-8859-1\r
 \r
-", "should render status with redirect and errors"
+", "should render status with redirect"
 );
-
 done_testing();
