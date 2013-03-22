@@ -72,6 +72,7 @@ sub render {
     }
     if ( $self->get_errors ) {
         $status .= ", Errors: " . join( ", ", $self->get_errors );
+        $self->{redirect_target} = ""; # clear redirect target in case of errors
     }
     my $header_args = {
                         -status => $status,
