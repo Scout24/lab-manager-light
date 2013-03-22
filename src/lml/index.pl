@@ -88,6 +88,7 @@ print thead(
 my $display_filter_vm_path = $C->get( "gui",     "display_filter_vm_path" );
 my $contactuser_field      = $C->get( "vsphere", "contactuserid_field" );
 my $expires_field          = $C->get( "vsphere", "expires_field" );
+my $screenshot_enabled     = $C->get("vmscreenshot", "enabled");
 
 while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
     Debug( "Handling " . Data::Dumper->Dump( [$VM] ) );
@@ -131,7 +132,7 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
                       },
                       $VM->{HOSTNAME} )
                      . "\n"
-                     . a( {
+                     . $screenshot_enabled ? a( {
                             -href    => $screenshot_url,
                             -title   => "Screenshot",
                             -onclick => "return false;",
@@ -139,7 +140,7 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
                             -class   => "tip"
                           },
                           img( { -src => "lib/images/console_icon.png" } )
-                     ),
+                     ) : "",
                    $display_vm_path,
                    span( { -title => get_gecos($contact_user_id) }, $contact_user_id ),
                    $expires, $esxhost

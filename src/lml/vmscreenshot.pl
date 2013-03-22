@@ -32,7 +32,7 @@ unless (caller) {
                                      -delay     => $C->get( "vmscreenshot", "push_delay" ),
                                      -next_page => sub { return $screenshot->render(@_) } );
                     } else {
-                        print $screenshot->render( $q, -1 ); # -1 should always be smaller than the max_push parameter
+                        print $screenshot->render( $q, -1 );    # -1 should always be smaller than the max_push parameter
                     }
                 } else {
                     print( $q->header,
@@ -61,5 +61,11 @@ unless (caller) {
                    $q->h1("LML Error"), $q->p("No uuid= parameter given."),
                    $q->end_html );
         }
+    } else {
+        # disabled
+        print( $q->header( -status => "403 VM screenshots disabled" ),
+               $q->start_html("LML Error"),
+               $q->h1("LML Error"), $q->p("VM screenshots disabled."),
+               $q->end_html );
     }
 }
