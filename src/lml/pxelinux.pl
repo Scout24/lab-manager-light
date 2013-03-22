@@ -86,7 +86,8 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         );
 
         $Policy->handle_forceboot($result);
-
+        
+        Debug("VM Validation result: ".join(", ",$result->get_errors));
         #Debug(Data::Dumper->Dump([\@error],["error"]));
 
         # up till here we have only checks that verify the VM.
