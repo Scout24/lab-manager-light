@@ -54,6 +54,7 @@ my $HOST_PROPERTIES = [ "name", "config.product" ];
 ##
 sub retrieve_vm_details ($) {
     my $vm = shift;
+    ##Debug( Data::Dumper->Dump( [ $vm ], ["vm"] ) ) if ($isDebug);
     my %VM_DATA;
 
     # initialize lookup tables
@@ -291,8 +292,14 @@ sub get_all_vm_data {
                                               properties   => $VM_PROPERTIES
     );
     if ($entityViews) {
-        my %results = map { $_->{"config.uuid"} => retrieve_vm_details($_) } @$entityViews;
-        return \%results;
+        my $results={};
+        foreach my $view (@$entityViews) {
+            my $VM;
+            if (exists $view->{"config.uuid"} and $VM = retrieve_vm_details($view)) {
+                $results->{$view->{"config.uuid"}} = $VM;
+            } # else is probably a template
+        }
+        return $results;
     } else {
         return {};
     }

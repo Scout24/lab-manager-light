@@ -71,14 +71,10 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     if ( $VM->get_filtered_macs ) {
         # This VM uses our managed network
 
-        # ensure that VM will only boot from network
-        if ( $C->get( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
-          # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
-            $VM->activate_forcenetboot;
-        }
-
         my $Policy = new LML::VMpolicy( $C, $VM );
 
+        $Policy->handle_unmanaged();
+        
         $result->add_error(
                             $Policy->validate_vm_name,   $Policy->validate_hostrules_pattern,
                             $Policy->validate_dns_zones, $Policy->validate_contact_user,
@@ -94,7 +90,14 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         # in case of errors stop processing so that we do not create host records anywhere as long
         # as some conditions are unmet.
 
-        # we only modify something if there are no errors
+
+        # ensure that VM will only boot from network
+        if ( $C->get( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
+          # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
+            $VM->activate_forcenetboot;
+        }
+
+        # we only modify our state data if there are no errors
         if ( not $result->get_errors ) {
             if ( $LAB->update_vm($VM) ) {
                 # update DHCP only if some host data changed because reloading dhcp server takes a while

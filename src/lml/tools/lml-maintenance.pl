@@ -45,35 +45,31 @@ sub maintain_labfile($$) {
     my $labfile = $C->labfile;
     my @error   = ();
 
-    if ( -r $labfile ) {
-        my $LAB = new LML::Lab($labfile);
-        # go through our known VM list and delete host from that list
-        # if they are not in the actual VM list we got previously
-        my $hosts_removed = 0;
-        for my $uuid ( $LAB->list_hosts ) {
-            if ( exists( $VM_ALL->{$uuid} ) ) {
-                my $VM = new LML::VM( $VM_ALL->{$uuid} );
-                $VM->set_networks_filter($C->vsphere_networks); # set network filter
-                $LAB->update_vm( $VM ) ;
-            } else {
-                # remember that we deleted a host
-                $hosts_removed++;
-                # delete the host from the lab hash
-                $LAB->remove($uuid);                
-            }
+    my $LAB = new LML::Lab($labfile);
+    # go through our known VM list and delete host from that list
+    # if they are not in the actual VM list we got previously
+    my $hosts_removed = 0;
+    for my $uuid ( $LAB->list_hosts ) {
+        if ( exists( $VM_ALL->{$uuid} ) ) {
+            my $VM = new LML::VM( $VM_ALL->{$uuid} );
+            $VM->set_networks_filter($C->vsphere_networks); # set network filter
+            $LAB->update_vm( $VM ) ;
+        } else {
+            # remember that we deleted a host
+            $hosts_removed++;
+            # delete the host from the lab hash
+            $LAB->remove($uuid);                
         }
+    }
 
-        # dump $LAB to file only if all is fine. This makes sure that LML stays with
-        # the old view of the lab for some kind of hard to catch errors.
-        if ( $hosts_removed > 0 or $LAB->vms_to_update ) {
-            $LAB->write_file( "by " . __FILE__ );
-        }
-        if ( $LAB->vms_to_update ) {
-            # rewrite the DHCP configuration with the new data
-            push( @error, LML::DHCP::UpdateDHCP( $C, $LAB ) );
-        }
-    } else {
-        push( @error, "'$labfile' not found\n" );
+    # dump $LAB to file only if all is fine. This makes sure that LML stays with
+    # the old view of the lab for some kind of hard to catch errors.
+    if ( $hosts_removed > 0 or $LAB->vms_to_update ) {
+        $LAB->write_file( "by " . __FILE__ );
+    }
+    if ( $LAB->vms_to_update ) {
+        # rewrite the DHCP configuration with the new data
+        push( @error, LML::DHCP::UpdateDHCP( $C, $LAB ) );
     }
 
     # Return the error array

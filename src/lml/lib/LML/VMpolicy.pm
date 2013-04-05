@@ -179,6 +179,21 @@ sub validate_vm_dns_name {
     return;
 }
 
+sub handle_unmanaged {
+    my ($self) = @_;
+    my $forceboot_field        = $self->{Config}->get( "vsphere", "forceboot_field" );
+    my $forceboot_target_field = $self->{Config}->get( "vsphere", "forceboot_target_field" );
+    # die if this is an unmanaged VM
+    if (
+        ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} and $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} eq "unmanaged" )
+        or ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field}
+             and $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} eq "unmanaged" )
+      )
+    {
+        die("You don't want to be managed - I won't let you boot here.\n");
+    }
+}
+
 sub handle_forceboot {
     my ( $self, $result ) = @_;
     # validate arg
