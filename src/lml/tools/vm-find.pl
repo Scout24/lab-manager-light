@@ -16,6 +16,21 @@ use LML::Common;
 use LML::Config;
 use LML::VMware;
 
+# define the --format option, default is UUID,PATH
+my %opts = (
+    format => {
+        type     => "=s",
+        help     => "Output format for found VMs (%UUID, %PATH, %USER, %HOST, %NAME). ",
+        required => 0,
+        default  => "%UUID%PATH"
+    }
+);
+
+# parse the options over vmwares module
+Opts::add_options(%opts);
+Opts::parse();
+
+# get the lml configuration
 my $C = new LML::Config();
 
 # connect to VMware
@@ -43,22 +58,55 @@ my $VM = get_all_vm_data( @ARGV ? ( "config.name" => qr($ARGV[0])i ) : () );
 die( "No VMs found " . ( @ARGV ? "matching '" . $ARGV[0] . "'  - check your search criteria" : "to work with" ) . " !\n" )
   unless ( scalar( keys( %{$VM} ) ) );
 
-print("\n");
-print( " UUID                                  PATH" . "\n" );
-print("\n");
+# prepare the output
+my $output_format = Opts::get_option('format');
+# split the format string (% is delimeter)
+my @output_formats = split(/%/, $output_format);
+# cut off the first array entry, because its empty
+shift(@output_formats);
 
+# define the printf format to be used
+my $format = ("%-40s" x @output_formats);
+
+# print the header
+print("\n");
+printf ( $format, @output_formats );
+print("\n\n");
+
+# get the display filter settings from configuration
 my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
+
 # go over virtual machines and do the job
 foreach my $uuid ( keys( %{$VM} ) ) {
-    # human-readable name for VM
-    my $vmname          = $VM->{$uuid}{NAME};
-    my $display_vm_path = $VM->{$uuid}{PATH};
+    # define the array which will include the content of every column
+    my @output;
 
-    if ($display_filter_vm_path) {
-        $display_vm_path =~ s/$display_filter_vm_path/$1/;
+    # go over the defined output formats
+    foreach ( @output_formats ) {
+        # custom value 'Contact User ID' is mapped to %USER
+        if ( $_ eq "USER" ) {
+            # check if value is set
+            if ( defined $VM->{$uuid}{CUSTOMFIELDS}->{'Contact User ID'} ) {
+                push( @output, $VM->{$uuid}{CUSTOMFIELDS}->{'Contact User ID'});
+            # if not, mark it
+            } else {
+                push( @output, "-- NOT SET --" );
+            }
+        # use the display regex for vm paths if there is one
+        } elsif ( $_ eq "PATH" ) {
+            my $display_vm_path = $VM->{$uuid}{PATH};
+            if ( $display_filter_vm_path ) {
+                $display_vm_path =~ s/$display_filter_vm_path/$1/;
+            }
+            push(@output, $display_vm_path);
+        # just push the hash value to output array
+        } else {
+            push(@output, $VM->{$uuid}{$_});
+        }
     }
 
-    printf( "%s  %s\n", $uuid, $display_vm_path );
+    # print the determined output in one line
+    printf( $format . "\n", @output );
 }
 print("\n");
 printf( "Found %d VMs\n", scalar( keys( %{$VM} ) ) );
