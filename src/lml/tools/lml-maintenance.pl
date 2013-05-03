@@ -4,6 +4,9 @@
 #
 # * Remove obsolete machines from lab.conf
 #
+# IMPORTANT: If an ESX server is disconnected from the vCenter server, the VM data
+#            is still accessible. Therefore this script won't delete VMs from that
+#            disconnected ESX server!
 
 use strict;
 use warnings;
