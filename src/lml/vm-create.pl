@@ -62,6 +62,8 @@ Opts::parse();
 Opts::validate(\&validate);
 
 Util::connect();
+# print html header before anything else
+print header();
 create_vms();
 Util::disconnect();
 
