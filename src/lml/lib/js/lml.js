@@ -92,6 +92,37 @@ $(document).ready(function() {
 		return false;
 	});
 
+    $("#create_vm_form").submit(function(event) {
+        /* stop form from submitting normally */
+        event.preventDefault();
+        var formData = $("#create_vm_form").serialize();
+        $.ajax({
+            type: "POST",
+            beforeSend: function() {
+                $('#create_vm_form *').prop("disabled", "disabled");
+                $('#vm_create_error').hide();
+                $('#vm_create_success').hide();
+                $('#vm_create_info').show();
+            },
+            success: function(data) {
+                $('#vm_create_info').hide();
+                $('#vm_create_error').hide();
+                $("#success_message").text(data);
+                $('#vm_create_success').show();
+                $('#create_vm_form *').removeAttr("disabled");
+            },
+            error: function(request, status, error) {
+                $('#vm_create_info').hide();
+                $('#vm_create_success').hide();
+                $("#error_message").text(request.responseText);
+                $('#vm_create_error').show();
+                $('#create_vm_form *').removeAttr("disabled");
+            },
+            url: "vm-create.pl",
+            data: formData
+        });
+        return false;
+    });
 });
 
 $(window).resize(

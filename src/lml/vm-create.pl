@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2007 VMware, Inc.  All rights reserved.
 #
-# Patched by authors:  
+# Patched by authors:
 #     Stefan Neben <stefan.neben@gmail.com>
 #
 
@@ -10,8 +10,10 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib glob("{/opt/vmware/,/usr/lib/vmware-}vcli/?pps"); # the ? makes sure that only existing paths will match.
+use lib glob("{/opt/vmware/,/usr/lib/vmware-}vcli/?pps");    # the ? makes sure that only existing paths will match.
 use lib "$FindBin::RealBin/lib";
+
+$Util::script_version = "1.0";
 
 use CGI ':standard';
 use VMware::VIRuntime;
@@ -25,111 +27,220 @@ use LML::Config;
 my $C = new LML::Config();
 
 # default paramter
-my $xsd_file = "/usr/share/lab-manager-light/schema/vm-create.xsd";
+my $xsd_file = "../schema/vm-create.xsd";
+my $xml_file = "";
+my @vms;
+my $linebreak = '\n';
 
-# look if we got data over CGI
-my $post_xml_content = "";
-if ( param('xml') ) {
-    # write temporary file
-    my $tmp_xml_file = "/tmp/vm-create-data-".time().".xml";
-    open( TMP_XML, ">", $tmp_xml_file ) || die "Could not open '$tmp_xml_file' for writing\n";
-    flock( TMP_XML, 2 ) || die;
-    print TMP_XML param('xml');
-    close(TMP_XML);
-    # set xml filename to the temporary one
-    $post_xml_content = $tmp_xml_file;
+# default values will be used in case we were called via webui
+my $memory      = 2048;              # in MB
+my $num_cpus    = 1;
+my $guestid     = 'rhel6_64Guest';
+my $disksize    = 16777216;          # in KB
+my $nic_poweron = 1;
+my %custom_fields;
+my %networks;
+
+# are we called via webui?
+if (    param('name')
+     && param('esx_host')
+     && param('username')
+     && param('expiration')
+     && param('folder') )
+{
+    @vms = worker_array_from_post();
+
+    # or do we have an xml source?
+} else {
+    # look if we got xml data over CGI
+    if ( param('xml') ) {
+        # write temporary file
+        $xml_file = "/tmp/vm-create-data-" . time() . ".xml";
+        open( TMP_XML, ">", $xml_file ) || die "Could not open '$xml_file' for writing" . $linebreak;
+        flock( TMP_XML, 2 ) || die;
+        print TMP_XML param('xml');
+        close(TMP_XML);
+    }
+
+    @vms = worker_array_from_xml();
 }
 
-$Util::script_version = "1.0";
-
-my %opts = (
-    filename => {
-        type     => "=s",
-        help     => "The location of the input xml file",
-        required => 0,
-        default  => $post_xml_content,
-    },
-    schema => {
-        type     => "=s",
-        help     => "The location of the schema file",
-        required => 0,
-        default  => $xsd_file,
-    }
-);
-
-Opts::add_options(%opts);
-Opts::parse();
-Opts::validate(\&validate);
-
 Util::connect();
-# print html header before anything else
-print header();
-create_vms();
+create_vms(@vms);
 Util::disconnect();
+
+# Generate an array of vm to be created. Each vm is represented
+# by a hash. The source of vm definitions is the given xml file.
+# =============================================================
+sub worker_array_from_xml {
+    my @vms;
+
+    # define command line options
+    my %opts = (
+                 filename => {
+                               type     => "=s",
+                               help     => "The location of the input xml file",
+                               required => 0,
+                               default  => $xml_file
+                 },
+                 schema => {
+                             type     => "=s",
+                             help     => "The location of the schema file",
+                             required => 0,
+                             default  => $xsd_file
+                 }
+    );
+
+    # initialize vmware sdk
+    Opts::add_options(%opts);
+    Opts::parse();
+    Opts::validate( \&validate );
+
+    my $parser      = XML::LibXML->new();
+    my $tree        = $parser->parse_file( Opts::get_option('filename') );
+    my $root        = $tree->getDocumentElement;
+    my @defined_vms = $root->findnodes('Virtual-Machine');
+
+    foreach (@defined_vms) {
+        # go through the section of Networks
+        if ( $_->findvalue('Networks') ) {
+            for my $entry ( $_->findnodes('Networks/Nic-Network') ) {
+                $networks{ $entry->getAttribute('name') } = $entry->getAttribute('poweron');
+            }
+        }
+
+        # go through the section of Custom-Values
+        if ( $_->findvalue('Custom-Values') ) {
+            for my $entry ( $_->findnodes('Custom-Values/Value') ) {
+                $custom_fields{ $entry->getAttribute('name') } = $entry->textContent();
+            }
+        }
+
+        # assemble the data hash for this vm
+        my %vm = (
+                   vmname        => $_->findvalue('Name'),
+                   vmhost        => $_->findvalue('Host'),
+                   datacenter    => $_->findvalue('Datacenter'),
+                   guestid       => $_->findvalue('Guest-Id'),
+                   datastore     => $_->findvalue('Datastore'),
+                   disksize      => $_->findvalue('Disksize'),
+                   memory        => $_->findvalue('Memory'),
+                   num_cpus      => $_->findvalue('Number-of-Processor'),
+                   nic_poweron   => $_->findvalue('Nic-Poweron'),
+                   custom_fields => \%custom_fields,
+                   target_folder => $_->findvalue('Target-Folder'),
+                   vm_poweron    => $_->findvalue('VM-Poweron'),
+                   networks      => \%networks
+        );
+
+        # add the vm hash to the worker array
+        push( @vms, \%vm );
+    }
+
+    return @vms;
+}
+
+# Generate an array of the vm to be created. This
+# vm is represented by a hash. The source of vm
+# definition is the data from post and default values
+# ===================================================
+sub worker_array_from_post {
+    my @vms;
+
+    # initialize vmware sdk
+    Opts::parse();
+
+    # assemble custom fields hash
+    %custom_fields = (
+                       'Contact User ID'   => param('username'),
+                       'Expires'           => param('expiration'),
+                       'Force Boot'        => 'ON',
+                       'Force Boot Target' => 'default'
+    );
+
+    # set default networks hash
+    foreach ( @{ $C->get( "vsphere", "default_vm_networks" ) } ) {
+        $networks{$_} = 1;
+    }
+
+    my $esx_host_fqdn = param('esx_host');
+    $esx_host_fqdn =~ /(^[^\.]+).*$/;
+    my $esx_host_name = $1;
+
+    @vms = (
+             {
+               vmname        => param('name'),
+               vmhost        => param('esx_host'),
+               datacenter    => $C->get( "vsphere", "default_vm_datacenter" ),
+               guestid       => $guestid,
+               datastore     => $esx_host_name . ':datastore1',
+               disksize      => $disksize,
+               memory        => $memory,
+               num_cpus      => $num_cpus,
+               nic_poweron   => $nic_poweron,
+               custom_fields => \%custom_fields,
+               target_folder => param('folder'),
+               vm_poweron    => 1,
+               networks      => \%networks
+             }
+    );
+    return @vms;
+}
+
+# compose error output related to the execution context
+# =====================================================
+sub error {
+    my $message = shift;
+
+    # print html header before anything else if CGI is used
+    if ( exists $ENV{GATEWAY_INTERFACE} ) {
+        print header( -status => '500 Error while processing' );
+        print "NEW_VM_STATUS=\"" . $message . "\"";
+    } else {
+        print "NEW_VM_STATUS=\"" . $message . "\"\n";
+    }
+
+    Util::disconnect();
+    exit 0;
+}
+
+# compose a success output
+sub success {
+    my $uuid    = shift;
+    my $message = shift;
+
+    # print html header before anything else if CGI is used
+    if ( exists $ENV{GATEWAY_INTERFACE} ) {
+        print header( -status => '200 vm created' );
+        print "NEW_VM_UUID=\"" . $uuid . "\"";
+    } else {
+        print "NEW_VM_UUID=\"" . $uuid . "\"\n";
+    }
+}
 
 # This subroutine parses the input xml file to retrieve all the
 # parameters specified in the file and passes these parameters
 # to create_vm subroutine to create a single virtual machine
 # =============================================================
 sub create_vms {
-    my $parser = XML::LibXML->new();
-    my $tree   = $parser->parse_file(Opts::get_option('filename'));
-    my $root   = $tree->getDocumentElement;
-    my @vms    = $root->findnodes('Virtual-Machine');
+    my @vms = @_;
 
-    foreach ( @vms ) {
-        # default values will be used in case
-        # the user do not specify some parameters
-        my $memory = 1024;  # in MB
-        my $num_cpus = 1;
-        my $guestid = 'rhel6_64Guest';
-        my $disksize = 8129;  # in KB
-        my $nic_poweron = 1;
-        my %custom_fields;
-        my %networks;
-
-        # If the properties are specified, the default values are not used.
-        if ($_->findvalue('Guest-Id')) {
-            $guestid = $_->findvalue('Guest-Id');
-        }
-        if ($_->findvalue('Disksize')) {
-            $disksize = $_->findvalue('Disksize');
-        }
-        if ($_->findvalue('Memory')) {
-            $memory = $_->findvalue('Memory');
-        }
-        if ($_->findvalue('Number-of-Processor')) {
-            $num_cpus = $_->findvalue('Number-of-Processor');
-        }
-        if ($_->findvalue('Nic-Poweron')) {
-            $nic_poweron = $_->findvalue('Nic-Poweron');
-        }
-        # go through the section of Custom-Values
-        if ($_->findvalue('Custom-Values')) {
-            for my $entry ($_->findnodes('Custom-Values/Value')) {
-                $custom_fields{$entry->getAttribute('name')} = $entry->textContent();
-            }
-        }
-        # go through the section of Networks
-        if ($_->findvalue('Networks')) {
-            for my $entry ($_->findnodes('Networks/Nic-Network')) {
-                $networks{$entry->getAttribute('name')} = $entry->getAttribute('poweron');
-            }
-        }
-
-        create_vm( vmname        => $_->findvalue('Name'),
-                   vmhost        => $_->findvalue('Host'),
-                   datacenter    => $_->findvalue('Datacenter'),
-                   guestid       => $guestid,
-                   datastore     => $_->findvalue('Datastore'),
-                   disksize      => $disksize,
-                   memory        => $memory,
-                   num_cpus      => $num_cpus,
-                   nic_poweron   => $nic_poweron,
-                   custom_fields => \%custom_fields,
-                   target_folder => $_->findvalue('Target-Folder'),
-                   vm_poweron    => $_->findvalue('VM-Poweron'),
-                   networks      => \%networks );
+    foreach (@vms) {
+        create_vm(
+                   vmname        => $_->{'vmname'},
+                   vmhost        => $_->{'vmhost'},
+                   datacenter    => $_->{'datacenter'},
+                   guestid       => $_->{'guestid'},
+                   datastore     => $_->{'datastore'},
+                   disksize      => $_->{'disksize'},
+                   memory        => $_->{'memory'},
+                   num_cpus      => $_->{'num_cpus'},
+                   nic_poweron   => $_->{'nic_poweron'},
+                   custom_fields => $_->{'custom_fields'},
+                   target_folder => $_->{'target_folder'},
+                   vm_poweron    => $_->{'vm_poweron'},
+                   networks      => $_->{'networks'}
+        );
     }
 }
 
@@ -139,153 +250,148 @@ sub create_vm {
     my %args = @_;
     my @vm_devices;
     my $host_view = Vim::find_entity_view( view_type => 'HostSystem',
-                                           filter    => {'name' => $args{vmhost}} );
+                                           filter    => { 'name' => $args{vmhost} } );
 
-    if ( ! $host_view ) {
-        print "NEW_VM_STATUS=\"ERROR: "
-            . "Host '$args{vmhost}' not found\"\n";
-        return;
+    if ( !$host_view ) {
+        error( "ERROR: " . "Host '$args{vmhost}' not found" );
     }
 
-    my %ds_info = HostUtils::get_datastore( host_view => $host_view,
+    my %ds_info = HostUtils::get_datastore(
+                                            host_view => $host_view,
                                             datastore => $args{datastore},
-                                            disksize  => $args{disksize} );
+                                            disksize  => $args{disksize}
+    );
 
-    if ($ds_info{mor} eq 0) {
-        if ($ds_info{name} eq 'datastore_error') {
-            print "NEW_VM_STATUS=\"ERROR: "
-                . "Datastore $args{datastore} not available.\"\n";
-            return;
+    if ( $ds_info{mor} eq 0 ) {
+        if ( $ds_info{name} eq 'datastore_error' ) {
+            error( "ERROR: " . "Datastore $args{datastore} not available." );
         }
-        if ($ds_info{name} eq 'disksize_error') {
-            print "NEW_VM_STATUS=\"ERROR: The free space "
-                . "available is less than the specified disksize.\"\n";
-            return;
+        if ( $ds_info{name} eq 'disksize_error' ) {
+            error( "ERROR: The free space " . "available is less than the specified disksize." );
         }
     }
 
-    my $ds_path = "[" . $ds_info{name} . "]";
+    my $ds_path                     = "[" . $ds_info{name} . "]";
     my $controller_vm_dev_conf_spec = create_conf_spec();
-    my $disk_vm_dev_conf_spec =
-        create_virtual_disk(ds_path => $ds_path, disksize => $args{disksize});
+    my $disk_vm_dev_conf_spec       = create_virtual_disk( ds_path => $ds_path, disksize => $args{disksize} );
 
     # add all configured networks
-    foreach my $network ( sort keys(%{$args{networks}}) ) {
-        my %net_settings = get_network( network_name => $network,
-                                        poweron      => ${$args{networks}}{$network},
-                                        host_view    => $host_view );
+    foreach my $network ( sort keys( %{ $args{networks} } ) ) {
+        my %net_settings = get_network(
+                                        network_name => $network,
+                                        poweron      => ${ $args{networks} }{$network},
+                                        host_view    => $host_view
+        );
 
         # check for errors
         if ( $net_settings{'error'} eq 0 ) {
-            push(@vm_devices, $net_settings{'network_conf'});
+            push( @vm_devices, $net_settings{'network_conf'} );
 
         } elsif ( $net_settings{'error'} eq 1 ) {
-            print "NEW_VM_STATUS=\"ERROR: "
-                . "Network '$args{nic_network}' not found\"\n";
-            return;
+            error( "ERROR: " . "Network '$args{nic_network}' not found" );
         }
     }
 
     push( @vm_devices, $controller_vm_dev_conf_spec );
     push( @vm_devices, $disk_vm_dev_conf_spec );
 
-    my $files = VirtualMachineFileInfo->new( logDirectory      => undef,
+    my $files = VirtualMachineFileInfo->new(
+                                             logDirectory      => undef,
                                              snapshotDirectory => undef,
                                              suspendDirectory  => undef,
-                                             vmPathName        => $ds_path );
+                                             vmPathName        => $ds_path
+    );
 
-    my $vm_config_spec = VirtualMachineConfigSpec->new( name         => $args{vmname},
+    my $vm_config_spec = VirtualMachineConfigSpec->new(
+                                                        name         => $args{vmname},
                                                         memoryMB     => $args{memory},
                                                         files        => $files,
                                                         numCPUs      => $args{num_cpus},
                                                         guestId      => $args{guestid},
-                                                        deviceChange => \@vm_devices );
+                                                        deviceChange => \@vm_devices
+    );
 
-    my $datacenter_views =
-        Vim::find_entity_views ( view_type => 'Datacenter',
-                                 filter    => { name => $args{datacenter}} );
+    my $datacenter_views = Vim::find_entity_views( view_type => 'Datacenter',
+                                                   filter    => { name => $args{datacenter} } );
 
     unless (@$datacenter_views) {
-        print "NEW_VM_STATUS=\"ERROR: "
-            . "Datacenter '$args{datacenter}' not found\"\n";
-        return;
+        error( "ERROR: " . "Datacenter '$args{datacenter}' not found" );
     }
 
     if ( $#{$datacenter_views} != 0 ) {
-        print "NEW_VM_STATUS=\"ERROR: "
-            . "Datacenter '$args{datacenter}' not unique\"\n";
-        return;
+        error( "ERROR: " . "Datacenter '$args{datacenter}' not unique" );
     }
 
-    my $datacenter = shift @$datacenter_views;
-    my $datacenter_vm_folder = Vim::get_view(mo_ref => $datacenter->vmFolder);
-    my $comp_res_view  = Vim::get_view(mo_ref => $host_view->parent);
+    my $datacenter           = shift @$datacenter_views;
+    my $datacenter_vm_folder = Vim::get_view( mo_ref => $datacenter->vmFolder );
+    my $comp_res_view        = Vim::get_view( mo_ref => $host_view->parent );
+
+    # create the folder regardless its already there
+    #create_folder( folder => $args{target_folder} );
 
     # get the wished folder
     my $target_folder_view;
-    my @found = split(/\//,$args{target_folder});
+    my @found = split( /\//, $args{target_folder} );
     # remove any empty lines
-    @found = grep(/\S/, @found);
-    get_folder( folder      => $datacenter_vm_folder,
+    @found = grep( /\S/, @found );
+    get_folder(
+                folder      => $datacenter_vm_folder,
                 found       => \@found,
-                target_view => \$target_folder_view );
+                target_view => \$target_folder_view
+    );
 
     eval {
         $target_folder_view->CreateVM( config => $vm_config_spec,
                                        pool   => $comp_res_view->resourcePool );
-        
+
     };
 
-    if ( $@ ) {
+    if ($@) {
         if ( ref($@) eq 'SoapFault' ) {
-            if ( ref($@->detail) eq 'PlatformConfigFault' ) {
-                print "NEW_VM_STATUS=\"ERROR: Invalid VM configuration: "
-                    . ${$@->detail}{'text'} . "\"\n";
-            } elsif ( ref($@->detail) eq 'InvalidDeviceSpec' ) {
-                print "NEW_VM_STATUS=\"ERROR: Invalid Device configuration: "
-                    . ${$@->detail}{'property'} . "\"\n";
-            } elsif ( ref($@->detail) eq 'DatacenterMismatch' ) {
-                print "NEW_VM_STATUS=\"ERROR: DatacenterMismatch, the input arguments had entities "
-                    . "that did not belong to the same datacenter\"\n";
-            } elsif ( ref($@->detail) eq 'HostNotConnected' ) {
-                print "NEW_VM_STATUS=\"ERROR: Unable to communicate with the remote host,"
-                    . " since it is disconnected\"\n";
-            } elsif ( ref($@->detail) eq 'InvalidState' ) {
-                print "NEW_VM_STATUS=\"ERROR: The operation is not allowed in the current state\"\n";
-            } elsif ( ref($@->detail) eq 'DuplicateName' ) {
-                print "NEW_VM_STATUS=\"ERROR: Virtual machine already exists\"\n";
+            if ( ref( $@->detail ) eq 'PlatformConfigFault' ) {
+                error( "ERROR: Invalid VM configuration: " . ${ $@->detail }{'text'} );
+            } elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
+                error( "ERROR: Invalid Device configuration: " . ${ $@->detail }{'property'} );
+            } elsif ( ref( $@->detail ) eq 'DatacenterMismatch' ) {
+                error("ERROR: DatacenterMismatch, the input arguments had entities that did not belong to the same datacenter");
+            } elsif ( ref( $@->detail ) eq 'HostNotConnected' ) {
+                error("ERROR: Unable to communicate with the remote host, since it is disconnected");
+            } elsif ( ref( $@->detail ) eq 'InvalidState' ) {
+                error("ERROR: The operation is not allowed in the current state");
+            } elsif ( ref( $@->detail ) eq 'DuplicateName' ) {
+                error("ERROR: Virtual machine already exists");
             } else {
-                print "NEW_VM_STATUS=\"ERROR: " . $@ . "\"\n";
+                error( "ERROR: " . $@ );
             }
         } else {
-            print "NEW_VM_STATUS=\"ERROR: " . $@ . "\"\n";
+            error( "ERROR: " . $@ );
         }
     }
 
-    # only begin to fill the custom fields, if no error occured
-    if ( not $@ ) {
-        # set the custom fields with defined values
-        set_custom_fields( vmname        => $args{vmname},
-                           custom_fields => $args{custom_fields} );
-        # get the view of the previously created vm
-        my $vm_views = VMUtils::get_vms( 'VirtualMachine', $args{vmname} );
-        my $vm_view = shift @{$vm_views};
-        # hand out the uuid
-        print "NEW_VM_UUID=\"" . $vm_view->config->uuid . "\"\n";
-        # finally switch on the virtual machine
-        if ( $args{vm_poweron} ) {
-            eval {
-                $vm_view->PowerOnVM();
-            };
-            # handle errors
-            if ( $@ ) {
-                print "NEW_VM_STATUS=\"ERROR: Switch on\"\n";
-            }
+    # set the custom fields with defined values
+    set_custom_fields( vmname        => $args{vmname},
+                       custom_fields => $args{custom_fields} );
+    # get the view of the previously created vm
+    my $vm_views = VMUtils::get_vms( 'VirtualMachine', $args{vmname} );
+    my $vm_view = shift @{$vm_views};
+    # finally switch on the virtual machine
+    if ( $args{vm_poweron} ) {
+        eval { $vm_view->PowerOnVM(); };
+        # handle errors
+        if ($@) {
+            error("ERROR: Switch on");
         }
-        # if everything went find give an status
-        print "NEW_VM_STATUS=\"SUCCESS: VM created and switched on\"\n";
     }
+    # if everything went find give an success status
+    success( $vm_view->config->uuid );
 }
+
+#sub create_folder {
+#    my %args = @_;
+#
+#    my $folder      = $args{folder};
+#    #$datacenter_vm_folder->CreateFolder( name => $args{target_folder} );
+#}
 
 # iterate through folders of datacenter
 sub get_folder {
@@ -301,7 +407,7 @@ sub get_folder {
     # are we in the target folder?
     if ( $folder->name eq ${$found}[0] ) {
         # cut the first found array element, if we are in that folder
-        shift(@{$found});
+        shift( @{$found} );
         # do we have a hit?
         if ( not @{$found} ) {
             ${$target_view} = $folder;
@@ -321,9 +427,11 @@ sub get_folder {
         next if $child->type eq 'VirtualMachine';
 
         # call this function on child to start the game again
-        get_folder( folder      => Vim::get_view( mo_ref => $child),
+        get_folder(
+                    folder      => Vim::get_view( mo_ref => $child ),
                     found       => $found,
-                    target_view => $target_view );
+                    target_view => $target_view
+        );
     }
 }
 
@@ -333,26 +441,27 @@ sub set_custom_fields {
     my %args = @_;
 
     # get view to service object
-    my $customFieldsManager =
-        Vim::get_view( mo_ref => Vim::get_service_content()->customFieldsManager );
+    my $customFieldsManager = Vim::get_view( mo_ref => Vim::get_service_content()->customFieldsManager );
     # only if there are fields defined
-    if (defined $customFieldsManager->{field}) {
+    if ( defined $customFieldsManager->{field} ) {
         my $fields = $customFieldsManager->{field};
 
         # get  view of the previous created vm
         my $vm = Vim::find_entity_view( view_type => 'VirtualMachine',
-                                        filter    => {"config.name" => $args{vmname}});
+                                        filter    => { "config.name" => $args{vmname} } );
 
         # go through each custom field, which is defined globally
         my $key;
-        foreach my $field ( @$fields ) {
+        foreach my $field (@$fields) {
             # go through each configured custom field (in input xml)
-            foreach ( keys %{$args{custom_fields}}) {
+            foreach ( keys %{ $args{custom_fields} } ) {
                 # if we are at the right field, use its key to modify the custom field in vm
-                if( $field->name eq $_ ) {
-                    $customFieldsManager->SetField( entity => $vm,
+                if ( $field->name eq $_ ) {
+                    $customFieldsManager->SetField(
+                                                    entity => $vm,
                                                     key    => $field->key,
-                                                    value  => ${$args{custom_fields}}{$field->name} );
+                                                    value  => ${ $args{custom_fields} }{ $field->name }
+                    );
                 }
             }
         }
@@ -362,15 +471,15 @@ sub set_custom_fields {
 # create virtual device config spec for controller
 # ================================================
 sub create_conf_spec {
-    my $controller =
-        ParaVirtualSCSIController->new( key       => 0,
-                                        device    => [0],
-                                        busNumber => 0,
-                                        sharedBus => VirtualSCSISharing->new('noSharing') );
+    my $controller = ParaVirtualSCSIController->new(
+                                                     key       => 0,
+                                                     device    => [0],
+                                                     busNumber => 0,
+                                                     sharedBus => VirtualSCSISharing->new('noSharing')
+    );
 
-    my $controller_vm_dev_conf_spec =
-        VirtualDeviceConfigSpec->new( device    => $controller,
-                                      operation => VirtualDeviceConfigSpecOperation->new('add') );
+    my $controller_vm_dev_conf_spec = VirtualDeviceConfigSpec->new( device    => $controller,
+                                                                    operation => VirtualDeviceConfigSpecOperation->new('add') );
 
     return $controller_vm_dev_conf_spec;
 }
@@ -378,91 +487,89 @@ sub create_conf_spec {
 # create virtual device config spec for disk
 # ==========================================
 sub create_virtual_disk {
-   my %args = @_;
-   my $ds_path = $args{ds_path};
-   my $disksize = $args{disksize};
+    my %args     = @_;
+    my $ds_path  = $args{ds_path};
+    my $disksize = $args{disksize};
 
-   my $disk_backing_info =
-      VirtualDiskFlatVer2BackingInfo->new(diskMode => 'persistent',
-                                          fileName => $ds_path);
+    my $disk_backing_info = VirtualDiskFlatVer2BackingInfo->new( diskMode => 'persistent',
+                                                                 fileName => $ds_path );
 
-   my $disk = VirtualDisk->new(backing => $disk_backing_info,
-                               controllerKey => 0,
-                               key => 0,
-                               unitNumber => 0,
-                               capacityInKB => $disksize);
+    my $disk = VirtualDisk->new(
+                                 backing       => $disk_backing_info,
+                                 controllerKey => 0,
+                                 key           => 0,
+                                 unitNumber    => 0,
+                                 capacityInKB  => $disksize
+    );
 
-   my $disk_vm_dev_conf_spec =
-      VirtualDeviceConfigSpec->new(device => $disk,
-               fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
-               operation => VirtualDeviceConfigSpecOperation->new('add'));
-   return $disk_vm_dev_conf_spec;
+    my $disk_vm_dev_conf_spec = VirtualDeviceConfigSpec->new(
+                                                              device        => $disk,
+                                                              fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
+                                                              operation     => VirtualDeviceConfigSpecOperation->new('add')
+    );
+    return $disk_vm_dev_conf_spec;
 }
-
 
 # get network configuration
 # =========================
-#print "DEBUG: ".Data::Dumper->Dump([%{$data}])."\n";
+#print "DEBUG: ".Data::Dumper->Dump([%{$data}])."" . $linebreak;
 sub get_network {
-    my %args = @_;
+    my %args         = @_;
     my $network_name = $args{network_name};
-    my $poweron = $args{poweron};
-    my $host_view = $args{host_view}; #DEBUG0
-    my $network = undef;
-    my $unit_num = 1;  # 1 since 0 is used by disk
+    my $poweron      = $args{poweron};
+    my $host_view    = $args{host_view};      #DEBUG0
+    my $network      = undef;
+    my $unit_num     = 1;                     # 1 since 0 is used by disk
 
-    if($network_name) {
+    if ($network_name) {
         my $network_list = Vim::get_views( mo_ref_array => $host_view->network );
 
         foreach (@$network_list) {
-            if($network_name eq $_->name) {
+            if ( $network_name eq $_->name ) {
                 $network = $_;
 
                 my $dvs_view = Vim::get_view( mo_ref => $network->config->distributedVirtualSwitch );
 
-                my $backing_port = DistributedVirtualSwitchPortConnection->new(
-                    portgroupKey => $network->key,
-                    switchUuid   => $dvs_view->uuid
+                my $backing_port = DistributedVirtualSwitchPortConnection->new( portgroupKey => $network->key,
+                                                                                switchUuid   => $dvs_view->uuid );
+
+                my $nic_backing_info = VirtualEthernetCardDistributedVirtualPortBackingInfo->new( port => $backing_port );
+
+                my $vd_connect_info = VirtualDeviceConnectInfo->new(
+                                                                     allowGuestControl => 1,
+                                                                     connected         => 0,
+                                                                     startConnected    => $poweron
                 );
 
-                my $nic_backing_info = VirtualEthernetCardDistributedVirtualPortBackingInfo->new(
-                    port    => $backing_port 
-                );
-
-                my $vd_connect_info =
-                    VirtualDeviceConnectInfo->new( allowGuestControl => 1,
-                                                   connected => 0,
-                                                   startConnected => $poweron );
-
-                my $nic = VirtualVmxnet3->new( backing     => $nic_backing_info,
+                my $nic = VirtualVmxnet3->new(
+                                               backing     => $nic_backing_info,
                                                key         => 0,
                                                unitNumber  => $unit_num,
                                                addressType => 'generated',
-                                               connectable => $vd_connect_info );
+                                               connectable => $vd_connect_info
+                );
 
-                my $nic_vm_dev_conf_spec =
-                    VirtualDeviceConfigSpec->new( device => $nic,
-                                                  operation => VirtualDeviceConfigSpecOperation->new('add') );
-                return (error => 0, network_conf => $nic_vm_dev_conf_spec);
+                my $nic_vm_dev_conf_spec = VirtualDeviceConfigSpec->new( device    => $nic,
+                                                                         operation => VirtualDeviceConfigSpecOperation->new('add') );
+                return ( error => 0, network_conf => $nic_vm_dev_conf_spec );
             }
         }
-        if (!defined($network)) {
+        if ( !defined($network) ) {
             # no network found
-            return (error => 1);
+            return ( error => 1 );
         }
     }
     # default network will be used
-    return (error => 2);
+    return ( error => 2 );
 }
 
 # check the XML file
 # =====================
 sub validate {
     my $valid = XMLValidation::validate_format( Opts::get_option('filename') );
-    if ($valid == 1) {
-        $valid = XMLValidation::validate_schema( Opts::get_option('filename'),
-                                                 Opts::get_option('schema') );
-        if ($valid == 1) {
+    if ( $valid == 1 ) {
+        $valid = XMLValidation::validate_schema( Opts::get_option('filename'), Opts::get_option('schema') );
+        if ( $valid == 1 ) {
             $valid = check_missing_value();
         }
     }
@@ -472,44 +579,36 @@ sub validate {
 # check missing values of mandatory fields
 # ========================================
 sub check_missing_value {
-   my $valid = 1;
-   my $filename = Opts::get_option('filename');
-   my $parser = XML::LibXML->new();
-   my $tree = $parser->parse_file($filename);
-   my $root = $tree->getDocumentElement;
-   
-   # defect 223162
-   if($root->nodeName eq 'Virtual-Machines') {
-      my @vms = $root->findnodes('Virtual-Machine');
-      foreach (@vms) {
-         if (!$_->findvalue('Name')) {
-            print "NEW_VM_STATUS=\"ERROR: Error in '$filename': <Name> value missing " .
-                           "in one of the VM specifications\"\n";
-            $valid = 0;
-         }
-         if (!$_->findvalue('Host')) {
-            print "NEW_VM_STATUS=\"ERROR: Error in '$filename':\n<Host> value missing " .
-                           "in one of the VM specifications\"\n";
-            $valid = 0;
-         }
-         if (!$_->findvalue('Datacenter')) {
-            print "NEW_VM_STATUS=\"ERROR: Error in '$filename':\n<Datacenter> value missing " .
-                           "in one of the VM specifications\"\n";
-            $valid = 0;
-         }
-      }
-   }
-   else {
-      print "NEW_VM_STATUS=\"ERROR: Error in '$filename': Invalid root element ";
-      $valid = 0;
-   }
-   return $valid;
+    my $valid    = 1;
+    my $filename = Opts::get_option('filename');
+    my $parser   = XML::LibXML->new();
+    my $tree     = $parser->parse_file($filename);
+    my $root     = $tree->getDocumentElement;
+
+    # defect 223162
+    if ( $root->nodeName eq 'Virtual-Machines' ) {
+        my @vms = $root->findnodes('Virtual-Machine');
+        foreach (@vms) {
+            if ( !$_->findvalue('Name') ) {
+                error("ERROR: Error in '$filename': <Name> value missing in one of the VM specifications");
+            }
+            if ( !$_->findvalue('Host') ) {
+                error("ERROR: Error in '$filename': <Host> value missing in one of the VM specifications");
+            }
+            if ( !$_->findvalue('Datacenter') ) {
+                error("ERROR: Error in '$filename':\n<Datacenter> value missing in one of the VM specifications");
+            }
+        }
+    } else {
+        error("ERROR: Error in '$filename': Invalid root element");
+    }
+    return $valid;
 }
 
 # cleanup temporary generated files
 END {
     # TODO: ATM we have only one file, so make use of the "global" variable
-    unlink($post_xml_content) if ($post_xml_content);
+    unlink($xml_file) if ($xml_file);
 }
 
 __END__

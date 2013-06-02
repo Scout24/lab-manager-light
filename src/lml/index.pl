@@ -150,14 +150,69 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
             $esxhost
         ] ) . "\n\n";
 }
-print <<EOF;
 
+# get a list of available host systems
+my @hosts = keys($LAB->{ESXHOSTS});
+
+print <<EOF;
         </tbody></table>
-	</div>
-	<div class="main_content" id="new">
-	   <p>Coming soon... (Help wanted!)</p>
-	</div>
-	
+    </div>
+    <div class="main_content" id="new">
+        <fieldset>
+            <legend>Create new VM(s)</legend>
+            <div class="info message" id="vm_create_info">
+                <h3>VM(s) provisioning in progress <img src="lib/images/wait.gif"></h3>
+                <p>Please wait while the VM(s) will be provisioned. This can take a while ...</p>
+            </div>
+            <div class="error message" id="vm_create_error">
+                <h3>Problems while VM(s) provisioning</h3>
+                <p>The following error occured: <b id="error_message"></b></p>
+            </div>
+            <div class="success message" id="vm_create_success">
+                <h3>Success</h3>
+                <p>VM was successfully created: <b id="success_message"></b></p>
+            </div>
+            <form id="create_vm_form" method="post">
+                <table>
+                    <tr>
+                        <td><p>Name</p></td>
+                        <td><input type="text" name="name"></td>
+                    </tr>
+                    <tr>
+                        <td><p>ESX-Host</p></td>
+                        <td>
+                            <select name="esx_host">
+EOF
+
+foreach my $host (@hosts) {
+    print "<option>" . $host . "</option>\n";
+}
+
+print <<EOF;
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><p>Username</p></td>
+                        <td><input type="text" name="username"></td>
+                    </tr>
+                    <tr>
+                        <td><p>Expiration date</p></td>
+                        <td><input type="text" name="expiration"></td>
+                    </tr>
+                    <tr>
+                        <td><p>Target folder</p></td>
+                        <td><input type="text" name="folder"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <input type="submit" value="Create">
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </fieldset>
+    </div>
 	<div class="main_content" id="tools">
        <p>
             <span id="clear_button" class="button" title="Clear tool output">Clear</span>

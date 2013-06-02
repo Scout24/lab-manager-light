@@ -98,6 +98,30 @@ div.DTTT_container {
 	color: white;
 }
 
+.message {
+    display: none;
+    border: 1px solid;
+    color: #fff;
+    padding: 15px;
+    text-shadow: 0 1px 0 rgba(0,0,0,.5);
+}
+
+.info {
+    background-color: #65b0d3;
+    border-color: #529cbe;
+}
+
+.error{
+    background-color: #ce5151;
+    border-color: #c03d3d;
+}
+
+.success{
+    background-color: #7ebe5c;
+    border-color: #6a9751;
+}
+
+/* button */
 .button {
 	box-shadow: inset 0px 1px 0px 0px #ffffff;
 	background-color: #ededed;
@@ -108,7 +132,7 @@ div.DTTT_container {
 	/*  
     font-family:Arial;
     font-size:12px;
-*/
+    */
 	font-weight: bold;
 	padding: 6px 16px;
 	text-decoration: none;
