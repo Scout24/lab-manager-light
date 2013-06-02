@@ -152,7 +152,7 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
 }
 
 # get a list of available host systems
-my @hosts = keys($LAB->{ESXHOSTS});
+my @hosts = keys(%{$LAB->{ESXHOSTS}});
 
 print <<EOF;
         </tbody></table>
