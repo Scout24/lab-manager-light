@@ -159,7 +159,16 @@ sub worker_array_from_post {
     );
 
     # set default networks hash
-    foreach ( @{ $C->get( "vsphere", "default_vm_networks" ) } ) {
+    my @default_vm_networks = ();
+    my $config_default_vm_networks = $C->get( "vsphere", "default_vm_networks" );
+    if ( $config_default_vm_networks ) {
+        if ( ref($config_default_vm_networks) eq "ARRAY" ) {
+            @default_vm_networks = @{$config_default_vm_networks};
+        } else {
+            @default_vm_networks = ($config_default_vm_networks);
+        }
+    }
+    foreach ( @default_vm_networks ) {
         $networks{$_} = 1;
     }
 
