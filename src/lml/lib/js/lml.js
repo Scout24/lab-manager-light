@@ -101,19 +101,21 @@ $(document).ready(function() {
             beforeSend: function() {
                 $('#create_vm_form *').prop("disabled", "disabled");
                 $('#vm_create_error').hide();
-                $('#vm_create_success').hide();
+                $('#new_vm_success_title').hide();
+                $("#info_message").text( 'Please wait while the VM will be provisioned. This can take a while ...' );
+                $('#new_vm_progress_title').show();
                 $('#vm_create_info').show();
             },
             success: function(data) {
-                $('#vm_create_info').hide();
                 $('#vm_create_error').hide();
-                $("#success_message").text(data);
-                $('#vm_create_success').show();
+                $('#new_vm_progress_title').hide();
+                $('#new_vm_success_title').show();
+                $("#info_message").text( 'The new VM was created with the UUID ' + data );
                 $('#create_vm_form *').removeAttr("disabled");
+                $('#new_vm_screenshot').attr('src', 'vmscreenshot.pl?stream=1;uuid=' + data );
             },
             error: function(request, status, error) {
                 $('#vm_create_info').hide();
-                $('#vm_create_success').hide();
                 $("#error_message").text(request.responseText);
                 $('#vm_create_error').show();
                 $('#create_vm_form *').removeAttr("disabled");

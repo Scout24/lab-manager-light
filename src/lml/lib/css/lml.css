@@ -98,8 +98,13 @@ div.DTTT_container {
 	color: white;
 }
 
+#new_vm_success_title {
+    display: none;
+}
+
 .message {
     display: none;
+    border-radius: 5px;
     border: 1px solid;
     color: #fff;
     padding: 15px;
@@ -112,13 +117,8 @@ div.DTTT_container {
 }
 
 .error{
-    background-color: #ce5151;
-    border-color: #c03d3d;
-}
-
-.success{
-    background-color: #7ebe5c;
-    border-color: #6a9751;
+    background-color: #df6464;
+    border-color: #b95858;
 }
 
 /* button */

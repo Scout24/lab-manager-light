@@ -221,10 +221,8 @@ sub success {
     # print html header before anything else if CGI is used
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
         print header( -status => '200 vm created' );
-        print "NEW_VM_UUID=\"" . $uuid . "\"";
-    } else {
-        print "NEW_VM_UUID=\"" . $uuid . "\"\n";
     }
+    print $uuid;
 }
 
 # This subroutine parses the input xml file to retrieve all the

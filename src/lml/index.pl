@@ -161,16 +161,22 @@ print <<EOF;
         <fieldset>
             <legend>Create new VM(s)</legend>
             <div class="info message" id="vm_create_info">
-                <h3>VM(s) provisioning in progress <img src="lib/images/wait.gif"></h3>
-                <p>Please wait while the VM(s) will be provisioned. This can take a while ...</p>
+              <table>
+                <tr>
+                  <td style="width: 100%;">
+                    <h2 id="new_vm_progress_title">VM provisioning in progress <img src="lib/images/wait.gif"></h2>
+                    <h2 id="new_vm_success_title">VM was successfully created</h2>
+                    <p id="info_message"></p>
+                  </td>
+                  <td>
+                    <img id="new_vm_screenshot" src="lib/images/placeholder.png" height="256" style="border: 1px solid #a0a0a0; opacity: 0.9;">
+                  </td>
+                </tr>
+              </table>
             </div>
             <div class="error message" id="vm_create_error">
                 <h3>Problems while VM(s) provisioning</h3>
                 <p>The following error occured: <b id="error_message"></b></p>
-            </div>
-            <div class="success message" id="vm_create_success">
-                <h3>Success</h3>
-                <p>VM was successfully created: <b id="success_message"></b></p>
             </div>
             <form id="create_vm_form" method="post">
                 <table>
