@@ -112,7 +112,9 @@ $(document).ready(function() {
                 $('#new_vm_success_title').show();
                 $("#info_message").text( 'The new VM was created with the UUID ' + data );
                 $('#create_vm_form *').removeAttr("disabled");
-                $('#new_vm_screenshot').attr('src', 'vmscreenshot.pl?stream=1;uuid=' + data );
+                setTimeout(function(){
+                    $('#new_vm_screenshot').attr('src', 'vmscreenshot.pl?stream=1;uuid=' + data );
+                }, 13000);
             },
             error: function(request, status, error) {
                 $('#vm_create_info').hide();
