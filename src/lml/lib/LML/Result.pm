@@ -95,7 +95,7 @@ sub render {
             # redirect to relative url (probably to /boot/) on our host
             $redirect_base =~ s#pxelinux.cfg/.*$##;      # strip pxelinux.cfg/*
         }
-        # compose the paramter string (hostname is alway present)
+        # compose the paramter string (hostname is always present)
         my $parameter = '?';
         foreach ( keys( %{ $self->{redirect_parameter} } ) ) {
             $parameter .= $_ . '=' . ${ $self->{redirect_parameter} }{$_} . '&';
