@@ -35,6 +35,17 @@ sub set {
     return $value;
 }
 
+sub get_proxy_parameter {
+    my ( $self, %args ) = @_;
+    my %parameters;
+    # get a copy of the sub hash from "proxy_variables" configuration
+    %parameters = %{ $self->{proxy_variables} } if exists $self->{proxy_variables};
+    # append the hostname parameter
+    $parameters{hostname} = $args{hostname};
+    # return the hash reference
+    return \%parameters;
+}
+
 sub labfile {
     my $self = shift;
     # TODO deal with the get() returning undef
@@ -42,8 +53,8 @@ sub labfile {
 }
 
 sub vsphere_networks {
-    my $self             = shift;
-    my @vsphere_networks = ();      # list of network names for which LML is responsible.
+    my $self                    = shift;
+    my @vsphere_networks        = ();                                    # list of network names for which LML is responsible.
     my $config_vsphere_networks = $self->get( "vsphere", "networks" );
     if ($config_vsphere_networks) {
         if ( ref($config_vsphere_networks) eq "ARRAY" ) {
@@ -52,7 +63,7 @@ sub vsphere_networks {
             @vsphere_networks = ($config_vsphere_networks);
         }
     } else {
-        @vsphere_networks = (".*");    # match all networks if not configured
+        @vsphere_networks = (".*");                                      # match all networks if not configured
     }
     return @vsphere_networks;
 }

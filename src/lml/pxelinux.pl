@@ -66,6 +66,9 @@ my @body;    # body to return to HTTP client
 if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     $vm_name = $VM->name;
 
+    # set redirect paramters
+    $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name ) );
+
     # check if we should handle this VM
     $VM->set_networks_filter( $C->vsphere_networks );
     if ( $VM->get_filtered_macs ) {

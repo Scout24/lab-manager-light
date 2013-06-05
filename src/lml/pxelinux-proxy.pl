@@ -51,6 +51,7 @@ sub replace_token {
             # ok first token is replaced, play the game again
             replace_token($line, $parameter);
         } else {
+            # set NO_TOKEN_X for better debugging
             $line =~ s/\%\%\%$token\%\%\%/!!!NO_TOKEN_$token!!!/i;
             replace_token($line, $parameter);
         }
@@ -64,7 +65,7 @@ my %parameter = get_parameter_hash();
 
 # if we have an file to proxy, do it
 if ( defined $parameter{'filename'} ) {
-    # IMPORTANT: DoCumentRoot infront to prevent the reading of outside files
+    # IMPORTANT: DocumentRoot infront to prevent the reading of outside files
     my $filename = $ENV{DOCUMENT_ROOT} . $parameter{'filename'};
 
     # go through each line of the file
@@ -76,8 +77,8 @@ if ( defined $parameter{'filename'} ) {
         print header( -status => '200 Proxy mode' );
         foreach ( read_file( $filename ) ) {
             my $line = $_;
-            # TODO: Better regex for double occurences
-            $line =~ s/(.*\.pxelinux)/$1\?$query_string/g;
+            # only trigger on config or append lines
+            $line =~ s/^(\s*(?:(?:config)|(?:append)|(?:include)).*\.pxelinux)/$1\?$query_string/g;
             print replace_token($line, \%parameter);
         }
 

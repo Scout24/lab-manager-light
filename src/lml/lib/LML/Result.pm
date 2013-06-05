@@ -14,12 +14,13 @@ sub new {
     croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Common::Config object" )
       unless ( ref($config) eq "LML::Config" );
     my $self = {
-                 config          => $config,
-                 status          => "200 OK",
-                 errors          => [],
-                 statusinfo      => "",
-                 redirect_target => "",
-                 full_url        => $full_url
+                 config             => $config,
+                 status             => "200 OK",
+                 errors             => [],
+                 statusinfo         => "",
+                 redirect_target    => "",
+                 redirect_parameter => "",
+                 full_url           => $full_url
     };
 
     bless( $self, $class );
@@ -53,6 +54,12 @@ sub set_redirect_target {
     return $redirect_target;
 }
 
+sub set_redirect_parameter {
+    my ( $self, $redirect_parameter ) = @_;
+    $self->{redirect_parameter} = $redirect_parameter;
+    return $self->{redirect_parameter};
+}
+
 sub redirect_target {
     my $self = shift;
     return $self->{redirect_target};
@@ -72,7 +79,7 @@ sub render {
     }
     if ( $self->get_errors ) {
         $status .= ", Errors: " . join( ", ", $self->get_errors );
-        $self->{redirect_target} = ""; # clear redirect target in case of errors
+        $self->{redirect_target} = "";        # clear redirect target in case of errors
     }
     my $header_args = {
                         -status => $status,
@@ -82,13 +89,20 @@ sub render {
     if ( $self->{redirect_target} ) {
         my $redirect_base = $self->{full_url};
         if ( substr( $self->{redirect_target}, 0, 1 ) eq "/" ) {
-                                                                    # redirect to absolute url on our host
-            $redirect_base =~ s#^(.*://[^/]+).*$#$1#;              # strip everything after the host part
+            # redirect to absolute url on our host
+            $redirect_base =~ s#^(.*://[^/]+).*$#$1#;    # strip everything after the host part
         } else {
             # redirect to relative url (probably to /boot/) on our host
-            $redirect_base =~ s#pxelinux.cfg/.*$##;                 # strip pxelinux.cfg/*
+            $redirect_base =~ s#pxelinux.cfg/.*$##;      # strip pxelinux.cfg/*
         }
-        $header_args->{-location} = $redirect_base . $self->{redirect_target};
+        # compose the paramter string (hostname is alway present)
+        my $parameter = '?';
+        foreach ( keys( %{ $self->{redirect_parameter} } ) ) {
+            $parameter .= $_ . '=' . ${ $self->{redirect_parameter} }{$_} . '&';
+        }
+        # remove the last ampersand
+        chop($parameter);
+        $header_args->{-location} = $redirect_base . $self->{redirect_target} . $parameter;
     }
     return header($header_args) . join( "\n", @body );
 }
