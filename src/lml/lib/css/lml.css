@@ -121,6 +121,11 @@ div.DTTT_container {
     border-color: #b95858;
 }
 
+.success{
+    background-color: #7ebe5c;
+    border-color: #6a9751;
+}
+
 /* button */
 .button {
 	box-shadow: inset 0px 1px 0px 0px #ffffff;
