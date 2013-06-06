@@ -155,6 +155,9 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         }
     }
 } else {
+    # set redirect paramters
+    $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => 'noname' ) );
+
     # if the VM is not found then also give some error text
     my $message = "No VM found for $search_uuid";
     if ( my $unknown_redirect = $C->get( "pxelinux", "unknown_redirect" ) ) {

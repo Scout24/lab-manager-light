@@ -72,7 +72,7 @@ if ( defined $parameter{'filename'} ) {
     if ( -f $filename ) {
         # get the query string and filter out the filename option
         my $query_string = $ENV{QUERY_STRING};
-        $query_string =~ s///;
+        $query_string =~ s/(.*)filename=[^&]+&*(.*)/$1$2/;
         # print out the header with OK status
         print header( -status => '200 Proxy mode' );
         foreach ( read_file( $filename ) ) {
