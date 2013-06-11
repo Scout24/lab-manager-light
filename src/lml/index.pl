@@ -70,8 +70,13 @@ print <<EOF;
 EOF
 
 print <<EOF;
-	<div id="overview">
-        <table id="vmlist_table" cellpadding="3" cellspacing="0">
+    <div id="overview">
+        <div class="error message" id="vm_action_error">
+            <h3>Problems while performing action</h3>
+            <p>The following error occured: <b id="vm_action_error_message"></b></p>
+        </div>
+        <form id="vm_action_form">
+            <table id="vmlist_table" cellpadding="3" cellspacing="0">
 EOF
 
 print thead(
@@ -82,7 +87,7 @@ print thead(
                  th( { -title => "Click to sort" }, "VM Path" ),
                  th( { -title => "Click to sort" }, "Contact User ID" ),
                  th( { -title => "Click to sort" }, "Expires" ),
-                 th( { -title => "Click to sort" }, "ESX Host" ),
+                 th( { -title => "Click to sort" }, "ESX Host" )
              ) ) . "\n\n\t\t<tbody>\n";
 
 my $display_filter_vm_path = $C->get( "gui",          "display_filter_vm_path" );
@@ -123,6 +128,12 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
         td [
+            checkbox(
+                -id    => $VM->{HOSTNAME},
+                -name  => "hosts",
+                -label => "",
+                -value => $VM->{HOSTNAME}
+            ) .
             a( {
                    -href    => "vmdata.pl/$uuid",
                    -title   => "Details",
@@ -155,7 +166,12 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
 my @hosts = keys(%{$LAB->{ESXHOSTS}});
 
 print <<EOF;
-        </tbody></table>
+            </tbody></table>
+            <div class="vm_action_panel">
+                <a id="detonate_button" class="button" href="#" title="Detonate"><img src="lib/images/bomb.png" class="button_image">&nbsp;Detonate</a>
+                <a id="destroy_button" class="button" href="#" title="Delete"><img src="lib/images/delete.png" class="button_image">&nbsp;Delete</a>
+            </div>
+        </form>
     </div>
     <div class="main_content" id="new">
         <fieldset>

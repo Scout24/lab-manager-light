@@ -11,7 +11,7 @@ use warnings;
 
 use FindBin;
 use lib glob("{/opt/vmware/,/usr/lib/vmware-}vcli/?pps");    # the ? makes sure that only existing paths will match.
-use lib "$FindBin::RealBin/lib";
+use lib "$FindBin::RealBin/../lib";
 
 $Util::script_version = "1.0";
 
@@ -27,7 +27,7 @@ use LML::Config;
 my $C = new LML::Config();
 
 # default paramter
-my $xsd_file = "../schema/vm-create.xsd";
+my $xsd_file = "/usr/share/lab-manager-light/schema/vm-create.xsd";
 my $xml_file = "";
 my @vms;
 my $linebreak = '\n';
@@ -210,7 +210,7 @@ sub error {
     }
 
     Util::disconnect();
-    exit 0;
+    exit 1;
 }
 
 # compose a success output

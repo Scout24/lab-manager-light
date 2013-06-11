@@ -1,0 +1,3 @@
+bomb.png - Source: nuvola(core-2.png) , License: LGPL-2.1
+delete.png - Source: gnome(edit-delete-2.png) , License: GPLv2
+

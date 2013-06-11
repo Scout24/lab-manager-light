@@ -1,5 +1,5 @@
 var framework_height = 130;
-var framework_datatables_height = framework_height + 80;
+var framework_datatables_height = framework_height + 100;
 var min_window_height = 500;
 
 /* customize above */
@@ -20,6 +20,8 @@ if (typeof String.prototype.startsWith != 'function') {
 }
 
 $(document).ready(function() {
+    $("#overview").append("<div id='waiting'><img src='lib/images/wait.gif' /></div>");
+
 	$('a.tip').cluetip({
 		attribute : 'href',
 		activation : 'click',
@@ -122,8 +124,86 @@ $(document).ready(function() {
                 $("#error_message").text(request.responseText);
                 $('#vm_create_error').show();
             },
-            url: "vm-create.pl",
+            url: "restricted/vm-create.pl",
             data: formData
+        });
+        return false;
+    });
+
+    $("#detonate_button").on('click', function(){
+        var form_data = $("#vm_action_form").serialize() + "&action=detonate";
+        $.ajax({
+            type: "POST",
+            beforeSend: function() {
+                /* disable the form */
+                $('#vm_action_form *').prop("disabled", "disabled");
+                $('#waiting').show();
+                /* deactivate previous error messages */
+                $('#vm_action_error').hide();
+                $('.dataTables_scrollBody').css('height',
+                        (myWindowHeight() - framework_datatables_height));
+            },
+            success: function(data) {
+                /* uncheck the checkbox of detonated machines */
+                var json = $.parseJSON(data);
+                $.each(json, function(index, value){
+                    $('#' + value).attr('checked', false);
+                });
+                /* reactivate the form */
+                $('#vm_action_form *').removeAttr("disabled");
+                $('#waiting').hide();
+            },
+            error: function(request, status, error) {
+                $('#vm_action_error').show();
+                $("#vm_action_error_message").text(request.responseText);
+                /* resize the result table */
+                $('.dataTables_scrollBody').css('height',
+                        (myWindowHeight() - framework_datatables_height - $('#vm_action_error').outerHeight() - 8));
+                /* reactivate the form */
+                $('#vm_action_form *').removeAttr("disabled");
+                $('#waiting').hide();
+            },
+            url: "restricted/vm-control.pl?action=detonate",
+            data: form_data
+        });
+        return false;
+    });
+
+    $("#destroy_button").on('click', function(){
+        var form_data = $("#vm_action_form").serialize() + "&action=destroy";
+        $.ajax({
+            type: "POST",
+            beforeSend: function() {
+                /* disable the form */
+                $('#vm_action_form *').prop("disabled", "disabled");
+                $('#waiting').show();
+                /* deactivate previous error messages */
+                $('#vm_action_error').hide();
+                $('.dataTables_scrollBody').css('height',
+                        (myWindowHeight() - framework_datatables_height));
+            },
+            success: function(data) {
+                /* remove the destroyed vms from our list */
+                var json = $.parseJSON(data);
+                $.each(json, function(index, value){
+                    $('#' + value).remove();
+                });
+                /* reactivate the form */
+                $('#vm_action_form *').removeAttr("disabled");
+                $('#waiting').hide();
+            },
+            error: function(request, status, error) {
+                $('#vm_action_error').show();
+                $("#vm_action_error_message").text(request.responseText);
+                /* resize the result table */
+                $('.dataTables_scrollBody').css('height',
+                        (myWindowHeight() - framework_datatables_height - $('#vm_action_error').outerHeight() - 8));
+                /* reactivate the form */
+                $('#vm_action_form *').removeAttr("disabled");
+                $('#waiting').hide();
+            },
+            url: "restricted/vm-control.pl?action=destroy",
+            data: form_data
         });
         return false;
     });
