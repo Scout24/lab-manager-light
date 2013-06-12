@@ -127,9 +127,9 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
     }
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
+        { -id => $VM->{HOSTNAME} },
         td [
             checkbox(
-                -id    => $VM->{HOSTNAME},
                 -name  => "hosts",
                 -label => "",
                 -value => $VM->{HOSTNAME}

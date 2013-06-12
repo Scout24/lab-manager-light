@@ -17,6 +17,8 @@ use JSON;
 
 use LML::Common;
 use LML::Config;
+use LML::DHCP;
+use LML::Lab;
 use LML::VMware;
 
 $Util::script_version = "1.0";
@@ -36,12 +38,12 @@ if ( param('action') ) {
     $action = param('action');
 
     # assemble hosts array if existent
-    if (param('hosts')) {
+    if ( param('hosts') ) {
         @VMS = param('hosts');
     } else {
-            print header( -status => '500 Nothing to do' );
-            print "No hosts were selected";
-            exit 0;
+        print header( -status => '500 Nothing to do' );
+        print "No hosts were selected";
+        exit 0;
     }
 
     # ok commandline context
@@ -112,7 +114,7 @@ foreach my $vm_name (@VMS) {
         reboot_vm( name => $vm_name,
                    view => $vm_view );
         # add the processed machine to the processed array
-        push(@processed_hosts, $vm_name);
+        push( @processed_hosts, $vm_name );
 
     } elsif ( $action = 'destroy' ) {
         # switch off the vm
@@ -122,17 +124,17 @@ foreach my $vm_name (@VMS) {
         destroy_vm( name => $vm_name,
                     view => $vm_view );
         # add the processed machine to the processed array
-        push(@processed_hosts, $vm_name);
+        push( @processed_hosts, $vm_name );
     }
 }
 
 # print an HTML success header if we are in CGI context
 if ( exists $ENV{GATEWAY_INTERFACE} ) {
-        print header( -status => '200 vm created' );
+    print header( -status => '200 vm created' );
 }
 
 # print out json formatted array
-print encode_json(\@processed_hosts) . "\n";
+print encode_json( \@processed_hosts ) . "\n";
 
 # compose a error output
 sub error {
@@ -157,12 +159,28 @@ sub destroy_vm {
     # get vm view
     my $vm_view = $args{view};
 
+    # get the uuid of the vm to be destroyed
+    my $uuid = $vm_view->config->uuid;
+
     # destroy the vm
     eval { $vm_view->Destroy(); };
 
     # check the success
     if ($@) {
         error( "Error destroying VM: " . ref( $@->detail ) );
+    }
+
+    # finally cleanup the lab configuration to do not show this machine again
+    my $LAB = new LML::Lab( $C->labfile );
+    $LAB->remove($uuid);
+    $LAB->write_file( "by " . __FILE__ );
+
+    # and additionally remove the machine from dhcp configuration
+    my @error = LML::DHCP::UpdateDHCP( $C, $LAB );
+
+    # if errors occured, print them out
+    if ( scalar(@error) ) {
+        error( "Error destroying VM: " . join( ', ', @error ) );
     }
 }
 

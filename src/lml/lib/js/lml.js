@@ -147,7 +147,7 @@ $(document).ready(function() {
                 /* uncheck the checkbox of detonated machines */
                 var json = $.parseJSON(data);
                 $.each(json, function(index, value){
-                    $('#' + value).attr('checked', false);
+                    $('#' + value + " input[type='checkbox']").attr('checked', false);
                 });
                 /* reactivate the form */
                 $('#vm_action_form *').removeAttr("disabled");
