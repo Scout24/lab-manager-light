@@ -46,13 +46,15 @@ print start_html(
                                { -src => "lib/js/jquery.dataTables.min.js" },
                                { -src => "lib/js/TableTools.min.js" },
                                { -src => "lib/js/lml.js" },
+                               { -src => "lib/js/jquery-ui-1.10.3.custom.min.js" }
                   ],
                   -style => [
                               { -src   => "lib/css/jquery.cluetip.css", },
                               { -src   => "lib/css/jquery.dataTables.css", },
                               { -src   => "lib/css/TableTools.css", },
                               { -src   => "lib/css/lml.css", },
-                              { -media => "print", -src => "lib/css/lml-print.css" },
+                              { -src   => "lib/css/jquery-ui-1.10.3.custom.css", },
+                              { -media => "print", -src => "lib/css/lml-print.css" }
                   ] );
 
 print <<EOF;
@@ -71,6 +73,7 @@ EOF
 
 print <<EOF;
     <div id="overview">
+        <div id="dialog"></div>
         <div class="error message" id="vm_action_error">
             <h3>Problems while performing action</h3>
             <p>The following error occured: <b id="vm_action_error_message"></b></p>
@@ -168,8 +171,8 @@ my @hosts = keys(%{$LAB->{ESXHOSTS}});
 print <<EOF;
             </tbody></table>
             <div class="vm_action_panel">
-                <a id="detonate_button" class="button" href="#" title="Detonate"><img src="lib/images/bomb.png" class="button_image">&nbsp;Detonate</a>
-                <a id="destroy_button" class="button" href="#" title="Delete"><img src="lib/images/delete.png" class="button_image">&nbsp;Delete</a>
+                <a id="detonate_button" class="button" href="#" title="Reinstall selected machines"><img src="lib/images/bomb.png" class="button_image">&nbsp;Detonate</a>
+                <a id="destroy_button" class="button confirm" href="#" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="lib/images/delete.png" class="button_image">&nbsp;Delete</a>
             </div>
         </form>
     </div>
