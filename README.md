@@ -10,3 +10,12 @@ No compilation required.
 2. Use `make` to build RPM and DEB packages in `dist/`
 
 # Configuration
+## Preparation
+To make use of Lab Manager Light one needs the following ingredients:
+
+* One or more VMware ESX servers managed through a vCenter
+* A dedicated network for Virtual Machines that will be managed by LML
+* A dedicated DNS domain for this network
+* A (virtual) server to host DHCP, TFTP, DNS and HTTP servers preferably on the dedicated network. Other setups are possible but beyond the scope of this guide.
+
+## Installation
