@@ -19,3 +19,16 @@ To make use of Lab Manager Light one needs the following ingredients:
 * A (virtual) server to host DHCP, TFTP, DNS and HTTP servers preferably on the dedicated network. Other setups are possible but beyond the scope of this guide.
 
 ## Installation
+LML requires the following Packages:
+
+* libsvn-perl
+* libconfig-inifiles-perl
+* vSphere SDK for Perl 
+
+The following services need to be configured for LML to work properly:
+
+* DHCP server
+* TFTP server
+* DNS server
+* HTTP server
+* VMware vCenter server 
