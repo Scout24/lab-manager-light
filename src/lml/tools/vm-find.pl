@@ -20,7 +20,7 @@ use LML::VMware;
 my %opts = (
     format => {
         type     => "=s",
-        help     => "Output format for found VMs (%UUID, %PATH, %USER, %HOST, %NAME). ",
+        help     => "Output format for found VMs (%UUID, %PATH, %USER, %HOST, %NAME, %EXPIRE). ",
         required => 0,
         default  => "%UUID%PATH"
     }
@@ -88,6 +88,15 @@ foreach my $uuid ( keys( %{$VM} ) ) {
             # check if value is set
             if ( defined $VM->{$uuid}{CUSTOMFIELDS}->{'Contact User ID'} ) {
                 push( @output, $VM->{$uuid}{CUSTOMFIELDS}->{'Contact User ID'});
+            # if not, mark it
+            } else {
+                push( @output, "-- NOT SET --" );
+            }
+        # custom value 'EXPIRES' is mapped to %EXPIRE
+        } elsif ( $_ eq "EXPIRE" ) {
+            # check if value is set
+            if ( defined $VM->{$uuid}{CUSTOMFIELDS}->{'Expires'} ) {
+                push( @output, $VM->{$uuid}{CUSTOMFIELDS}->{'Expires'});
             # if not, mark it
             } else {
                 push( @output, "-- NOT SET --" );
