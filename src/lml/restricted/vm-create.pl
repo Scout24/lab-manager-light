@@ -351,11 +351,11 @@ sub create_vm {
                 target_view => \$target_folder_view
     );
 
-    eval {
-        #$target_folder_view->CreateVM( config => $vm_config_spec,
-                                       pool   => $comp_res_view->resourcePool );
-
-    };
+#    eval {
+#        $target_folder_view->CreateVM( config => $vm_config_spec,
+#                                       pool   => $comp_res_view->resourcePool );
+#
+#    };
 
     if ($@) {
         if ( ref($@) eq 'SoapFault' ) {
