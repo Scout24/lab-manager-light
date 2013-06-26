@@ -22,6 +22,7 @@ use AppUtil::XMLInputUtil;
 use AppUtil::HostUtil;
 use AppUtil::VMUtil;
 use Data::Dumper;
+use LWP::Simple;
 
 use LML::Config;
 my $C = new LML::Config();
@@ -31,6 +32,7 @@ my $xsd_file = "/usr/share/lab-manager-light/schema/vm-create.xsd";
 my $xml_file = "";
 my @vms;
 my $linebreak = '\n';
+my $hostname_package_host = "vcs01.rz.is24.loc";
 
 # default values will be used in case we were called via webui
 my $memory      = 2048;              # in MB
@@ -256,6 +258,8 @@ sub create_vms {
 sub create_vm {
     my %args = @_;
     my @vm_devices;
+    my $kickstart_url = "http://".$hostname_package_host."/hostname-package/hostname-".$args{vmname}.".rz.is.rpm";
+    my $quelltext = get( $kickstart_url );
     my $host_view = Vim::find_entity_view( view_type => 'HostSystem',
                                            filter    => { 'name' => $args{vmhost} } );
 
@@ -348,7 +352,7 @@ sub create_vm {
     );
 
     eval {
-        $target_folder_view->CreateVM( config => $vm_config_spec,
+        #$target_folder_view->CreateVM( config => $vm_config_spec,
                                        pool   => $comp_res_view->resourcePool );
 
     };
