@@ -67,7 +67,7 @@ if ( param('action') ) {
     Opts::parse();
 
     # get the vm name
-    if (@ARGV) {
+    if (@ARGV or Opts::get_option('help')) {
         # check the command option consistence
         if ( Opts::get_option('detonate') && Opts::get_option('destroy') ) {
             error("The option --reinstall and --destroy can not be used at the same time, quit ...");
