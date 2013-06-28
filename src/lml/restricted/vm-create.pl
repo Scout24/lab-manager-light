@@ -37,9 +37,7 @@ my $user_name;
 my $expiration_date;
 
 # are we called via webui?
-if (    param('name')
-     && param('username')
-     && param('expiration') )
+if ( exists $ENV{GATEWAY_INTERFACE} )
 {
     $vm_name         = param('name');
     $user_name       = param('username');
@@ -57,8 +55,7 @@ if (    param('name')
 
     # we have nothing, print help
 } else {
-    print_usage();
-    exit 0;
+    error("no Parameters");
 }
 
 # paramters must be set and valid!
