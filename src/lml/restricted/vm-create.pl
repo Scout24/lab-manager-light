@@ -25,7 +25,6 @@ my $C = new LML::Config();
 
 # default paramter
 my $linebreak             = '\n';
-my $hostname_package_host = "vcs01.rz.is24.loc";
 
 # default values will be used as default values
 my $guestid = 'rhel6_64Guest';
