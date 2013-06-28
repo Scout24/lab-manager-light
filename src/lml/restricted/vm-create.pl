@@ -61,14 +61,14 @@ if (    param('name')
 }
 
 # paramters must be set and valid!
-error($_) if ( check_parameter(
+my $check_param check_parameter(
                                    vm_name         => $vm_name,
                                    user_name       => $user_name,
                                    expiration_date => $expiration_date
-));
-#if ($check_param) {
-#    print $/. $check_param . $/;
-#}
+);
+if ($check_param) {
+    print $/. $check_param . $/;
+}
 
 #
 my @vms = generate_vms_array(
