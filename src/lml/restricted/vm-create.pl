@@ -79,9 +79,7 @@ my @vms = generate_vms_array(
                               expiration_date => $expiration_date
 );
 
-#Util::connect();
 create_vms(@vms);
-#Util::disconnect();
 
 # generate an array of hashes, where each hash
 # represents a virtual machine to be created
@@ -102,7 +100,6 @@ sub generate_vms_array {
     get( sprintf( $C->get( "vm_spec", "host_announcement" ), $args{vm_name} ) );
 
     # get now the json spec for this vm
-    # TODO: get rid of hardcoded url (sprintf and configuration)
     my $answer = get( sprintf( $C->get( "vm_spec", "host_spec" ), $args{vm_name} ) );
     # check if we got something from web call
     error( "ERROR: Unable to get JSON description file for VM " . $args{vm_name} )
