@@ -61,7 +61,7 @@ if (    param('name')
 }
 
 # paramters must be set and valid!
-my $check_param check_parameter(
+my $check_param = check_parameter(
                                    vm_name         => $vm_name,
                                    user_name       => $user_name,
                                    expiration_date => $expiration_date
