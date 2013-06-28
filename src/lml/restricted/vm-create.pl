@@ -69,8 +69,6 @@ my $check_param = check_parameter(
 );
 if ($check_param) {
     print $/. $check_param . $/;
-    print_usage();
-    exit 0;
 }
 
 #
@@ -123,7 +121,7 @@ sub generate_vms_array {
              {
                vmname        => $args{vm_name},
                vmhost        => $esx_host_fqdn,
-               datacenter    => $vm_spec->{virtualMachine}->{dataCenter},
+               datacenter    => $C->get( "vsphere", "datacenter" ),
                guestid       => $guestid,
                datastore     => $esx_host_name . ':datastore1',
                disksize      => $vm_spec->{virtualMachine}->{diskSize},
@@ -159,6 +157,7 @@ sub error {
         print $message;
     } else {
         print $message . "\n";
+        print_usage();
     }
 
     Util::disconnect();
