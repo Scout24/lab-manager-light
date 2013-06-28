@@ -61,16 +61,14 @@ if (    param('name')
 }
 
 # paramters must be set and valid!
-my $check_param = check_parameter(
+error($_) if ( check_parameter(
                                    vm_name         => $vm_name,
                                    user_name       => $user_name,
                                    expiration_date => $expiration_date
-);
-if ($check_param) {
-    print $/. $check_param . $/;
-    print_usage();
-    exit 0;
-}
+));
+#if ($check_param) {
+#    print $/. $check_param . $/;
+#}
 
 #
 my @vms = generate_vms_array(
@@ -158,6 +156,7 @@ sub error {
         print $message;
     } else {
         print $message . "\n";
+        print_usage();
     }
 
     Util::disconnect();
