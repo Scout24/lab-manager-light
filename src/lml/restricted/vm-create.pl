@@ -122,7 +122,7 @@ sub generate_vms_array {
              {
                vmname        => $args{vm_name},
                vmhost        => $esx_host_fqdn,
-               datacenter    => $vm_spec->{virtualMachine}->{dataCenter},
+               datacenter    => $C->get( "vsphere", "datacenter" ),
                guestid       => $guestid,
                datastore     => $esx_host_name . ':datastore1',
                disksize      => $vm_spec->{virtualMachine}->{diskSize},
