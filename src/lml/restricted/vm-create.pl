@@ -67,7 +67,7 @@ my $check_param = check_parameter(
                                    expiration_date => $expiration_date
 );
 if ($check_param) {
-    print $/. $check_param . $/;
+    error($check_param);
 }
 
 #
@@ -544,17 +544,25 @@ sub create_nic {
 # check the validity of the given paramter
 # ========================================
 sub check_parameter {
-    # vm_name, user_name, expiration_date
-    my $result;
+    # expected args vm_name, user_name, expiration_date
+    my $result = "";
     my %args                 = @_;
-    my $hostname_pattern     = $C->get( "hostrules", "pattern" );
+
+    # Check Expiration-Date
     my $european             = $C->get( "vsphere", "expires_european" );
+    $result = $result . "invalid expiration_date".$/ if ( ! $args{expiration_date} or ! eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
+
+    # Check VM-Name
+    my $hostname_pattern     = $C->get( "hostrules", "pattern" );
+    $result = $result . "invalid vm_name".$/         if ( ! $args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/ );
+
+    #Check User-Name
     my $contactuserid_minuid = $C->get( "vsphere", "contactuserid_minuid" );
-    my @pwnaminfo            = getpwnam( $args{user_name} );
-    eval { my $expires = DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) };
-    $result = $result . "invalid expiration_date\n" if ($@);
-    $result = $result . "invalid vm_name\n"         if ( $args{vm_name} !~ m/($hostname_pattern)/ );
-    $result = $result . "invalid user_name\n"       if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
+    my @pwnaminfo;
+    @pwnaminfo = getpwnam( $args{user_name} ) if ( $args{user_name} );
+    $result = $result . "invalid user_name".$/       if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
+
+    # give result
     return $result;
 }
 
