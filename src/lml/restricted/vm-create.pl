@@ -125,7 +125,8 @@ sub generate_vms_array {
                memory        => $vm_spec->{virtualMachine}->{memory},
                num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
                custom_fields => \%custom_fields,
-               target_folder => $vm_spec->{virtualMachine}->{targetFolder}
+               target_folder => $vm_spec->{virtualMachine}->{targetFolder},
+               has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend}
              }
     );
 
@@ -227,7 +228,8 @@ sub create_vm {
                                  host_view        => $host_view,
                                  catchall_network => $C->get( "network_policy", "catchall" ),
                                  hostname_pattern => $C->get( "network_policy", "hostname_pattern" ),
-                                 network_pattern  => $C->get( "network_policy", "network_pattern" )
+                                 network_pattern  => $C->get( "network_policy", "network_pattern" ),
+                                 has_frontend     => $$args{has_frontend}
     );
 
     # check the success and add the found networks

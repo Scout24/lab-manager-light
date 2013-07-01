@@ -92,5 +92,4 @@ sub find_networks {
     return @vm_networks;
 }
 
-
 1;
