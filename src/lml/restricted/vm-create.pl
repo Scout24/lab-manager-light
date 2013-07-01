@@ -25,7 +25,7 @@ use LML::Config;
 my $C = new LML::Config();
 
 # default paramter
-my $linebreak             = '\n';
+my $linebreak = '\n';
 
 # default values will be used as default values
 my $guestid = 'rhel6_64Guest';
@@ -37,8 +37,7 @@ my $user_name;
 my $expiration_date;
 
 # are we called via webui?
-if ( exists $ENV{GATEWAY_INTERFACE} )
-{
+if ( exists $ENV{GATEWAY_INTERFACE} ) {
     $vm_name         = param('name');
     $user_name       = param('username');
     $expiration_date = param('expiration');
@@ -98,8 +97,7 @@ sub generate_vms_array {
     # get now the json spec for this vm
     my $answer = get( sprintf( $C->get( "vm_spec", "host_spec" ), $args{vm_name} ) );
     # check if we got something from web call
-    error( "ERROR: Unable to get JSON description file for VM " . $args{vm_name} )
-      unless defined $answer;
+    error( "ERROR: Unable to get JSON description file for VM " . $args{vm_name} ) unless defined $answer;
 
     # convert the HTML answer to pure json
     $answer =~ s/<[^>]*>//g;
@@ -114,8 +112,7 @@ sub generate_vms_array {
     $esx_host_fqdn =~ /(^[^\.]+).*$/;
     my $esx_host_name = $1;
 
-    @vms = (
-             {
+    @vms = ( {
                vmname        => $args{vm_name},
                vmhost        => $esx_host_fqdn,
                datacenter    => $C->get( "vsphere", "datacenter" ),
@@ -126,9 +123,7 @@ sub generate_vms_array {
                num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
                custom_fields => \%custom_fields,
                target_folder => $vm_spec->{virtualMachine}->{targetFolder},
-               has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend}
-             }
-    );
+               has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend} } );
 
     return @vms;
 }
@@ -206,8 +201,7 @@ sub create_vm {
     my %ds_info = HostUtils::get_datastore(
                                             host_view => $host_view,
                                             datastore => $$args{datastore},
-                                            disksize  => $$args{disksize}
-    );
+                                            disksize  => $$args{disksize} );
 
     if ( $ds_info{mor} eq 0 ) {
         if ( $ds_info{name} eq 'datastore_error' ) {
@@ -224,13 +218,12 @@ sub create_vm {
 
     # get all networks, which are related to this vm
     my @vm_nics = LML::VMNetworks::find_networks(
-                                 vm_name          => $$args{vmname},
-                                 host_view        => $host_view,
-                                 catchall_network => $C->get( "network_policy", "catchall" ),
-                                 hostname_pattern => $C->get( "network_policy", "hostname_pattern" ),
-                                 network_pattern  => $C->get( "network_policy", "network_pattern" ),
-                                 has_frontend     => $$args{has_frontend}
-    );
+                                                  vm_name          => $$args{vmname},
+                                                  host_view        => $host_view,
+                                                  catchall_network => $C->get( "network_policy", "catchall" ),
+                                                  hostname_pattern => $C->get( "network_policy", "hostname_pattern" ),
+                                                  network_pattern  => $C->get( "network_policy", "network_pattern" ),
+                                                  has_frontend     => $$args{has_frontend} );
 
     # check the success and add the found networks
     if (@vm_nics) {
@@ -405,8 +398,7 @@ sub set_custom_fields {
                     $customFieldsManager->SetField(
                                                     entity => $vm,
                                                     key    => $field->key,
-                                                    value  => ${ $args{custom_fields} }{ $field->name }
-                    );
+                                                    value  => ${ $args{custom_fields} }{ $field->name } );
                 }
             }
         }
@@ -420,8 +412,7 @@ sub create_conf_spec {
                                                      key       => 0,
                                                      device    => [0],
                                                      busNumber => 0,
-                                                     sharedBus => VirtualSCSISharing->new('noSharing')
-    );
+                                                     sharedBus => VirtualSCSISharing->new('noSharing') );
 
     my $controller_vm_dev_conf_spec = VirtualDeviceConfigSpec->new( device    => $controller,
                                                                     operation => VirtualDeviceConfigSpecOperation->new('add') );
@@ -450,8 +441,7 @@ sub create_virtual_disk {
     my $disk_vm_dev_conf_spec = VirtualDeviceConfigSpec->new(
                                                               device        => $disk,
                                                               fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
-                                                              operation     => VirtualDeviceConfigSpecOperation->new('add')
-    );
+                                                              operation     => VirtualDeviceConfigSpecOperation->new('add') );
     return $disk_vm_dev_conf_spec;
 }
 
@@ -460,21 +450,23 @@ sub create_virtual_disk {
 sub check_parameter {
     # expected args vm_name, user_name, expiration_date
     my $result = "";
-    my %args                 = @_;
+    my %args   = @_;
 
     # Check Expiration-Date
-    my $european             = $C->get( "vsphere", "expires_european" );
-    $result = $result . "invalid expiration_date".$/ if ( ! $args{expiration_date} or ! eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
+    my $european = $C->get( "vsphere", "expires_european" );
+    $result = $result . "invalid expiration_date" . $/
+      if (    !$args{expiration_date}
+           or !eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
 
     # Check VM-Name
-    my $hostname_pattern     = $C->get( "hostrules", "pattern" );
-    $result = $result . "invalid vm_name".$/         if ( ! $args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/ );
+    my $hostname_pattern = $C->get( "hostrules", "pattern" );
+    $result = $result . "invalid vm_name" . $/ if ( !$args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/ );
 
     #Check User-Name
     my $contactuserid_minuid = $C->get( "vsphere", "contactuserid_minuid" );
     my @pwnaminfo;
     @pwnaminfo = getpwnam( $args{user_name} ) if ( $args{user_name} );
-    $result = $result . "invalid user_name".$/       if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
+    $result = $result . "invalid user_name" . $/ if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
 
     # give result
     return $result;
