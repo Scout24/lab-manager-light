@@ -90,14 +90,4 @@ sub find_networks {
     return @vm_networks;
 }
 
-sub compare_networks {
-	my $hostname_pattern_extracted = shift;
-	my $network_pattern = shift;
-	my $full_network_list = shift;
-	my $which_catchall = shift;
-	my $has_frontend = shift;
-	my @vm_networks;
-	my $catchall_network = undef;
-}
-
 1;
