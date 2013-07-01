@@ -47,7 +47,6 @@ sub create_nic {
 sub find_networks {
     my %args = @_;
     my @vm_networks;
-    my $catchall_network = undef;
     # get the configured hostname pattern for later comparision
     my $hostname_pattern_extracted = undef;
     my $hostname_pattern = $args{hostname_pattern};
@@ -58,9 +57,25 @@ sub find_networks {
     # get all networks, which the selected esx host can see
     my $full_network_list = Vim::get_views( mo_ref_array => $args{host_view}->network );
 
-    # go through each network the esx host can see
-    my $network_pattern = $args{network_pattern};
-    foreach (@$full_network_list) {
+    ######
+    push (@vm_networks, compare_networks($hostname_pattern_extracted, $args{network_pattern}, $full_network_list, $args{catchall_network}, $args{has_frontend}));
+    push (@vm_networks, compare_networks($hostname_pattern_extracted, $args{network_pattern}, $full_network_list, $args{catchall_network}, $args{has_frontend})) if ( $args{has_frontend} );
+
+    # now make sure, that the the networks are sorted in the correct order
+
+    # when we finished, return the generated network cards as an array
+    return @vm_networks;
+}
+
+sub compare_networks {
+	my $hostname_pattern_extracted = shift;
+	my $network_pattern = shift;
+	my $full_network_list = shift;
+	my $which_catchall = shift;
+	my $has_frontend = shift;
+	my @vm_networks;
+	my $catchall_network = undef;
+	foreach (@$full_network_list) {
         # get the configured network pattern
         
         my $network_pattern_extracted = undef;
@@ -76,20 +91,14 @@ sub find_networks {
             push( @vm_networks, create_nic( network => $_ ) );
 
             # else check if we have the catchall network, if yes rembember it
-        } elsif ( $_->name eq $args{catchall_network} ) {
+        } elsif ( $_->name eq $which_catchall and ! $has_frontend) {
             $catchall_network = $_;
         }
     }
-
     # add a nic connected to the catchall network
     if ( not @vm_networks and defined $catchall_network ) {
         push( @vm_networks, create_nic( network => $catchall_network ) );
     }
-
-    # now make sure, that the the networks are sorted in the correct order
-
-    # when we finished, return the generated network cards as an array
-    return @vm_networks;
 }
 
 1;
