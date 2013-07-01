@@ -49,6 +49,7 @@ sub find_networks {
     my @vm_networks;
     my @vm_networks_temp;
     my $catchall_network = undef;
+    my $network_pattern = $args{network_pattern};
     # get the configured hostname pattern for later comparision
     my $hostname_pattern_extracted = undef;
     my $hostname_pattern = $args{hostname_pattern};
@@ -59,8 +60,6 @@ sub find_networks {
     # get all networks, which the selected esx host can see
     my $full_network_list = Vim::get_views( mo_ref_array => $args{host_view}->network );
 
-    # go through each network the esx host can see
-    my $network_pattern = $args{network_pattern};
     foreach (@$full_network_list) {
         # get the configured network pattern
         
@@ -82,7 +81,6 @@ sub find_networks {
             $catchall_network = $_;
         }
     }
-
     # add a nic connected to the catchall network
     if ( not @vm_networks_temp and defined $catchall_network ) {
         my $nic = create_nic( network => $catchall_network ) ;
