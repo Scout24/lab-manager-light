@@ -47,6 +47,7 @@ sub create_nic {
 sub find_networks {
     my %args = @_;
     my @vm_networks;
+    my @vm_networks_temp;
     my $catchall_network = undef;
     # get the configured hostname pattern for later comparision
     my $hostname_pattern_extracted = undef;
@@ -73,7 +74,8 @@ sub find_networks {
              and $network_pattern_extracted eq $hostname_pattern_extracted )
         {
             # push the generated card spec to our array for network cards
-            push( @vm_networks, create_nic( network => $_ ) );
+            my %wrapped = wrap_network_spec_for_sorting(create_nic( network => $_ ), $_->name);
+            push( @vm_networks_temp,  \%wrapped);
 
             # else check if we have the catchall network, if yes rembember it
         } elsif ( $_->name eq $args{catchall_network} ) {
@@ -82,15 +84,55 @@ sub find_networks {
     }
 
     # add a nic connected to the catchall network
-    if ( not @vm_networks and defined $catchall_network ) {
-        push( @vm_networks, create_nic( network => $catchall_network ) );
+    if ( not @vm_networks_temp and defined $catchall_network ) {
+        my $nic = create_nic( network => $catchall_network ) ;
+         my %wrapped = wrap_network_spec_for_sorting($nic, $catchall_network);
+        push( @vm_networks_temp, \%wrapped);
     }
 
     # now make sure, that the the networks are sorted in the correct order
+    sort_networks(@vm_networks_temp);
+    foreach (@vm_networks_temp) {
+        push(@vm_networks, unwrap_network_spec($_));
+    }
 
     # when we finished, return the generated network cards as an array
     return @vm_networks;
 }
 
+sub is_backend {
+	my $network = shift;
+	my %network = %{$network};
+	return $network{"name"}  =~ /_BE_/;
+}
+
+sub compare {
+    my $first = shift;
+    my $is_first_backend =  is_backend($first);
+    my $second = shift;
+    my $is_second_backend = is_backend($second);
+    return 1 if ($is_second_backend and not $is_first_backend) ;
+    return -1 if  ($is_first_backend and not $is_second_backend);
+    return 0;
+}
+
+sub sort_networks {
+    return sort { compare($a, $b) } @_;
+}
+
+sub wrap_network_spec_for_sorting {
+    my $spec = shift;
+    my $name = shift;
+    return (
+        "name" => $name,
+        "spec" => $spec
+    );
+}
+
+sub unwrap_network_spec {
+    my $wrapped = shift;
+    my %wrapped = %{$wrapped};
+    return $wrapped{"spec"};
+}
 
 1;
