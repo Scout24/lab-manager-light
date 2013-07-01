@@ -71,7 +71,7 @@ if ($check_param) {
 #
 my @vms = generate_vms_array(
                               vm_name         => $vm_name,
-                              user_name       => $vm_name,
+                              user_name       => $user_name,
                               expiration_date => $expiration_date
 );
 
@@ -85,7 +85,7 @@ sub generate_vms_array {
 
     # assemble custom fields hash
     %custom_fields = (
-                       'Contact User ID'   => $args{vm_name},
+                       'Contact User ID'   => $args{user_name},
                        'Expires'           => $args{expiration_date},
                        'Force Boot'        => 'ON',
                        'Force Boot Target' => 'default'
