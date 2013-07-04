@@ -25,7 +25,7 @@ my $force_boot_target = 'qrdata';
  my $vm_host = $vm_loctyp.$vm_number;
  
 my $uuid = create_vm();
-if ($uuid =~ /ERROR: / or $uuid =~ /\s+$/) {
+if ($uuid =~ /ERROR: / or $uuid =~ /\s+/) {
         fail_team_city_build($uuid);
 } else {
        call_pxelinux($uuid);
