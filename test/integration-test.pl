@@ -33,7 +33,7 @@ my $uuid = create_vm();
 if ($uuid =~ /ERROR: / or $uuid =~ /\s+/) {
         fail_team_city_build($uuid);
 } else {
-      call_pxelinux($uuid);
+      my $response = call_pxelinux($uuid);
       wait_for_machine_boot();
       download_qr_code($uuid);
       my $vm_spec = decode_qr($uuid);
