@@ -18,7 +18,7 @@ use JSON;
 use constant MAX_QR_CODE_AGE_SEC => 180;  # 3 minutes
 
 my $test_host;
-my $vm_loctyp;
+my $vm_name_prefix;
 my $vm_number = generate_vm_number();
 my $esx_host;
 my $username;
@@ -27,7 +27,7 @@ my $folder;
 my $force_boot_target = 'qrdata';
 
  process_parameters();
- my $vm_host = $vm_loctyp.$vm_number;
+ my $vm_host = $vm_name_prefix.$vm_number;
  
 my $uuid = create_vm();
 if ($uuid =~ /ERROR: / or $uuid =~ /\s+/) {
@@ -55,7 +55,7 @@ if ($result ne "[\"$vm_host\"]") {
 sub process_parameters {
      if (!GetOptions(
                 "test_host=s"     => \$test_host,
-                "vm_loctyp=s"     => \$vm_loctyp,
+                "vm_name_prefix=s"     => \$vm_name_prefix,
                 "esx_host=s"     => \$esx_host,
                 "username=s"     => \$username,
                 "expiration_date=s"       => \$expiration_date,
