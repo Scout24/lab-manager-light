@@ -91,11 +91,12 @@ unless (caller) {
     my $vm_name = "";
     my @error   = ();
 
+    # get info about all ESX hosts
+    my $ESX = get_hosts();
+    
     # get a complete dump from vSphere - this is expensive and takes some time
     my $VM = get_all_vm_data();
     
-    my $ESX = get_hosts();
-
     # dump %VM to file, ATM we don't use this information any more.
     write_vm_file($VM);
 

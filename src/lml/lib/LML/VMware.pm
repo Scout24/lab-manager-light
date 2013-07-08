@@ -42,8 +42,22 @@ my $VM_PROPERTIES = [
                       "config.template", "config.hardware.device", "customValue", "runtime.host",
 ];
 
-my $HOST_PROPERTIES = [ "name", "config.product" ];
-
+my %DVP_PORT_GROUP_NAMES;
+# lookup and cache port group names of DistributedVirtualSwitches
+sub dvp_to_name($) {
+    my $portgroupkey = shift;
+    if ( !exists( $DVP_PORT_GROUP_NAMES{$portgroupkey} ) ) {
+        $DVP_PORT_GROUP_NAMES{$portgroupkey} = Vim::get_view(
+                                                              mo_ref =>
+                                                                new ManagedObjectReference(
+                                                                                            type  => "DistributedVirtualPortgroup",
+                                                                                            value => $portgroupkey
+                                                                ),
+                                                              properties => ["config.name"] )->get_property("config.name");
+        Debug("Cached $portgroupkey = $DVP_PORT_GROUP_NAMES{$portgroupkey}");                                                           
+    }
+    return $DVP_PORT_GROUP_NAMES{$portgroupkey};
+}
 ################################ sub #################
 ##
 ## retrieve_vm_details (<vm>)
@@ -70,6 +84,7 @@ sub retrieve_vm_details ($) {
     $VM_DATA{"NAME"} = $vm->get_property("name");
     $VM_DATA{"PATH"} = Util::get_inventory_path( $vm, $vm->{vim} );
     my @vm_macs = ();
+    Debug( "Reading VM " . $VM_DATA{"UUID"} . " (" . $VM_DATA{"NAME"} . "): " . $VM_DATA{"PATH"} );
     foreach my $vm_dev ( @{ $vm->get_property("config.hardware.device") } ) {
         if ( $vm_dev->can("macAddress") and defined( $vm_dev->macAddress ) ) {
             my $mac = $vm_dev->macAddress;
@@ -111,10 +126,7 @@ sub retrieve_vm_details ($) {
 =cut
 
                 my $portgroupkey = $vm_dev->backing->port->portgroupKey;
-                $net =
-                  Vim::get_view( mo_ref     => new ManagedObjectReference( type => "DistributedVirtualPortgroup", value => $portgroupkey ),
-                                 properties => ["config.name"] )->get_property("config.name");
-
+                $net = dvp_to_name($portgroupkey);
             }
 
             $VM_DATA{"MAC"}{$mac} = $net;
@@ -228,16 +240,16 @@ sub get_hosts {
         my $entityViews = Vim::find_entity_views(
                                                   view_type    => "HostSystem",
                                                   begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => $HOST_PROPERTIES
-        );
+                                                  properties   => [ "name", "config.product", "summary.quickStats" ] );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "host" ] ) );
             $HOSTIDS{ $e->{mo_ref}->value } = $e->{name};
+            Debug( "Reading ESX Host " . $e->{name} );
             $HOSTS{ $e->{name} } = {
-                "id"   => $e->{mo_ref}->value,
-                "name" => $e->{name},
-                # remove the object character
-                "product" => { %{ $e->get_property("config.product") } },
+                                     "id"         => $e->{mo_ref}->value,
+                                     "name"       => $e->{name},
+                                     "product"    => { %{ $e->get_property("config.product") } },
+                                     "quickStats" => { %{ $e->get_property("summary.quickStats") } },
             };
         }
     }
@@ -292,12 +304,12 @@ sub get_all_vm_data {
                                               properties   => $VM_PROPERTIES
     );
     if ($entityViews) {
-        my $results={};
+        my $results = {};
         foreach my $view (@$entityViews) {
             my $VM;
-            if (exists $view->{"config.uuid"} and $VM = retrieve_vm_details($view)) {
-                $results->{$view->{"config.uuid"}} = $VM;
-            } # else is probably a template
+            if ( exists $view->{"config.uuid"} and $VM = retrieve_vm_details($view) ) {
+                $results->{ $view->{"config.uuid"} } = $VM;
+            }    # else is probably a template
         }
         return $results;
     } else {
