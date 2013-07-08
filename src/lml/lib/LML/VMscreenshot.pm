@@ -28,7 +28,7 @@ sub new {
             push_max => ( $config->get( "vmscreenshot", "push_max" ) ? $config->get( "vmscreenshot", "push_max" ) : 0 ),
     };
     my $LAB = new LML::Lab( $config->labfile );
-    my $HOST = $LAB->get_host($uuid);
+    my $HOST = $LAB->get_vm($uuid);
     if ( $HOST and exists $HOST->{VM_ID}) {
         $self->{vm_id}    = $HOST->{VM_ID};
         $self->{hostname} = $HOST->{HOSTNAME};

@@ -40,11 +40,12 @@ sub write_vm_file {
     close(VM_CONF);
 }
 
-sub maintain_labfile($$) {
+sub maintain_labfile($$$) {
     # initialize needed variables
     my $C = shift;
     carp( "1st argument must be LML::Config object and not " . ref($C) ) unless ( ref($C) eq "LML::Config" );
-    my $VM_ALL      = shift; # this is a hash of LML::VM data structures
+    my $VM_ALL  = shift;         # this is a hash of LML::VM data structures
+    my $ESX_ALL = shift;       # this is a hash of ESX hosts
     my $labfile = $C->labfile;
     my @error   = ();
 
@@ -55,21 +56,21 @@ sub maintain_labfile($$) {
     for my $uuid ( $LAB->list_hosts ) {
         if ( exists( $VM_ALL->{$uuid} ) ) {
             my $VM = new LML::VM( $VM_ALL->{$uuid} );
-            $VM->set_networks_filter($C->vsphere_networks); # set network filter
-            $LAB->update_vm( $VM ) ;
+            $VM->set_networks_filter( $C->vsphere_networks );    # set network filter
+            $LAB->update_vm($VM);
         } else {
             # remember that we deleted a host
             $hosts_removed++;
             # delete the host from the lab hash
-            $LAB->remove($uuid);                
+            $LAB->remove($uuid);
         }
     }
 
-    # dump $LAB to file only if all is fine. This makes sure that LML stays with
-    # the old view of the lab for some kind of hard to catch errors.
-    if ( $hosts_removed > 0 or $LAB->vms_to_update ) {
-        $LAB->write_file( "by " . __FILE__ );
-    }
+    # first update the info about ESX hosts
+    $LAB->update_hosts($ESX_ALL);
+    # always write LAB file, also creates new one if it did not exist before
+    $LAB->write_file( "by " . __FILE__ );
+
     if ( $LAB->vms_to_update ) {
         # rewrite the DHCP configuration with the new data
         push( @error, LML::DHCP::UpdateDHCP( $C, $LAB ) );
@@ -92,13 +93,15 @@ unless (caller) {
 
     # get a complete dump from vSphere - this is expensive and takes some time
     my $VM = get_all_vm_data();
+    
+    my $ESX = get_hosts();
 
     # dump %VM to file, ATM we don't use this information any more.
     write_vm_file($VM);
 
     # $LAB describes our internal view of the lab that lml manages
     # used mainly to react to renamed VMs or VMs with changed MAC adresses
-    push( @error, maintain_labfile( $C, $VM ) );
+    push( @error, maintain_labfile( $C, $VM, $ESX ) );
 
     # if errors occured, print them out
     if ( scalar(@error) ) {

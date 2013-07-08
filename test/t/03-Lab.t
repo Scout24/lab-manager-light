@@ -106,7 +106,7 @@ $LAB = new_ok(
                                                                     "MACS"     => [ "1:2:3", "4:5:6" ] } } } ] );
 
 is_deeply(
-           $LAB->get_host("12345-1234-123"),
+           $LAB->get_vm("12345-1234-123"),
            {
               "HOSTNAME" => "foo",
               "MACS"     => [ "1:2:3", "4:5:6" ]
@@ -114,5 +114,5 @@ is_deeply(
            "should return test data from previous test"
 );
 
-is( $LAB->get_host("foobar"), undef, "should return undef if VM not found" );
+is( $LAB->get_vm("foobar"), undef, "should return undef if VM not found" );
 done_testing();

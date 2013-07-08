@@ -33,15 +33,16 @@ sub new {
             eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
             close(LAB_CONF);
         }
-        croak '$LAB is not a hashref or empty, your $arg file must be broken.\n'
-          unless ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) );
-        $self = $LAB;
-        $self->{filename} = $arg;    # keep filename if we read the data from a file
+        if ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) ) {
+            # make sure that LAB is a non-empty hashref
+            $self = $LAB;
+            $self->{filename} = $arg;    # keep filename if we read the data from a file
+        } else {
+            croak '$LAB is not a hashref or empty, your $arg file must be broken.\n';
+        }
+
     } else {
-        croak "Parameter to "
-          . ( caller(0) )[3]
-          . " should be hashref with LAB data or filename of LAB file and not "
-          . ref($arg) . "\n";
+        croak "Parameter to " . ( caller(0) )[3] . " should be hashref with LAB data or filename of LAB file and not " . ref($arg) . "\n";
     }
     $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
     bless( $self, $class );
@@ -65,7 +66,7 @@ sub list_hosts {
     return sort( keys( %{ $self->{HOSTS} } ) );
 }
 
-sub get_host {
+sub get_vm {
     my ( $self, $uuid ) = @_;
     croak( "Must give VM uuid as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($uuid);
     if ( exists $self->{HOSTS}{$uuid} ) {
@@ -102,7 +103,7 @@ sub update_vm {
     my @vm_lab_macs = $VM->get_filtered_macs;
 
     Debug( "Updating LAB for '$name' with '" . join( ", ", @vm_lab_macs ) . "'" );
-    
+
     # add timestamp so that we know when the host was last time updated with fresh data
 
     # create HOSTS record for DHCP if it has changed (name or networking)
@@ -118,16 +119,16 @@ sub update_vm {
         push( @{ $self->{vms_to_update} }, $uuid );
     }
     $self->{HOSTS}->{$uuid} = {
-        UPDATED => time,
-        UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime ),
-        UUID => $uuid,
-        HOSTNAME => $name,
-        MACS => \@vm_lab_macs,
-        VM_ID => $vm_id,
-        MAC => $VM->mac,
-        CUSTOMFIELDS => $VM->customfields,
-        PATH => $VM->path,
-        HOST => $VM->host,
+                                UPDATED         => time,
+                                UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime ),
+                                UUID            => $uuid,
+                                HOSTNAME        => $name,
+                                MACS            => \@vm_lab_macs,
+                                VM_ID           => $vm_id,
+                                MAC             => $VM->mac,
+                                CUSTOMFIELDS    => $VM->customfields,
+                                PATH            => $VM->path,
+                                HOST            => $VM->host,
     };
 
     return $update_dhcp;
