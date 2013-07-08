@@ -33,7 +33,6 @@ my $uuid = create_vm();
 if ($uuid =~ /ERROR: / or $uuid =~ /\s+/) {
         fail_team_city_build($uuid);
 } else {
-      my $response = call_pxelinux($uuid);
       wait_for_machine_boot();
       download_qr_code($uuid);
       my $vm_spec = decode_qr($uuid);
@@ -108,7 +107,7 @@ sub delete_vm {
 # not ideal, but simple solution
 sub wait_for_machine_boot {
        report_progress("Waiting for $vm_host to boot");
-       sleep 25;
+       sleep 20;
 }
  
 sub do_http_get_request {
@@ -119,14 +118,6 @@ sub do_http_get_request {
 
        my $res = $ua->request($req);
        $res->is_success ? return $res->content : return $res->status_line;
-}
- 
-# calls pxelinux to update the lab.conf file
-# should be unnecessary in future
-sub call_pxelinux {
-        report_progress("Calling pxelinux");
-        my $uuid = shift;
-        return do_http_get_request("http://$test_host/lml/pxelinux.pl?uuid=$uuid");
 }
  
 # downloads the QR code and saves it in a file
