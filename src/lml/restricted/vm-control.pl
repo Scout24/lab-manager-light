@@ -183,7 +183,7 @@ sub worker_array_from_post {
              {
                vmname        => param('name'),
                vmhost        => param('esx_host'),
-               datacenter    => $C->get( "vsphere", "default_vm_datacenter" ),
+               datacenter    => $C->get( "vsphere", "datacenter" ),
                guestid       => $guestid,
                datastore     => $esx_host_name . ':datastore1',
                disksize      => $disksize,
