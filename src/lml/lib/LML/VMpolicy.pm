@@ -51,25 +51,79 @@ sub validate_hostrules_pattern {
 
 sub validate_dns_zones {
     # check VM name against other DNS zones to prevent creating duplicate entries
-    my $self          = shift;
-    my $vm_name       = $self->{VM}->name;
-    my @dnscheckzones = @{ $self->{Config}->get( "hostrules", "dnscheckzones" ) };
+    my $self = shift;
     my @error;
-    if ( scalar(@dnscheckzones) ) {
-        for my $z (@dnscheckzones) {
+    my $dnscheck = $self->{Config}->get( "hostrules", "dnscheck" );
 
-            Debug( "validating name in other DNS domain: " . $vm_name . ".$z." );
-            if ( scalar( gethostbyname( $vm_name . ".$z." ) ) ) {
-                push( @error, "Name conflict with '$vm_name.$z.'" );
+    # only process the dnscheck, if it is enabled in configuration
+    if ($dnscheck) {
+        my @dnscheckzones = @{ $self->{Config}->get( "hostrules", "dnscheckzones" ) };
+        my $vm_name = $self->{VM}->name;
+        if ( scalar(@dnscheckzones) ) {
+            for my $z (@dnscheckzones) {
+                Debug( "validating name in other DNS domain: " . $vm_name . ".$z." );
+                if ( scalar( gethostbyname( $vm_name . ".$z." ) ) ) {
+                    push( @error, "Name conflict with '$vm_name.$z.'" );
+                }
             }
         }
+        Debug( "Result: " . join( ", ", @error ) );
     }
-    Debug( "Result: " . join( ", ", @error ) );
+
     if (@error) {
         return @error;
     } else {
         return;
     }
+}
+
+# TODO: The following test fails to notice name conflicts against offline machines that do not have a DNS records at the moment
+# you might want to increase your lease time to counter this effect or add some code to compare the new name against
+# the list of known hostnames in $LAB
+sub validate_vm_dns_name {
+    # check if the VM name exists already in our managed DNS domain.
+    # the only situation where this is OK is if the VM existed already before and the VM name did not change
+    my ( $self, $LAB ) = @_;
+    # validate arg
+    croak( "Parameter to " . ( caller(0) )[3] . " must be LML::Lab object" ) unless ( ref($LAB) eq "LML::Lab" );
+
+    my $dnscheck = $self->{Config}->get( "hostrules", "dnscheck" );
+
+    # only process the dnscheck, if it is enabled in configuration
+    if ($dnscheck) {
+        my $result;
+        my $vm_name = $self->{VM}->name;
+        my $vm_uuid = $self->{VM}->uuid;
+
+        my $appenddomain = $self->{Config}->get( "dhcp", "appenddomain" );
+        return unless ($appenddomain);    # nothing to do if no DNS domain to append given
+        my $vm_fqdn = $vm_name . ".$appenddomain.";
+        my ( $dns_fqdn, $aliases, $addrtype, $length, @addrs ) = gethostbyname($vm_fqdn);
+
+        Debug( "validating name '$vm_name' in managed DNS domain: $appenddomain: " . join( ", ", map { inet_ntoa($_) } @addrs ) );
+        if ( exists( $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) ) {
+            # we have old data
+            if ( $vm_name eq $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) {
+                # old name equals new name
+                return;
+            } elsif ($dns_fqdn) {
+                # new VM name exists in DNS
+                $result = "Renamed VM '$vm_fqdn' name exists already in '$appenddomain'";
+            }    # else new VM name does not exist in DNS -> all OK
+        } else {
+            # we don't have old data, must be new VM
+            if ($dns_fqdn) {
+                # new VM name conflicts with existing systems in managed domain
+                $result = "New VM name exists already in '$appenddomain'";
+            }
+        }
+        if ($result) {
+            Debug("Result: $result");
+            return $result;
+        }
+    }
+
+    return;
 }
 
 sub validate_contact_user {
@@ -138,56 +192,15 @@ sub validate_expiry {
     }
 }
 
-# TODO: The following test fails to notice name conflicts against offline machines that do not have a DNS records at the moment
-# you might want to increase your lease time to counter this effect or add some code to compare the new name against
-# the list of known hostnames in $LAB
-sub validate_vm_dns_name {
-    # check if the VM name exists already in our managed DNS domain.
-    # the only situation where this is OK is if the VM existed already before and the VM name did not change
-    my ( $self, $LAB ) = @_;
-    my $result;
-    # validate arg
-    croak( "Parameter to " . ( caller(0) )[3] . " must be LML::Lab object" ) unless ( ref($LAB) eq "LML::Lab" );
-    my $vm_name      = $self->{VM}->name;
-    my $vm_uuid      = $self->{VM}->uuid;
-    my $appenddomain = $self->{Config}->get( "dhcp", "appenddomain" );
-    return unless ($appenddomain);    # nothing to do if no DNS domain to append given
-    my $vm_fqdn = $vm_name . ".$appenddomain.";
-    my ( $dns_fqdn, $aliases, $addrtype, $length, @addrs ) = gethostbyname($vm_fqdn);
-    Debug( "validating name '$vm_name' in managed DNS domain: $appenddomain: " . join( ", ", map { inet_ntoa($_) } @addrs ) );
-
-    if ( exists( $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) ) {
-        # we have old data
-        if ( $vm_name eq $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) {
-            # old name equals new name
-            return;
-        } elsif ($dns_fqdn) {
-            # new VM name exists in DNS
-            $result = "Renamed VM '$vm_fqdn' name exists already in '$appenddomain'";
-        }    # else new VM name does not exist in DNS -> all OK
-    } else {
-        # we don't have old data, must be new VM
-        if ($dns_fqdn) {
-            # new VM name conflicts with existing systems in managed domain
-            $result = "New VM name exists already in '$appenddomain'";
-        }
-    }
-    if ($result) {
-        Debug("Result: $result");
-        return $result;
-    }
-    return;
-}
-
 sub handle_unmanaged {
     my ($self) = @_;
     my $forceboot_field        = $self->{Config}->get( "vsphere", "forceboot_field" );
     my $forceboot_target_field = $self->{Config}->get( "vsphere", "forceboot_target_field" );
     # die if this is an unmanaged VM
     if (
-        ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} and $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} eq "unmanaged" )
-        or ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field}
-             and $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} eq "unmanaged" )
+         ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} and $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} eq "unmanaged" )
+         or ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field}
+              and $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} eq "unmanaged" )
       )
     {
         die("You don't want to be managed - I won't let you boot here.\n");
@@ -213,13 +226,12 @@ sub handle_forceboot {
          and not grep { $_ eq uc( $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
     {
         my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot              = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
         my $forceboot_target_field = $self->{Config}->get( "vsphere", "forceboot_target_field" );
 
         my $forceboot_target_value;
         if ($forceboot_target_field) {
-            $forceboot_target_value =
-              exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
+            $forceboot_target_value = exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
         } else {
             $forceboot_target_value = "";
         }
