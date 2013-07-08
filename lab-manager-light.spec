@@ -23,6 +23,7 @@ Requires: perl(GD) perl(GD::Barcode)
 BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
 BuildRequires: perl(File::Slurp) perl(Text::Diff) perl(DateTime::Format::Flexible) perl(JSON)
 BuildRequires: perl(CGI) perl(Config::IniFiles) perl(VMware::VIRuntime) perl(GD) perl(GD::Barcode)
+BuildRequires: perl(LWP::Simple::Post)
 
 # RHEL6 specific so far
 Requires: httpd, cronie
