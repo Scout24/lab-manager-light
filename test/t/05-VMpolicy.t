@@ -160,7 +160,7 @@ is(
 #
 is_deeply( [ $Pgood->validate_dns_zones ], [], "should return undef as test VM is not present in any zone" );
 is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "hostrules" => { "dnscheckzones" => [ "google.com", "google.de" ] } } ),
+              new LML::VMpolicy( new LML::Config( { "hostrules" => { "dnscheckzones" => [ "google.com", "google.de" ], "dnscheck" => 1 } } ),
                                  new LML::VM( { "NAME" => "www" } ) )->validate_dns_zones
            ],
            [ "Name conflict with 'www.google.com.'", "Name conflict with 'www.google.de.'" ],
@@ -337,7 +337,7 @@ is_deeply( [
            "should not return error as VM is new and has no conflict with managed domain"
 );
 is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "google.com", }, } ),
+              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "google.com" }, "hostrules" => { "dnscheck" => 1 } } ),
                                  new LML::VM( { "NAME" => "www", "UUID" => "01234" } ) )
                 ->validate_vm_dns_name( new LML::Lab( { "HOSTS" => {} } ) )
            ],
@@ -345,7 +345,7 @@ is_deeply( [
            "should return error as new VM name conflicts with managed domain"
 );
 is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "google.com", }, } ),
+              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "google.com" }, "hostrules" => { "dnscheck" => 1 } } ),
                                  new LML::VM( { "NAME" => "www", "UUID" => "01234" } ) )
                 ->validate_vm_dns_name( new LML::Lab( { "HOSTS" => { "01234" => { "HOSTNAME" => "zzz" } } } ) )
            ],
