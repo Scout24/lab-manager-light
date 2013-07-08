@@ -166,7 +166,30 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
 }
 
 # get a list of available host systems
-my @hosts = keys(%{$LAB->{ESXHOSTS}});
+sub hostFairness($) {
+    # See https://www.vmware.com/support/developer/vc-sdk/visdk2xpubs/ReferenceGuide/vim.host.Summary.QuickStats.html
+    # for an explanation of the Fairness values. As a first approximation we simply add the values here.
+    my $h = shift;
+    return 0 unless (exists($LAB->{ESXHOSTS}->{$h}->{"quickStats"}));
+    my $fairness = $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedCpuFairness"} + 
+        $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedMemoryFairness"};
+    Debug("Host Fairness for $h is $fairness");
+    return $fairness;
+}
+
+sub displayHost($) {
+    # display ESX host together with CPU and MEM usage
+    my $h = shift;
+    return $h unless (exists($LAB->{ESXHOSTS}->{$h}->{"quickStats"}));
+    return sprintf("%s (%d GHz CPU, %d GB MEM used)",
+            $h,
+            $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallCpuUsage"}/1024,
+            $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallMemoryUsage"}/1024
+            );
+}
+
+# sorted list of hosts, fairest first
+my @hosts = sort {hostFairness($a) <=> hostFairness($b)} keys(%{$LAB->{ESXHOSTS}});
 
 print <<EOF;
             </tbody></table>
@@ -210,7 +233,7 @@ print <<EOF;
 EOF
 
 foreach my $host (@hosts) {
-    print "<option>" . $host . "</option>\n";
+    print "<option value='$host'>" . displayHost($host) . "</option>\n";
 }
 
 print <<EOF;
