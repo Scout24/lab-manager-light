@@ -20,18 +20,19 @@ use LML::Result;
 use LML::Lab;
 use Data::Dumper;
 
-my $C       = new LML::Config();    # implicitly also fills %LML::Common::CONFIG
-my $vm_name = "";
-my @error   = ();
-my $search_uuid;                    # input parameter, UUID of a VM
+my $C             = new LML::Config();    # implicitly also fills %LML::Common::CONFIG
+my $vm_name       = "";
+my $append_domain = "";
+my @error         = ();
+my $search_uuid;                          # input parameter, UUID of a VM
 
 # install die handler to report fatal errors
 $SIG{__DIE__} = sub {
-    die @_ if $^S;                  # see http://perldoc.perl.org/functions/die.html at the end
+    die @_ if $^S;                        # see http://perldoc.perl.org/functions/die.html at the end
     return unless ( $C->get( "lml", "showfatalerrors" ) and Config( "pxelinux", "fatalerror_template" ) );
     my $message = shift;
-    chomp($message);                # remove trailing newlines
-    $message =~ s/\n/; /;           # turn message into single line
+    chomp($message);                      # remove trailing newlines
+    $message =~ s/\n/; /;                 # turn message into single line
     print header( -status => '200 Fatal Error', -type => 'text/plain' );
     my $body = join( "\n", @{ $C->get( "pxelinux", "fatalerror_template" ) } ) . "\n";
     $body =~ s/MESSAGE/$message/;
@@ -64,10 +65,11 @@ my @body;    # body to return to HTTP client
 
 # if there are VMs and if we find the VM we are looking for:
 if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
-    $vm_name = $VM->name;
+    $vm_name       = $VM->name;
+    $append_domain = $C->get( "dhcp", "appenddomain" );
 
     # set redirect paramters
-    $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name ) );
+    $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name . "." . $append_domain ) );
 
     # check if we should handle this VM
     $VM->set_networks_filter( $C->vsphere_networks );
