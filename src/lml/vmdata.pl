@@ -17,6 +17,8 @@ use GD::Barcode::QRcode;
 use GD::Image;
 use Carp;
 
+use Sys::Hostname;
+
 # uuid is either "" or undef to denote everything
 sub display_vm_data {
     my ( $C, $uuid, $content_type ) = @_;
@@ -35,6 +37,7 @@ sub display_vm_data {
         $uuid = "all VM";        # use this later for output
     } elsif ( exists( $LAB->{HOSTS}{$uuid} ) ) {
         $data = $VM = $LAB->{HOSTS}{$uuid};
+        $data->{LMLHOST} = hostname;
     } else {
         return "";
     }
@@ -63,11 +66,12 @@ sub display_vm_data {
                   "",      exists $VM->{CUSTOMFIELDS} ? ( "Custom Fields:", %{ $VM->{CUSTOMFIELDS} } ) : (),
                   "",      exists $VM->{VM_ID} ? ( "Mo-Ref:", $VM->{VM_ID} ) : (),
                   "",      exists $VM->{HOST} ? ( "Host:", $VM->{HOST} ) : (),
+                  "",      exists $VM->{LMLHOST} ? ( "LML:", $VM->{LMLHOST} ) : (),
           )
         {
             #Debug("Writing $_");
             $im->string( GD::Font->Giant, 480, $y, $_, $orange );
-            $y += GD::Font->Giant->height;
+            $y += $_ eq "" ? GD::Font->Tiny->height : GD::Font->Giant->height;
         }
         my $logo = new GD::Image( $INC[0] . "/images/LabManagerLightlogo-small.png" );    # logo is 200x75
         $im->copy( $logo, 481, 0, 0, 0, 160, 60 );
