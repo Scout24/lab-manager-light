@@ -64,15 +64,16 @@ print <<EOF;
 &nbsp;
 <div id="tabs">
     <ul>
-        <li><a href="#overview">VM Overview</a></li>
+        <li><a href="#vm_overview">VM Overview</a></li>
         <li><a href="#new">New VM</a></li>
+        <li><a href="#host_overview">Host Overview</a></li>
         <li><a href="#tools">Tools</a></li>
         <li><a href="#config">Configuration</a></li>
     </ul>
 EOF
 
 print <<EOF;
-    <div id="overview">
+    <div class="main_content" id="vm_overview">
         <div id="dialog"></div>
         <div class="error message" id="vm_action_error">
             <h3>Problems while performing action</h3>
@@ -202,6 +203,13 @@ print <<EOF;
             </div>
         </form>
     </div>
+    
+    
+    
+    
+    
+    
+    
     <div class="main_content" id="new">
         <fieldset>
             <legend>Create new VM(s)</legend>
@@ -264,6 +272,42 @@ print <<EOF;
             </form>
         </fieldset>
     </div>
+    
+
+
+
+
+    <div class="main_content" id="host_overview">
+    <table id="hostlist_table" border="1" cellpadding="3" cellspacing="0">
+EOF
+
+print thead(
+             { -id => "hostlist" },
+             Tr(
+                 { -valign => "top" },
+                 th( { -title => "Click to sort" }, 'Name' ),
+                 th( { -title => "Click to sort" }, "CPU (GHz)" ),
+                 th( { -title => "Click to sort" }, "MEM (GB)" ),
+                 th( { -title => "Click to sort" }, "Fairness" ),
+             ) ) . "\n\n    <tbody>\n";
+
+foreach my $name (@hosts ) {
+    my $HOST = $LAB->{ESXHOSTS}->{$name};
+    Debug( "Handling " . Data::Dumper->Dump( [$HOST] ) );
+    print Tr(
+        { -id => $name }, td [
+            $name,
+            sprintf("%.2f",$HOST->{"quickStats"}->{"overallCpuUsage"}/1024),
+            sprintf("%.2f",$HOST->{"quickStats"}->{"overallMemoryUsage"}/1024),
+            hostFairness($name),
+        ] ) . "\n\n";    
+}
+print <<EOF;
+    </tbody></table>
+    </div>
+    
+    
+
 	<div class="main_content" id="tools">
        <p>
             <span id="clear_button" class="button" title="Clear tool output">Clear</span>
