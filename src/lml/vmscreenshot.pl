@@ -32,6 +32,7 @@ unless (caller) {
                                      -delay     => $C->get( "vmscreenshot", "push_delay" ),
                                      -next_page => sub { return $screenshot->render(@_) } );
                     } else {
+                        binmode STDOUT; # don't let anybody mess with our output
                         print $screenshot->render( $q, -1 );    # -1 should always be smaller than the max_push parameter
                     }
                 } else {
