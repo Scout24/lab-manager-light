@@ -33,23 +33,32 @@ my %custom_fields;
 
 # initialize custom value variables
 my $vm_name;
-my $user_name;
+my $username;
 my $expiration_date;
+my $esx_host;
+my $vm_folder;
+my $force_boot_target;
 
 # are we called via webui?
 if ( exists $ENV{GATEWAY_INTERFACE} ) {
-    $vm_name         = param('name');
-    $user_name       = param('username');
-    $expiration_date = param('expiration');
+    $vm_name           = param('name');
+    $username          = param('username');
+    $expiration_date   = param('expiration');
+    $esx_host          = param('esx_host');
+    $vm_folder         = param('folder');
+    $force_boot_target = param('force_boot_target');
 
     # or are we called via commandline
 } elsif ( @ARGV > 0 ) {
 
     # get the long commandline options
     GetOptions(
-                "vm_name=s"         => \$vm_name,
-                "user_name=s"       => \$user_name,
-                "expiration_date=s" => \$expiration_date
+                "name=s"              => \$vm_name,
+                "username=s"          => \$username,
+                "expiration_date=s"   => \$expiration_date,
+                "esx_host=s"          => \$esx_host,
+                "folder=s"            => \$vm_folder,
+                "force_boot_target=s" => \$force_boot_target
     );
 
     # we have nothing, print help
@@ -60,18 +69,26 @@ if ( exists $ENV{GATEWAY_INTERFACE} ) {
 # paramters must be set and valid!
 my $check_param = check_parameter(
                                    vm_name         => $vm_name,
-                                   user_name       => $user_name,
-                                   expiration_date => $expiration_date
+                                   username        => $username,
+                                   expiration_date => $expiration_date,
+#                                   esx_host          => $esx_host,
+#                                   force_boot_target => $force_boot_target,
+#                                   vm_folder         => $vm_folder
 );
+
+# was the paramter check unsuccessful?
 if ($check_param) {
     error($check_param);
 }
 
 #
 my @vms = generate_vms_array(
-                              vm_name         => $vm_name,
-                              user_name       => $user_name,
-                              expiration_date => $expiration_date
+                              vm_name           => $vm_name,
+                              username          => $username,
+                              expiration_date   => $expiration_date,
+                              esx_host          => $esx_host,
+                              force_boot_target => $force_boot_target,
+                              vm_folder         => $vm_folder
 );
 
 create_vms(@vms);
@@ -80,21 +97,19 @@ create_vms(@vms);
 # represents a virtual machine to be created
 # ============================================
 sub generate_vms_array {
-    my %args = @_;
-    my $force_boot_target = "default";
-	$force_boot_target = param('force_boot_target') if ( param('force_boot_target') );
+    my %args              = @_;
 
     # assemble custom fields hash
     %custom_fields = (
-                       'Contact User ID'   => $args{user_name},
+                       'Contact User ID'   => $args{username},
                        'Expires'           => $args{expiration_date},
                        'Force Boot'        => 'ON',
-                       'Force Boot Target' => $force_boot_target
+                       'Force Boot Target' => $args{force_boot_target}
     );
 
     # because it is possible that a machine don't exist in subversion we call
-    # the generation now
-    get( sprintf( $C->get( "vm_spec", "host_announcement" ), $args{vm_name} ) );
+    # the generation now (temporary disabled)
+    #get( sprintf( $C->get( "vm_spec", "host_announcement" ), $args{vm_name} ) );
 
     # get now the json spec for this vm
     my $answer = get( sprintf( $C->get( "vm_spec", "host_spec" ), $args{vm_name} ) );
@@ -108,15 +123,14 @@ sub generate_vms_array {
     # put the json structure to a perl data structure
     my $vm_spec = decode_json($answer);
 
-    # get the best suited esx host
-    my $esx_host_fqdn = get_best_esx_host();
     # strip down the real hostname from given fqdn
-    $esx_host_fqdn =~ /(^[^\.]+).*$/;
+    $args{esx_host} =~ /(^[^\.]+).*$/;
     my $esx_host_name = $1;
 
-    @vms = ( {
+    @vms = (
+             {
                vmname        => $args{vm_name},
-               vmhost        => $esx_host_fqdn,
+               vmhost        => $args{esx_host},
                datacenter    => $C->get( "vsphere", "datacenter" ),
                guestid       => $guestid,
                datastore     => $esx_host_name . ':datastore1',
@@ -124,22 +138,14 @@ sub generate_vms_array {
                memory        => $vm_spec->{virtualMachine}->{memory},
                num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
                custom_fields => \%custom_fields,
-               target_folder => $vm_spec->{virtualMachine}->{targetFolder},
-               has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend} } );
+               # Temporary deactivated (we using cmd or post data for this atm)
+               #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
+               target_folder => $args{vm_folder},
+               has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend}
+             }
+    );
 
     return @vms;
-}
-
-# TODO: determine the best esx host for the new vm
-# determine the esx host with the best disk/memory relation
-# =========================================================
-sub get_best_esx_host() {
-    my $best_esx_host;
-
-    $best_esx_host = "esx01.arc.int";
-    $best_esx_host = param('esx_host') if ( param('esx_host') );
-
-    return $best_esx_host;
 }
 
 # compose error output related to the execution context
@@ -180,6 +186,7 @@ sub success {
 sub create_vms {
     my @vms = @_;
 
+    # go through each dataset and create a vm with the given specs
     foreach (@vms) {
         create_vm($_);
     }
@@ -204,7 +211,8 @@ sub create_vm {
     my %ds_info = HostUtils::get_datastore(
                                             host_view => $host_view,
                                             datastore => $$args{datastore},
-                                            disksize  => $$args{disksize} );
+                                            disksize  => $$args{disksize}
+    );
 
     if ( $ds_info{mor} eq 0 ) {
         if ( $ds_info{name} eq 'datastore_error' ) {
@@ -226,7 +234,8 @@ sub create_vm {
                                                   catchall_network => $C->get( "network_policy", "catchall" ),
                                                   hostname_pattern => $C->get( "network_policy", "hostname_pattern" ),
                                                   network_pattern  => $C->get( "network_policy", "network_pattern" ),
-                                                  has_frontend     => $$args{has_frontend} );
+                                                  has_frontend     => $$args{has_frontend}
+    );
 
     # check the success and add the found networks
     if (@vm_nics) {
@@ -401,7 +410,8 @@ sub set_custom_fields {
                     $customFieldsManager->SetField(
                                                     entity => $vm,
                                                     key    => $field->key,
-                                                    value  => ${ $args{custom_fields} }{ $field->name } );
+                                                    value  => ${ $args{custom_fields} }{ $field->name }
+                    );
                 }
             }
         }
@@ -415,7 +425,8 @@ sub create_conf_spec {
                                                      key       => 0,
                                                      device    => [0],
                                                      busNumber => 0,
-                                                     sharedBus => VirtualSCSISharing->new('noSharing') );
+                                                     sharedBus => VirtualSCSISharing->new('noSharing')
+    );
 
     my $controller_vm_dev_conf_spec = VirtualDeviceConfigSpec->new( device    => $controller,
                                                                     operation => VirtualDeviceConfigSpecOperation->new('add') );
@@ -444,32 +455,38 @@ sub create_virtual_disk {
     my $disk_vm_dev_conf_spec = VirtualDeviceConfigSpec->new(
                                                               device        => $disk,
                                                               fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
-                                                              operation     => VirtualDeviceConfigSpecOperation->new('add') );
+                                                              operation     => VirtualDeviceConfigSpecOperation->new('add')
+    );
     return $disk_vm_dev_conf_spec;
 }
 
 # check the validity of the given paramter
 # ========================================
 sub check_parameter {
-    # expected args vm_name, user_name, expiration_date
+    # expected args vm_name, username, expiration_date
     my $result = "";
     my %args   = @_;
 
     # Check Expiration-Date
     my $european = $C->get( "vsphere", "expires_european" );
     $result = $result . "invalid expiration_date" . $/
-      if (    !$args{expiration_date}
-           or !eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
+      if ( !$args{expiration_date} or !eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
 
     # Check VM-Name
     my $hostname_pattern = $C->get( "hostrules", "pattern" );
     $result = $result . "invalid vm_name" . $/ if ( !$args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/ );
 
-    #Check User-Name
+    # Check User-Name
     my $contactuserid_minuid = $C->get( "vsphere", "contactuserid_minuid" );
     my @pwnaminfo;
-    @pwnaminfo = getpwnam( $args{user_name} ) if ( $args{user_name} );
-    $result = $result . "invalid user_name" . $/ if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
+    @pwnaminfo = getpwnam( $args{username} ) if ( $args{username} );
+    $result = $result . "invalid username" . $/ if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
+
+    # TODO: Check force_boot_target
+
+    # TODO: Check the validity of given esx host
+
+    # TODO: Check if folder is given
 
     # give result
     return $result;
@@ -478,7 +495,7 @@ sub check_parameter {
 sub print_usage {
     print "vm-create.pl <OPTIONS>\n\n";
 
-    print "   --vm_name=value \t\t Name of the vm to be created (e.g. devxyz01)\n";
-    print "   --user_name=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n";
+    print "   --name=value \t\t Name of the vm to be created (e.g. devxyz01)\n";
+    print "   --username=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n";
     print "   --expiration_date=value \t Date where the vm will be expired (e.g. 01.01.2015) \n\n";
 }

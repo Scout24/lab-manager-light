@@ -42,88 +42,88 @@ sub create_nic {
     return $nic_vm_dev_conf_spec;
 }
 
-# find all networks related to this vm
+# Find all networks related to this vm
 # ====================================
 sub find_networks {
     my %args = @_;
     my @vm_networks;
     my @vm_networks_temp;
     my $catchall_network = undef;
-    my $network_pattern = $args{network_pattern};
-    # get the configured hostname pattern for later comparision
+    my $network_pattern  = $args{network_pattern};
+    # Get the configured hostname pattern for later comparision
     my $hostname_pattern_extracted = undef;
-    my $hostname_pattern = $args{hostname_pattern};
-    if ( $args{vm_name} =~ /($hostname_pattern)/ ) {
+    my $hostname_pattern           = $args{hostname_pattern};
+    if ( $args{vm_name} =~ /($hostname_pattern)/i ) {
         $hostname_pattern_extracted = $1;
     }
 
-    # get all networks, which the selected esx host can see
+    # Get all networks, which the selected esx host can see
     my $full_network_list = Vim::get_views( mo_ref_array => $args{host_view}->network );
 
     foreach (@$full_network_list) {
-        # get the configured network pattern
-        
+        # Get the configured network pattern
+
         my $network_pattern_extracted = undef;
-        if ( $_->name =~ /($network_pattern)/ ) {
+        if ( $_->name =~ /($network_pattern)/i ) {
             $network_pattern_extracted = $1;
         }
-        # if the hostname pattern matches the network pattern, take it
+        # If the hostname pattern matches the network pattern, take it
         if (     defined $network_pattern_extracted
              and defined $hostname_pattern_extracted
-             and $network_pattern_extracted eq $hostname_pattern_extracted )
+             and lc($network_pattern_extracted) eq lc($hostname_pattern_extracted) )
         {
-            # push the generated card spec to our array for network cards
-            my %wrapped = wrap_network_spec_for_sorting(create_nic( network => $_ ), $_->name);
-            push( @vm_networks_temp,  \%wrapped);
+            # Push the generated card spec to our array for network cards
+            my %wrapped = wrap_network_spec_for_sorting( create_nic( network => $_ ), $_->name );
+            push( @vm_networks_temp, \%wrapped );
 
-            # else check if we have the catchall network, if yes rembember it
+            # Else check if we have the catchall network, if yes rembember it
         } elsif ( $_->name eq $args{catchall_network} ) {
             $catchall_network = $_;
         }
     }
-    # add a nic connected to the catchall network
+    # Add a nic connected to the catchall network
     if ( not @vm_networks_temp and defined $catchall_network ) {
-        my $nic = create_nic( network => $catchall_network ) ;
-         my %wrapped = wrap_network_spec_for_sorting($nic, $catchall_network);
-        push( @vm_networks_temp, \%wrapped);
+        my $nic = create_nic( network => $catchall_network );
+        my %wrapped = wrap_network_spec_for_sorting( $nic, $catchall_network );
+        push( @vm_networks_temp, \%wrapped );
     }
 
-    # now make sure, that the the networks are sorted in the correct order
+    # Now make sure, that the the networks are sorted in the correct order
     sort_networks(@vm_networks_temp);
     foreach (@vm_networks_temp) {
-        push(@vm_networks, unwrap_network_spec($_));
+        push( @vm_networks, unwrap_network_spec($_) );
     }
 
-    # when we finished, return the generated network cards as an array
+    # When we finished, return the generated network cards as an array
     return @vm_networks;
 }
 
 sub is_backend {
-	my $network = shift;
-	my %network = %{$network};
-	return $network{"name"}  =~ /_BE_/;
+    my $network = shift;
+    my %network = %{$network};
+    return $network{"name"} =~ /_BE_/i;
 }
 
 sub compare {
-    my $first = shift;
-    my $is_first_backend =  is_backend($first);
-    my $second = shift;
+    my $first             = shift;
+    my $is_first_backend  = is_backend($first);
+    my $second            = shift;
     my $is_second_backend = is_backend($second);
-    return 1 if ($is_second_backend and not $is_first_backend) ;
-    return -1 if  ($is_first_backend and not $is_second_backend);
+    return 1  if ( $is_second_backend and not $is_first_backend );
+    return -1 if ( $is_first_backend  and not $is_second_backend );
     return 0;
 }
 
 sub sort_networks {
-    return sort { compare($a, $b) } @_;
+    return sort { compare( $a, $b ) } @_;
 }
 
 sub wrap_network_spec_for_sorting {
     my $spec = shift;
     my $name = shift;
     return (
-        "name" => $name,
-        "spec" => $spec
+             "name" => $name,
+             "spec" => $spec
     );
 }
 
