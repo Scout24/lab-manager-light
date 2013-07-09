@@ -100,6 +100,9 @@ sub LoadConfig {
     $ENV{VI_SERVER}          = Config( "vsphere", "server" )          if ( Config( "vsphere", "server" ) );
     $ENV{VI_PASSTHROUGHAUTH} = Config( "vsphere", "passthroughauth" ) if ( Config( "vsphere", "passthroughauth" ) );
     $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0 if ( Config( "vsphere", "disablecertificatevalidation" ) );
+    if ( Config ("lml","disableproxy") ) {
+        $ENV{HTTPS_PROXY} = $ENV{HTTP_PROXY} = $ENV{http_proxy} = $ENV{https_proxy} = "";
+    }
 
     return %CONFIG;
 }
