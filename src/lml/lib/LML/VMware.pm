@@ -34,6 +34,7 @@ my %CUSTOMFIELDS;
 
 my %HOSTIDS;
 my %HOSTS;
+my %NETWORKIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
@@ -54,7 +55,7 @@ sub dvp_to_name($) {
                                                                                             value => $portgroupkey
                                                                 ),
                                                               properties => ["config.name"] )->get_property("config.name");
-        Debug("Cached $portgroupkey = $DVP_PORT_GROUP_NAMES{$portgroupkey}");                                                           
+        Debug("Cached $portgroupkey = $DVP_PORT_GROUP_NAMES{$portgroupkey}");
     }
     return $DVP_PORT_GROUP_NAMES{$portgroupkey};
 }
@@ -227,11 +228,90 @@ sub get_custom_fields {
 
 ################################ sub #################
 ##
+## get_networks
+##
+## returns a hash of id->data for networks
+##
+
+sub get_networks {
+    unless ( scalar( keys(%NETWORKIDS) ) ) {
+        # $networkEntityViews is an array of this:
+        #Network=HASH(0x51f57e0)
+        #      'host' => ARRAY(0x5207ad0)
+        #         0  ManagedObjectReference=HASH(0x51e8600)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1060'
+        #      'mo_ref' => ManagedObjectReference=HASH(0x51e83d8)
+        #         'type' => 'Network'
+        #         'value' => 'network-1329'
+        #      'name' => 'VLAN-Trunk'
+        my $networkEntityViews = Vim::find_entity_views(
+                                                         view_type    => "Network",
+                                                         begin_entity => Vim::get_service_content()->rootFolder,
+                                                         properties   => [ "name", "host" ] );
+        foreach my $e ( @{$networkEntityViews} ) {
+            #Debug( Data::Dumper->Dump( [ $e ], [ "Network" ] ) );
+            my $id = $e->{mo_ref}->value;
+            $NETWORKIDS{$id} = {
+                                 "id"    => $id,
+                                 "name"  => $e->{name},
+                                 "hosts" => [ map { $_->{value} } @{ $e->{host} } ],
+            };
+        }
+        # $dvPortGroupEntityViews is an array of this:
+        #DistributedVirtualPortgroup=HASH(0x6ddf398)
+        #      'host' => ARRAY(0x6dd6dc8)
+        #         0  ManagedObjectReference=HASH(0x6e57750)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1606'
+        #         1  ManagedObjectReference=HASH(0x5e92600)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1608'
+        #         2  ManagedObjectReference=HASH(0x6e54e80)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1598'
+        #         3  ManagedObjectReference=HASH(0x6e577b0)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1633'
+        #         4  ManagedObjectReference=HASH(0x5e9ba50)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1615'
+        #         5  ManagedObjectReference=HASH(0x6dd6048)
+        #            'type' => 'HostSystem'
+        #            'value' => 'host-1637'
+        #      'mo_ref' => ManagedObjectReference=HASH(0x5e99738)
+        #         'type' => 'DistributedVirtualPortgroup'
+        #         'value' => 'dvportgroup-2675'
+        #      'name' => '3801_BE_DEVNIC_DYN'
+        my $dvPortGroupEntityViews = Vim::find_entity_views(
+                                                             view_type    => "DistributedVirtualPortgroup",
+                                                             begin_entity => Vim::get_service_content()->rootFolder,
+                                                             properties   => [ "name", "host" ] );
+
+        foreach my $e ( @{$dvPortGroupEntityViews} ) {
+            #Debug( Data::Dumper->Dump( [$e], ["DistributedVirtualPortgroup"] ) );
+            my $id = $e->{mo_ref}->value;
+            $NETWORKIDS{$id} = {
+                                 "id"    => $id,
+                                 "name"  => $e->{name},
+                                 "hosts" => [ map { $_->{value} } @{ $e->{host} } ],
+            };
+        }
+        #Debug( Data::Dumper->Dump( [ \%NETWORKIDS ], ["NETWORKIDS"] ) );
+    }
+    return \%NETWORKIDS;
+}
+
+################################ sub #################
+##
 ## get_hosts
 ##
-## returns a hash of name->id pairs of defined custom fields
+## returns a hash of name->data blocks for ESX host info
 ##
 sub get_hosts {
+
+    # initialize %NETWORKIDS
+    get_networks();
 
     unless ( scalar( keys(%HOSTS) ) ) {
         # initialize HOSTIDS and HOSTS if they don't contain data
@@ -240,7 +320,7 @@ sub get_hosts {
         my $entityViews = Vim::find_entity_views(
                                                   view_type    => "HostSystem",
                                                   begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => [ "name", "config.product", "summary.quickStats" ] );
+                                                  properties   => [ "name", "config.product", "summary.quickStats", "summary.hardware" ] );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "host" ] ) );
             $HOSTIDS{ $e->{mo_ref}->value } = $e->{name};
@@ -250,7 +330,16 @@ sub get_hosts {
                                      "name"       => $e->{name},
                                      "product"    => { %{ $e->get_property("config.product") } },
                                      "quickStats" => { %{ $e->get_property("summary.quickStats") } },
+                                     "hardware" => { %{ $e->get_property("summary.hardware") } },
+                                     "networks" => [],
             };
+        }
+        
+        # add networks to host data
+        while ( my ($nid,$network) = each(%NETWORKIDS)) {
+            foreach my $hid (@{$network->{hosts}}) {
+                push(@{$HOSTS{ $HOSTIDS{$hid} }{"networks"}},$network->{"name"});
+            }
         }
     }
     return \%HOSTS;

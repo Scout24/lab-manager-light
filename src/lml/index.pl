@@ -289,6 +289,9 @@ print thead(
                  th( { -title => "Click to sort" }, "CPU (GHz)" ),
                  th( { -title => "Click to sort" }, "MEM (GB)" ),
                  th( { -title => "Click to sort" }, "Fairness" ),
+                 th( { -title => "Click to sort" }, "Networks" ),
+                 th( { -title => "Click to sort" }, "Hardware" ),
+                 th( { -title => "Click to sort" }, "Product" ),
              ) ) . "\n\n    <tbody>\n";
 
 foreach my $name (@hosts ) {
@@ -297,9 +300,12 @@ foreach my $name (@hosts ) {
     print Tr(
         { -id => $name }, td [
             $name,
-            sprintf("%.2f",$HOST->{"quickStats"}->{"overallCpuUsage"}/1024),
-            sprintf("%.2f",$HOST->{"quickStats"}->{"overallMemoryUsage"}/1024),
+            sprintf("%.2f / %.0f",$HOST->{"quickStats"}->{"overallCpuUsage"}/1024,$HOST->{"hardware"}->{"cpuMhz"}*$HOST->{"hardware"}->{"numCpuCores"}/1024),
+            sprintf("%.2f / %.0f",$HOST->{"quickStats"}->{"overallMemoryUsage"}/1024,$HOST->{"hardware"}->{"memorySize"}/1024/1024/1024),
             hostFairness($name),
+            span({style=>"font-size: 60%"},join("<br/>",@{$HOST->{"networks"}})),
+            $HOST->{"hardware"}->{"vendor"}." ".$HOST->{"hardware"}->{"model"},
+            $HOST->{"product"}->{"fullName"},
         ] ) . "\n\n";    
 }
 print <<EOF;
