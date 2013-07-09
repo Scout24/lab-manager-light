@@ -33,21 +33,21 @@ my $uuid = create_vm();
 if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
     fail_team_city_build($uuid);
 } else {
-	  wait_for_machine_boot();
-      download_qr_code($uuid);
-      my $vm_spec = decode_qr($uuid);
-      delete_qr($uuid);
-       if ($vm_spec ) {
-              assert_vm_spec($vm_spec, $uuid);
-       } else {
-              fail_team_city_build("No QR code recognized");
-       }
- }
- 
+    wait_for_machine_boot();
+    download_qr_code($uuid);
+    my $vm_spec = decode_qr($uuid);
+    delete_qr($uuid);
+    if ($vm_spec) {
+        assert_vm_spec( $vm_spec, $uuid );
+    } else {
+        fail_team_city_build("No QR code recognized");
+    }
+}
+
 my $result = delete_vm();
 chomp($result);
-if ($result ne "[\"$vm_host\"]") {
-       fail_team_city_build($result);
+if ( $result ne "[\"$vm_host\"]" ) {
+    fail_team_city_build($result);
 }
 
 # processes build parameters
@@ -61,7 +61,8 @@ sub process_parameters {
                       "username=s"        => \$username,
                       "expiration_date=s" => \$expiration_date,
                       "folder=s"          => \$folder
-         ) )
+         )
+      )
     {
         fail_team_city_build("Missing options");
         die("Missing options");
@@ -94,11 +95,7 @@ sub do_http_post_request {
 # returns UUID or error message
 sub create_vm {
     report_progress("Creating $vm_host");
-    return
-      do_http_post_request(
-        "http://$test_host/lml/restricted/vm-create-old.pl",
-"name=$vm_host&esx_host=$esx_host&username=$username&expiration=$expiration_date&folder=$folder&force_boot_target=$force_boot_target"
-      );
+    return do_http_post_request( "http://$test_host/lml/restricted/vm-create-old.pl", "name=$vm_host&esx_host=$esx_host&username=$username&expiration=$expiration_date&folder=$folder&force_boot_target=$force_boot_target" );
 }
 
 # deletes the vm
