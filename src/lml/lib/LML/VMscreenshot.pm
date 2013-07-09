@@ -11,6 +11,7 @@ use CGI::Carp;
 use LML::Config;
 use LML::Common;
 use LML::Lab;
+use LML::VM;
 use LWP::UserAgent;
 use HTTP::Request;
 use Data::Dumper;
@@ -28,14 +29,23 @@ sub new {
             push_max => ( $config->get( "vmscreenshot", "push_max" ) ? $config->get( "vmscreenshot", "push_max" ) : 0 ),
     };
     my $LAB = new LML::Lab( $config->labfile );
-    my $HOST = $LAB->get_vm($uuid);
-    if ( $HOST and exists $HOST->{VM_ID}) {
-        $self->{vm_id}    = $HOST->{VM_ID};
-        $self->{hostname} = $HOST->{HOSTNAME};
+    my $VM = $LAB->get_vm($uuid);
+    if ( ref($VM) ne "LML::VM") {
+        eval { connect_vi(); };
+        if ($@) {
+            Debug("connect_vi died:\n$@");
+            return undef;
+        }
+        $VM = new LML::VM($uuid);
+    }
+    if ( ref($VM) eq "LML::VM" ) {
+        $self->{vm_id}    = $VM->vm_id;
+        $self->{hostname} = $VM->name;
     } else {
         Debug("No LAB data found for '$uuid'");
         return undef;    # signal no VM found
     }
+    Debug("VMscreenshot initialized for $uuid ($self->{hostname}): $self->{vm_id}");
     $self->{ua} = new LWP::UserAgent( keep_alive => 2 );    # get persistent LWP UA
     $self->{ua}->timeout(10);                               # 10 secs timeout
     $self->{ua}->env_proxy;
