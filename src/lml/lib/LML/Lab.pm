@@ -70,7 +70,7 @@ sub get_vm {
     my ( $self, $uuid ) = @_;
     croak( "Must give VM uuid as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($uuid);
     if ( exists $self->{HOSTS}{$uuid} ) {
-        return $self->{HOSTS}{$uuid};
+        return new LML::VM($self->{HOSTS}{$uuid});
     } else {
         return;
     }
@@ -123,6 +123,7 @@ sub update_vm {
                                 UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime ),
                                 UUID            => $uuid,
                                 HOSTNAME        => $name,
+                                NAME            => $name,
                                 MACS            => \@vm_lab_macs,
                                 VM_ID           => $vm_id,
                                 MAC             => $VM->mac,

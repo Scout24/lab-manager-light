@@ -84,8 +84,8 @@ is_deeply( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{MACS},
 $LAB->set_filename("test/temp/new_lab.conf");
 is(
     $LAB->write_file( "by " . __FILE__, "test" ),
-    2897,
-"Writing to 'test/temp/new_lab.conf' should write 2897 bytes and it would be better to analyse the content but at least we notice change"
+    2986,
+"Writing to 'test/temp/new_lab.conf' should write 2986 bytes and it would be better to analyse the content but at least we notice change"
 );
 
 is_deeply( [ $LAB->list_hosts ],
@@ -109,7 +109,9 @@ is_deeply(
            $LAB->get_vm("12345-1234-123"),
            {
               "HOSTNAME" => "foo",
-              "MACS"     => [ "1:2:3", "4:5:6" ]
+              "NAME" => "foo",
+              "MACS"     => [ "1:2:3", "4:5:6" ],
+              "filter_networks" => []
            },
            "should return test data from previous test"
 );

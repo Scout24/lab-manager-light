@@ -3,13 +3,14 @@ use warnings;
 
 use Test::More;
 use Test::Warn;
-use Test::MockModule;
+
 use LML::Common;
 
 # load shipped configuration
 LoadConfig( "src/lml/default.conf", "test/data/test.conf" );
 
 # mock needed function from LML::VMware
+use Test::MockModule;
 use LML::VMware;
 my $mock            = new Test::MockModule('LML::VMware');
 my $off_value       = undef;
@@ -127,6 +128,7 @@ $mock->mock(
         #diag("Mock setVmExtraOptsU($uuid,$extraopts_key,$extraopts_value)\n");
         return 1;
     } );
+
 use_ok "LML::VM";
 
 my $VM;

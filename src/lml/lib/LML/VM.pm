@@ -20,6 +20,10 @@ sub new {
         # hashref given, turn it into a VM object.
         # if some of the data structures are missing, then you are on your own!
         $self = $uuid;
+        # migrate old LAB structure to new VM structure
+        if (! exists $self->{NAME} and exists $self->{HOSTNAME}) {
+            $self->{NAME} = $self->{HOSTNAME};
+        }
     } else {
 
         unless ($uuid) {
