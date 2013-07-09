@@ -1,4 +1,7 @@
 #!/usr/bin/perl -w
+
+# Purpose: Deletes an single VM identified by the uuid. The machine will be powered off if still on
+#          and then the machine will be completely deleted including the files in datastore
 #
 # Authors:
 #     Stefan Neben <stefan.neben@gmail.com>
