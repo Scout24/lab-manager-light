@@ -33,30 +33,21 @@ my $uuid = create_vm();
 if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
     fail_team_city_build($uuid);
 } else {
-    call_pxelinux($uuid);
-    wait_for_machine_boot();
-    download_qr_code($uuid);
-    my $vm_spec = decode_qr($uuid);
-    delete_qr($uuid);
-    if ($vm_spec) {
-        assert_vm_spec( $vm_spec, $uuid );
-    } else {
-        fail_team_city_build("No QR code recognized");
-    }
-}
-
+	  wait_for_machine_boot();
+      download_qr_code($uuid);
+      my $vm_spec = decode_qr($uuid);
+      delete_qr($uuid);
+       if ($vm_spec ) {
+              assert_vm_spec($vm_spec, $uuid);
+       } else {
+              fail_team_city_build("No QR code recognized");
+       }
+ }
+ 
 my $result = delete_vm();
 chomp($result);
-if ( $result ne "[\"$vm_host\"]" ) {
-    fail_team_city_build($result);
-}
-
-# calls pxelinux to update the lab.conf file
-# should be unnecessary in future
-sub call_pxelinux {
-    report_progress("Calling pxelinux");
-    my $uuid = shift;
-    return do_http_get_request("http://$test_host/lml/pxelinux.pl?uuid=$uuid");
+if ($result ne "[\"$vm_host\"]") {
+       fail_team_city_build($result);
 }
 
 # processes build parameters
