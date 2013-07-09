@@ -26,6 +26,8 @@ my $expiration_date;
 my $folder;
 my $force_boot_target = 'qrdata';
 
+print "##teamcity[buildStatus text='Running Integration Test']" . $/;
+
 process_parameters();
 my $vm_host = $vm_name_prefix . $vm_number;
 
@@ -48,7 +50,9 @@ my $result = delete_vm();
 chomp($result);
 if ( $result ne "[\"$vm_host\"]" ) {
     fail_team_city_build($result);
-}
+} else {
+   print "##teamcity[buildStatus status='SUCCESS' text='Integration Test OK']" . $/;
+} 
 
 # processes build parameters
 # sets the global variables
