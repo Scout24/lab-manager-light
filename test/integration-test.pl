@@ -200,6 +200,7 @@ sub assert_vm_spec {
 sub fail_team_city_build {
     my $reason = shift;
     print "##teamcity[buildStatus status='FAILURE' text='$reason']" . $/;
+    exit 1;
 }
 
 # logs TeamCity build progress message
