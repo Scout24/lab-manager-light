@@ -92,7 +92,7 @@ sub do_http_post_request {
 # returns UUID or error message  
  sub create_vm {
         report_progress("Creating $vm_host");
-        return do_http_post_request("http://$test_host/lml/restricted/-old.pl",
+        return do_http_post_request("http://$test_host/lml/restricted/vm-create-old.pl",
               "name=$vm_host&esx_host=$esx_host&username=$username&expiration=$expiration_date&folder=$folder&force_boot_target=$force_boot_target");
  } 
  
