@@ -171,8 +171,10 @@ sub hostFairness($) {
     # for an explanation of the Fairness values. As a first approximation we simply add the values here.
     my $h = shift;
     return 0 unless (exists($LAB->{ESXHOSTS}->{$h}->{"quickStats"}));
-    my $fairness = $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedCpuFairness"} + 
-        $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedMemoryFairness"};
+    my $fairness = (
+        abs(1000-$LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedCpuFairness"}) + 
+        abs(1000-$LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedMemoryFairness"})
+        ) / 2;
     Debug("Host Fairness for $h is $fairness");
     return $fairness;
 }
@@ -188,8 +190,9 @@ sub displayHost($) {
             );
 }
 
-# sorted list of hosts, fairest first
-my @hosts = sort {hostFairness($a) <=> hostFairness($b)} keys(%{$LAB->{ESXHOSTS}});
+# sorted list of hosts, fairest first. Fair means highest fairness (sort descending)
+my @hosts = sort {hostFairness($b) <=> hostFairness($a)} keys(%{$LAB->{ESXHOSTS}});
+Debug("Sorted host list: ".join(",",@hosts));
 
 print <<EOF;
             </tbody></table>
