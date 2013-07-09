@@ -81,13 +81,15 @@ create_vms(@vms);
 # ============================================
 sub generate_vms_array {
     my %args = @_;
+    my $force_boot_target = "default";
+	$force_boot_target = param('force_boot_target') if ( param('force_boot_target') );
 
     # assemble custom fields hash
     %custom_fields = (
                        'Contact User ID'   => $args{user_name},
                        'Expires'           => $args{expiration_date},
                        'Force Boot'        => 'ON',
-                       'Force Boot Target' => 'default'
+                       'Force Boot Target' => $force_boot_target
     );
 
     # because it is possible that a machine don't exist in subversion we call
@@ -135,6 +137,7 @@ sub get_best_esx_host() {
     my $best_esx_host;
 
     $best_esx_host = "esx01.arc.int";
+    $best_esx_host = param('esx_host') if ( param('esx_host') );
 
     return $best_esx_host;
 }
