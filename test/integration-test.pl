@@ -92,7 +92,7 @@ sub do_http_post_request {
     $req->content("$data");
 
     my $res = $ua->request($req);
-    fail_team_city_build(return $res->content);
+    fail_team_city_build($res->content);
     $res->is_success ? return $res->content : return $res->status_line;
 }
 
@@ -201,7 +201,7 @@ sub assert_vm_spec {
 sub fail_team_city_build {
     my $reason = shift;
     print "##teamcity[buildStatus status='FAILURE' text='$reason']" . $/;
-    #exit 1;
+    exit 1;
 }
 
 # logs TeamCity build progress message
