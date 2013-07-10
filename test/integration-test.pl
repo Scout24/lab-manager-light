@@ -33,7 +33,7 @@ my $vm_host = $vm_name_prefix . $vm_number;
 
 my $uuid = create_vm();
 if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
-    fail_team_city_build($uuid);
+    fail_team_city_build($uuid, "0");
 } else {
     wait_for_machine_boot();
     download_qr_code($uuid);
@@ -42,14 +42,14 @@ if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
     if ($vm_spec) {
         assert_vm_spec( $vm_spec, $uuid );
     } else {
-        fail_team_city_build("No QR code recognized");
+        fail_team_city_build("No QR code recognized", "1");
     }
 }
 
 my $result = delete_vm();
 chomp($result);
 if ( $result ne "[\"$vm_host\"]" ) {
-    fail_team_city_build($result);
+    fail_team_city_build($result, "0");
 } else {
    print "##teamcity[buildStatus status='SUCCESS' text='Integration Test OK']" . $/;
 } 
@@ -68,7 +68,7 @@ sub process_parameters {
          )
       )
     {
-        fail_team_city_build("Missing options");
+        fail_team_city_build("Missing options", "0");
         exit 1;
     }
 }
@@ -163,21 +163,21 @@ sub assert {
     my $field    = shift;
     my $expected = shift;
     my $actual   = $spec->{"$field"};
-    fail_team_city_build("expected $field: $expected, actual: $actual") if ( "$actual" ne "$expected" );
+    fail_team_city_build("expected $field: $expected, actual: $actual", "1") if ( "$actual" ne "$expected" );
 }
 
 # asserts that the QR code is not too old
 sub assert_qr_code_age {
     my $spec = shift;
     my $time = $spec->{"UPDATED"};
-    fail_team_city_build("QR code too old") if ( time - $time > MAX_QR_CODE_AGE_SEC );
+    fail_team_city_build("QR code too old", "1") if ( time - $time > MAX_QR_CODE_AGE_SEC );
 }
 
 # asserts the vm path
 sub assert_vm_path {
     my $spec = shift;
     my $path = $spec->{"PATH"};
-    fail_team_city_build("expected path: $folder/$vm_host, actual $path") if ( $path !~ /$folder\/$vm_host/ );
+    fail_team_city_build("expected path: $folder/$vm_host, actual $path", "1") if ( $path !~ /$folder\/$vm_host/ );
 }
 
 # asserts the vm specification
@@ -200,7 +200,9 @@ sub assert_vm_spec {
 # logs TeamCity build status message with FAILURE status
 sub fail_team_city_build {
     my $reason = shift;
+    my $delete = shift;
     print "##teamcity[buildStatus status='FAILURE' text='$reason']" . $/;
+    delete_vm() if ( $delete ne "0" );
     exit 1;
 }
 
