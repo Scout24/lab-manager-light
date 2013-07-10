@@ -109,7 +109,7 @@ sub generate_vms_array {
 
     # because it is possible that a machine don't exist in subversion we call
     # the generation now (temporary disabled)
-    #get( sprintf( $C->get( "vm_spec", "host_announcement" ), $args{vm_name} ) );
+    get( sprintf( $C->get( "vm_spec", "host_announcement" ), $args{vm_name} ) );
 
     # get now the json spec for this vm
     my $answer = get( sprintf( $C->get( "vm_spec", "host_spec" ), $args{vm_name} ) );
