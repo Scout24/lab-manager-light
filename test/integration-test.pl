@@ -1,9 +1,10 @@
 #!/usr/bin/perl -w
 
-# required dependencies:
+# required RPM dependencies on RHEL/compatible:
 # zbar
 # perl-libwww-perl
 # perl-JSON
+# perl-DateTime
 
 use strict;
 use warnings;
@@ -30,6 +31,7 @@ my $force_boot_target = 'qrdata';
 my $lmlhostpattern;
 my $screenshot_count = 0;
 
+my $already_deleted = 0;
 my $vm_host;
 print "##teamcity[buildStatus text='Running Integration Test']" . $/;
 
@@ -37,23 +39,23 @@ print "##teamcity[buildStatus text='Running Integration Test']" . $/;
 # sets the global variables
 sub process_parameters {
     if (
-        !GetOptions(
-                     "boot_timeout=i"    => \$boot_timeout,
-                     "test_host=s"       => \$test_host,
-                     "vm_name_prefix=s"  => \$vm_name_prefix,
-                     "esx_host=s"        => \$esx_host,
-                     "username=s"        => \$username,
-                     "expiration_date=s" => \$expiration_date,
-                     "folder=s"          => \$folder,
-                     "lmlhostpattern=s"  => \$lmlhostpattern,
-        ) )
+         !GetOptions(
+                      "boot_timeout=i"    => \$boot_timeout,
+                      "test_host=s"       => \$test_host,
+                      "vm_name_prefix=s"  => \$vm_name_prefix,
+                      "esx_host=s"        => \$esx_host,
+                      "username=s"        => \$username,
+                      "expiration_date=s" => \$expiration_date,
+                      "folder=s"          => \$folder,
+                      "lmlhostpattern=s"  => \$lmlhostpattern,
+         ) )
     {
         fail_team_city_build( "Missing options", "0" );
     }
     # make sure that everything is set
     if ( not( $test_host and $vm_name_prefix and $esx_host and $username and $folder and $lmlhostpattern ) ) {
-        fail_team_city_build( "Need to provide at least test_host, vm_name_prefix, esx_host, username, folder and lmlhostpattern options.",
-                              "0" );
+        fail_team_city_build("Need to provide at least test_host, vm_name_prefix, esx_host, username, folder and lmlhostpattern options.")
+          ;
     }
 }
 
@@ -77,7 +79,17 @@ sub do_http_post_request {
     $req->content("$data");
 
     my $res = $ua->request($req);
-    return $res->is_success ? $res->content : "ERROR: ".$res->status_line;
+    return $res->is_success ? $res->content : "ERROR: " . $res->status_line;
+}
+
+sub do_http_get_request {
+    my $url = shift;
+    my $ua  = LWP::UserAgent->new;
+    $ua->agent("TeamCity/0.1 ");
+    my $req = HTTP::Request->new( GET => "$url" );
+
+    my $res = $ua->request($req);
+    return $res->is_success ? $res->content : "ERROR: " . $res->status_line;
 }
 
 # creates a new vm
@@ -93,18 +105,17 @@ sub create_vm {
 
 # deletes the vm
 sub delete_vm {
-    report_progress("Deleting $vm_host");
-    return do_http_post_request( "http://$test_host/lml/restricted/vm-control.pl", "action=destroy&hosts=$vm_host" );
-}
-
-sub do_http_get_request {
-    my $url = shift;
-    my $ua  = LWP::UserAgent->new;
-    $ua->agent("TeamCity/0.1 ");
-    my $req = HTTP::Request->new( GET => "$url" );
-
-    my $res = $ua->request($req);
-    $res->is_success ? return $res->content : return $res->status_line;
+    if ($already_deleted) {
+        report_progress("$vm_host already deleted previously, everything OK");
+    } else {
+        report_progress("Deleting $vm_host");
+        my $res = do_http_post_request( "http://$test_host/lml/restricted/vm-control.pl", "action=destroy&hosts=$vm_host" );
+        if ( $res =~ /ERROR/ ) {
+            fail_team_city_build($res);
+        } else {
+            $already_deleted = 1;
+        }
+    }
 }
 
 # downloads VM screenshot and saves it in a file and return file name
@@ -114,8 +125,8 @@ sub download_vm_screenshot ($) {
     my $url  = "http://$test_host/lml/vmscreenshot.pl?image=1&uuid=$uuid";
     report_progress("Downloading VM Screenshot from $url to $file");
     my $png = do_http_get_request($url);
-    open( FILE, ">$file" ) or fail_team_city_build("Could not open $file for writing","1");
-    print FILE $png or fail_team_city_build("Could not write to $file","1");
+    open( FILE, ">$file" ) or fail_team_city_build("Could not open $file for writing");
+    print FILE $png or fail_team_city_build("Could not write to $file");
     close(FILE);
     return $file;
 }
@@ -136,28 +147,29 @@ sub assert {
     my $field    = shift;
     my $expected = shift;
     my $actual   = $spec->{"$field"};
-    fail_team_city_build( "expected $field: $expected, actual: $actual", "1" ) if ( "$actual" ne "$expected" );
+    fail_team_city_build("expected $field: $expected, actual: $actual") if ( "$actual" ne "$expected" );
 }
 
 # asserts that the QR code is not too old
 sub assert_qr_code_age {
     my $spec = shift;
     my $time = $spec->{"UPDATED"};
-    fail_team_city_build( "QR code ".(time-$time)." seconds old, more than allowed ".MAX_QR_CODE_AGE_SEC, "1" ) if ( time - $time > MAX_QR_CODE_AGE_SEC );
+    fail_team_city_build( "QR code " . ( time - $time ) . " seconds old, more than allowed " . MAX_QR_CODE_AGE_SEC, "1" )
+      if ( time - $time > MAX_QR_CODE_AGE_SEC );
 }
 
 # asserts the vm path
 sub assert_vm_path {
     my $spec = shift;
     my $path = $spec->{"PATH"};
-    fail_team_city_build( "expected path: $folder/$vm_host, actual $path", "1" ) if ( $path !~ /$folder\/$vm_host/ );
+    fail_team_city_build("expected path: $folder/$vm_host, actual $path") if ( $path !~ /$folder\/$vm_host/ );
 }
 
 # assert the lml host
 sub assert_lml_host {
     my $spec    = shift;
     my $lmlhost = $spec->{"LMLHOST"};
-    fail_team_city_build( "expected LML host pattern $lmlhostpattern does not match $lmlhost", "1" ) if ( $lmlhost !~ /$lmlhostpattern/ );
+    fail_team_city_build("expected LML host pattern $lmlhostpattern does not match $lmlhost") if ( $lmlhost !~ /$lmlhostpattern/ );
 }
 
 # asserts the vm specification
@@ -182,7 +194,6 @@ sub assert_vm_spec {
 sub fail_team_city_build {
     my $reason = shift;
     print "##teamcity[buildStatus status='FAILURE' text='$reason']" . $/;
-    delete_vm();
     exit 1;
 }
 
@@ -202,24 +213,22 @@ if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
     my $starttime = time();
     my $vm_spec;
     my $file;
-    while (not $vm_spec and (time() <= $starttime + $boot_timeout)) {
-        $file = download_vm_screenshot($uuid);
+    while ( not $vm_spec and ( time() <= $starttime + $boot_timeout ) ) {
+        $file    = download_vm_screenshot($uuid);
         $vm_spec = decode_qr($file);
-        sleep 3; # be nice to vSphere and try again only after a few seconds
+        sleep 3;    # be nice to vSphere and try again only after a few seconds
     }
     if ($vm_spec) {
-        link($file,"test/temp/".$vm_host."_".$uuid.".png");
+        link( $file, "test/temp/" . $vm_host . "_" . $uuid . ".png" );
         assert_vm_spec( $vm_spec, $uuid );
     } else {
-        fail_team_city_build( "No QR code recognized", "1" );
+        fail_team_city_build("No QR code recognized after $boot_timeout seconds");
     }
 }
 
-my $result = delete_vm();
-chomp($result);
-if ( $result ne "[\"$vm_host\"]" ) {
-    fail_team_city_build( $result, "0" );
-} else {
-    print "##teamcity[buildStatus status='SUCCESS' text='Integration Test OK']" . $/;
-}
+delete_vm();
+print "##teamcity[buildStatus status='SUCCESS' text='Integration Test OK']" . $/;
 
+END {
+    delete_vm();
+}
