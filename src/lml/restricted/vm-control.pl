@@ -41,7 +41,7 @@ if ( param('action') ) {
     if ( param('hosts') ) {
         @VMS = param('hosts');
     } else {
-        print header( -status => '500 Nothing to do' );
+        print header( -status => '400 No hosts given (hosts=)' );
         print "No hosts were selected";
         exit 0;
     }
@@ -99,7 +99,8 @@ connect_vi();
 foreach my $vm_name (@VMS) {
     # get the view of the vm to work with
     my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
-                                         filter    => { 'name' => $vm_name } );
+                                         filter    => { 'name' => $vm_name } ,
+                                         properties => [ "name", "config.uuid" ]);
 
     # check the success
     if ( not defined $vm_view ) {
@@ -143,7 +144,7 @@ sub error {
 
     # print html header before anything else if CGI is used
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
-        print header( -status => '500 Error while processing' );
+        print header( -status => '500 $message' );
         $linebreak = "<br>";
     }
 
@@ -160,7 +161,7 @@ sub destroy_vm {
     my $vm_view = $args{view};
 
     # get the uuid of the vm to be destroyed
-    my $uuid = $vm_view->config->uuid;
+    my $uuid = $vm_view->get_property("config.uuid");
 
     # destroy the vm
     eval { $vm_view->Destroy(); };
