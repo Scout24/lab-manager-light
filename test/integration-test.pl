@@ -77,7 +77,8 @@ sub process_parameters {
 # because DHCP lease lasts 1 hour at us
 sub generate_vm_number {
     my @time = localtime(time);
-    $time[1] < 10 ? return "0$time[1]" : return $time[1];
+    my $time = $time[1] + 1;
+    $time < 10 ? return "0$time" : return $time;
 }
 
 sub do_http_post_request {
