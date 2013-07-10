@@ -92,7 +92,6 @@ sub do_http_post_request {
     $req->content("$data");
 
     my $res = $ua->request($req);
-    fail_team_city_build($res->content);
     $res->is_success ? return $res->content : return $res->status_line;
 }
 
