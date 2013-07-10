@@ -80,6 +80,10 @@ img {
 	vertical-align: middle;
 }
 
+div.cluetip-outer {
+	z-index: 100;
+}
+
 div.cluetip-inner img {
 	max-width: 480px;
 }
