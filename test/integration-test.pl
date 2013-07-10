@@ -33,7 +33,6 @@ my $screenshot_count = 0;
 
 my $already_deleted = 0;
 my $vm_host;
-print "##teamcity[buildStatus text='Running Integration Test']" . $/;
 
 # processes build parameters
 # sets the global variables
@@ -106,7 +105,7 @@ sub create_vm {
 # deletes the vm
 sub delete_vm {
     if ($already_deleted) {
-        report_progress("$vm_host already deleted previously, everything OK");
+        return;
     } else {
         report_progress("Deleting $vm_host");
         my $res = do_http_post_request( "http://$test_host/lml/restricted/vm-control.pl", "action=destroy&hosts=$vm_host" );
@@ -204,6 +203,7 @@ sub report_progress {
 }
 
 process_parameters();
+print "##teamcity[buildStatus text='Running Integration Test against $test_host']" . $/;
 $vm_host = $vm_name_prefix . $vm_number;
 
 my $uuid = create_vm();
