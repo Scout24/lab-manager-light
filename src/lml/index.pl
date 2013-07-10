@@ -37,31 +37,33 @@ my $C = new LML::Config();
 my $LAB = new LML::Lab( $C->labfile );
 
 print header();
-print start_html(
-    -title  => $C->get( "vsphere", "server" ) . " Lab Manager Light",
-    -script => [
-                 { -src => "lib/js/jquery-1.8.3.min.js" },
-                 { -src => "lib/js/jquery.cluetip.min.js" },
-                 { -src => "lib/js/jquery.tabsLite.js" },
-                 { -src => "lib/js/jquery.dataTables.min.js" },
-                 { -src => "lib/js/TableTools.min.js" },
-                 { -src => "lib/js/lml.js" },
-                 { -src => "lib/js/jquery-ui-1.10.3.custom.min.js" },
-    ],
-    -style => [
-                { -src   => "lib/css/jquery.cluetip.css", },
-                { -src   => "lib/css/jquery.dataTables.css", },
-                { -src   => "lib/css/TableTools.css", },
-                { -src   => "lib/css/lml.css", },
-                { -src   => "lib/css/jquery-ui-1.10.3.custom.css", },
-                { -media => "print", -src => "lib/css/lml-print.css" },
-    ] );
 
+my $vsphere_server = $C->get( "vsphere", "server" );
 print <<EOF;
+<!DOCTYPE html>
+<html>
+<head>
+<title>$vsphere_server Lab Manager Light</title>
+<link rel="shortcut icon" type="image/png" href="lib/images/favicon.png"/>
+<link rel="stylesheet" type="text/css" href="lib/css/jquery.cluetip.css" />
+<link rel="stylesheet" type="text/css" href="lib/css/jquery.dataTables.css" />
+<link rel="stylesheet" type="text/css" href="lib/css/TableTools.css" />
+<link rel="stylesheet" type="text/css" href="lib/css/lml.css" />
+<link rel="stylesheet" type="text/css" href="lib/css/jquery-ui-1.10.3.custom.css" />
+<link rel="stylesheet" type="text/css" href="lib/css/lml-print.css" media="print"/>
+<script src="lib/js/jquery-1.8.3.min.js" type="text/javascript"></script>
+<script src="lib/js/jquery.cluetip.min.js" type="text/javascript"></script>
+<script src="lib/js/jquery.tabsLite.js" type="text/javascript"></script>
+<script src="lib/js/jquery.dataTables.min.js" type="text/javascript"></script>
+<script src="lib/js/TableTools.min.js" type="text/javascript"></script>
+<script src="lib/js/lml.js" type="text/javascript"></script>
+<script src="lib/js/jquery-ui-1.10.3.custom.min.js" type="text/javascript"></script>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+</head>
+<body>
 <div id="logoframe">
     <a href="#"><img src="lib/images/LabManagerLightlogo-small.png"/></a><br/>
 </div>
-&nbsp;
 <div id="tabs">
     <ul>
         <li><a href="#vm_overview">VM Overview</a></li>
@@ -70,9 +72,7 @@ print <<EOF;
         <li><a href="#tools">Tools</a></li>
         <li><a href="#config">Configuration</a></li>
     </ul>
-EOF
 
-print <<EOF;
     <div class="main_content" id="vm_overview">
         <div id="dialog"></div>
         <div class="error message" id="vm_action_error">
@@ -194,8 +194,8 @@ Debug( "Sorted host list: " . join( ",", @hosts ) );
 print <<EOF;
             </tbody></table>
             <div class="vm_action_panel">
-                <a id="detonate_button" class="button" href="#" title="Reinstall selected machines"><img src="lib/images/bomb.png" class="button_image">&nbsp;Detonate</a>
-                <a id="destroy_button" class="button confirm" href="#" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="lib/images/delete.png" class="button_image">&nbsp;Delete</a>
+                <a id="detonate_button" class="button" href="#" title="Reinstall selected machines"><img src="lib/images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
+                <a id="destroy_button" class="button confirm" href="#" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="lib/images/delete.png" class="button_image"/>&nbsp;Delete</a>
             </div>
         </form>
     </div>
@@ -213,12 +213,12 @@ print <<EOF;
               <table>
                 <tr>
                   <td style="width: 100%;">
-                    <h2 id="new_vm_progress_title">VM provisioning in progress <img src="lib/images/wait.gif"></h2>
+                    <h2 id="new_vm_progress_title">VM provisioning in progress <img src="lib/images/wait.gif"/></h2>
                     <h2 id="new_vm_success_title">VM was successfully created</h2>
                     <p id="info_message"></p>
                   </td>
                   <td>
-                    <img id="new_vm_screenshot" src="lib/images/placeholder.png" height="256" style="border: 1px solid #a0a0a0; opacity: 0.9;">
+                    <img id="new_vm_screenshot" src="lib/images/placeholder.png" height="256" style="border: 1px solid #a0a0a0; opacity: 0.9;"/>
                   </td>
                 </tr>
               </table>
@@ -231,7 +231,7 @@ print <<EOF;
                 <table>
                     <tr>
                         <td><p>Name</p></td>
-                        <td><input type="text" name="name"></td>
+                        <td><input type="text" name="name"/></td>
                     </tr>
                     <tr>
                         <td><p>ESX-Host</p></td>
@@ -249,19 +249,19 @@ print <<EOF;
                     </tr>
                     <tr>
                         <td><p>Username</p></td>
-                        <td><input type="text" name="username"></td>
+                        <td><input type="text" name="username"/></td>
                     </tr>
                     <tr>
                         <td><p>Expiration date</p></td>
-                        <td><input type="text" name="expiration"></td>
+                        <td><input type="text" name="expiration"/></td>
                     </tr>
                     <tr>
                         <td><p>Target folder</p></td>
-                        <td><input type="text" name="folder"></td>
+                        <td><input type="text" name="folder"/></td>
                     </tr>
                     <tr>
                         <td colspan="2">
-                            <input type="submit" value="Create">
+                            <input type="submit" value="Create"/>
                         </td>
                     </tr>
                 </table>
@@ -328,14 +328,12 @@ print <<EOF;
     </div>
 EOF
 
-my $conffiles = "<ol>\n\t<li>" . join( "</li>\n\t<li>", @CONFIGFILES ) . "</li>\n</ol>\n";
+my $conffiles = "<ol>\n\t<li><code>" . join( "</code></li>\n\t<li><code>", @CONFIGFILES ) . "</code></li>\n</ol>\n";
 print <<EOF;
 	<div class="main_content" id="config">
-		<p>The config files are 
-		<code>
+		<p>The config files are</p> 
 		$conffiles
-		</code>
-		and this is the <strong>merged</strong> result of all config files:</p>
+		<p>and this is the <strong>merged</strong> result of all config files:</p>
 		<pre>
 EOF
 # mask password in config dump

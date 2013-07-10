@@ -28,6 +28,9 @@
 }
 
 /* tabs */
+#tabs {
+    margin-top: 25px;
+}
 .main_content {
 	overflow: auto;
 }

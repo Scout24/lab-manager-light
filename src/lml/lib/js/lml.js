@@ -1,5 +1,5 @@
 var framework_height = 130;
-var framework_datatables_height = framework_height + 100;
+var framework_datatables_height = framework_height + 110;
 var min_window_height = 500;
 
 /* customize above */
