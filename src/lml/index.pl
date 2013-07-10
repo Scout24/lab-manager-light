@@ -38,24 +38,24 @@ my $LAB = new LML::Lab( $C->labfile );
 
 print header();
 print start_html(
-                  -title  => $C->get( "vsphere", "server" ) . " Lab Manager Light",
-                  -script => [
-                               { -src => "lib/js/jquery-1.8.3.min.js" },
-                               { -src => "lib/js/jquery.cluetip.min.js" },
-                               { -src => "lib/js/jquery.tabsLite.js" },
-                               { -src => "lib/js/jquery.dataTables.min.js" },
-                               { -src => "lib/js/TableTools.min.js" },
-                               { -src => "lib/js/lml.js" },
-                               { -src => "lib/js/jquery-ui-1.10.3.custom.min.js" }
-                  ],
-                  -style => [
-                              { -src   => "lib/css/jquery.cluetip.css", },
-                              { -src   => "lib/css/jquery.dataTables.css", },
-                              { -src   => "lib/css/TableTools.css", },
-                              { -src   => "lib/css/lml.css", },
-                              { -src   => "lib/css/jquery-ui-1.10.3.custom.css", },
-                              { -media => "print", -src => "lib/css/lml-print.css" }
-                  ] );
+    -title  => $C->get( "vsphere", "server" ) . " Lab Manager Light",
+    -script => [
+                 { -src => "lib/js/jquery-1.8.3.min.js" },
+                 { -src => "lib/js/jquery.cluetip.min.js" },
+                 { -src => "lib/js/jquery.tabsLite.js" },
+                 { -src => "lib/js/jquery.dataTables.min.js" },
+                 { -src => "lib/js/TableTools.min.js" },
+                 { -src => "lib/js/lml.js" },
+                 { -src => "lib/js/jquery-ui-1.10.3.custom.min.js" },
+    ],
+    -style => [
+                { -src   => "lib/css/jquery.cluetip.css", },
+                { -src   => "lib/css/jquery.dataTables.css", },
+                { -src   => "lib/css/TableTools.css", },
+                { -src   => "lib/css/lml.css", },
+                { -src   => "lib/css/jquery-ui-1.10.3.custom.css", },
+                { -media => "print", -src => "lib/css/lml-print.css" },
+    ] );
 
 print <<EOF;
 <div id="logoframe">
@@ -91,8 +91,7 @@ print thead(
                  th( { -title => "Click to sort" }, "VM Path" ),
                  th( { -title => "Click to sort" }, "Contact User ID" ),
                  th( { -title => "Click to sort" }, "Expires" ),
-                 th( { -title => "Click to sort" }, "ESX Host" )
-             ) ) . "\n\n\t\t<tbody>\n";
+                 th( { -title => "Click to sort" }, "ESX Host" ) ) ) . "\n\n\t\t<tbody>\n";
 
 my $display_filter_vm_path = $C->get( "gui",          "display_filter_vm_path" );
 my $contactuser_field      = $C->get( "vsphere",      "contactuserid_field" );
@@ -131,39 +130,37 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
     }
     my $screenshot_url = "vmscreenshot.pl?stream=1;uuid=$uuid";
     print Tr(
-        { -id => $VM->{HOSTNAME} },
-        td [
-            checkbox(
-                -name  => "hosts",
-                -label => "",
-                -value => $VM->{HOSTNAME}
-            ) .
-            a( {
-                   -href    => "vmdata.pl/$uuid",
-                   -title   => "Details",
-                   -onclick => "return false;",
-                   -rel     => "vmdata.pl/$uuid",
-                   -class   => "tip vmhostname"
-                },
-                $VM->{HOSTNAME} )
-              . "\n"
-              . (
-                  $screenshot_enabled
-                  ? a( {
-                         -href    => $screenshot_url,
-                         -title   => "Screenshot",
-                         -onclick => "return false;",
-                         -rel     => $screenshot_url,
-                         -class   => "tip"
-                       },
-                       img( { -src => "lib/images/console_icon.png" } ) )
-                  : ""
-              ),
-            $display_vm_path,
-            span( { -title => get_gecos($contact_user_id) }, $contact_user_id ),
-            $expires,
-            $esxhost
-        ] ) . "\n\n";
+              { -id => $VM->{HOSTNAME} },
+              td [
+                   checkbox(
+                             -name  => "hosts",
+                             -label => "",
+                             -value => $VM->{HOSTNAME} )
+                     . a( {
+                             -href    => "vmdata.pl/$uuid",
+                             -title   => "Details",
+                             -onclick => "return false;",
+                             -rel     => "vmdata.pl/$uuid",
+                             -class   => "tip vmhostname"
+                          },
+                          $VM->{HOSTNAME} )
+                     . "\n"
+                     . (
+                         $screenshot_enabled
+                         ? a( {
+                                -href    => $screenshot_url,
+                                -title   => "Screenshot",
+                                -onclick => "return false;",
+                                -rel     => $screenshot_url,
+                                -class   => "tip"
+                              },
+                              img( { -src => "lib/images/console_icon.png" } ) )
+                         : ""
+                     ),
+                   $display_vm_path,
+                   span( { -title => get_gecos($contact_user_id) }, $contact_user_id ),
+                   $expires, $esxhost
+              ] ) . "\n\n";
 }
 
 # get a list of available host systems
@@ -171,11 +168,10 @@ sub hostFairness($) {
     # See https://www.vmware.com/support/developer/vc-sdk/visdk2xpubs/ReferenceGuide/vim.host.Summary.QuickStats.html
     # for an explanation of the Fairness values. As a first approximation we simply add the values here.
     my $h = shift;
-    return 0 unless (exists($LAB->{ESXHOSTS}->{$h}->{"quickStats"}));
+    return 0 unless ( exists( $LAB->{ESXHOSTS}->{$h}->{"quickStats"} ) );
     my $fairness = (
-        abs(1000-$LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedCpuFairness"}) + 
-        abs(1000-$LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedMemoryFairness"})
-        ) / 2;
+                     abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedCpuFairness"} ) +
+                       abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedMemoryFairness"} ) ) / 2;
     Debug("Host Fairness for $h is $fairness");
     return $fairness;
 }
@@ -183,17 +179,17 @@ sub hostFairness($) {
 sub displayHost($) {
     # display ESX host together with CPU and MEM usage
     my $h = shift;
-    return $h unless (exists($LAB->{ESXHOSTS}->{$h}->{"quickStats"}));
-    return sprintf("%s (%d GHz CPU, %d GB MEM used)",
-            $h,
-            $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallCpuUsage"}/1024,
-            $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallMemoryUsage"}/1024
-            );
+    return $h unless ( exists( $LAB->{ESXHOSTS}->{$h}->{"quickStats"} ) );
+    return
+      sprintf( "%s (%d GHz CPU, %d GB MEM used)",
+               $h,
+               $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallCpuUsage"} / 1024,
+               $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallMemoryUsage"} / 1024 );
 }
 
 # sorted list of hosts, fairest first. Fair means highest fairness (sort descending)
-my @hosts = sort {hostFairness($b) <=> hostFairness($a)} keys(%{$LAB->{ESXHOSTS}});
-Debug("Sorted host list: ".join(",",@hosts));
+my @hosts = sort { hostFairness($b) <=> hostFairness($a) } keys( %{ $LAB->{ESXHOSTS} } );
+Debug( "Sorted host list: " . join( ",", @hosts ) );
 
 print <<EOF;
             </tbody></table>
@@ -294,19 +290,24 @@ print thead(
                  th( { -title => "Click to sort" }, "Product" ),
              ) ) . "\n\n    <tbody>\n";
 
-foreach my $name (@hosts ) {
+foreach my $name (@hosts) {
     my $HOST = $LAB->{ESXHOSTS}->{$name};
     Debug( "Handling " . Data::Dumper->Dump( [$HOST] ) );
     print Tr(
-        { -id => $name }, td [
-            $name,
-            sprintf("%.2f / %.0f",$HOST->{"quickStats"}->{"overallCpuUsage"}/1024,$HOST->{"hardware"}->{"cpuMhz"}*$HOST->{"hardware"}->{"numCpuCores"}/1024),
-            sprintf("%.2f / %.0f",$HOST->{"quickStats"}->{"overallMemoryUsage"}/1024,$HOST->{"hardware"}->{"memorySize"}/1024/1024/1024),
-            hostFairness($name),
-            span({style=>"font-size: 60%"},join("<br/>",@{$HOST->{"networks"}})),
-            $HOST->{"hardware"}->{"vendor"}." ".$HOST->{"hardware"}->{"model"},
-            $HOST->{"product"}->{"fullName"},
-        ] ) . "\n\n";    
+              { -id => $name },
+              td [
+                   $name,
+                   sprintf( "%.2f / %.0f",
+                            $HOST->{"quickStats"}->{"overallCpuUsage"} / 1024,
+                            $HOST->{"hardware"}->{"cpuMhz"} * $HOST->{"hardware"}->{"numCpuCores"} / 1024 ),
+                   sprintf( "%.2f / %.0f",
+                            $HOST->{"quickStats"}->{"overallMemoryUsage"} / 1024,
+                            $HOST->{"hardware"}->{"memorySize"} / 1024 / 1024 / 1024 ),
+                   hostFairness($name),
+                   span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"networks"} } ) ),
+                   $HOST->{"hardware"}->{"vendor"} . " " . $HOST->{"hardware"}->{"model"},
+                   $HOST->{"product"}->{"fullName"},
+              ] ) . "\n\n";
 }
 print <<EOF;
     </tbody></table>
