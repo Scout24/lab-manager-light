@@ -333,6 +333,8 @@ sub get_hosts {
                                      "hardware" => { %{ $e->get_property("summary.hardware") } },
                                      "networks" => [],
             };
+            # some systems have extra info which remains blessed after the get_property
+            delete($HOSTS{ $e->{name} }{"hardware"}{"otherIdentifyingInfo"});
         }
         
         # add networks to host data
@@ -345,6 +347,9 @@ sub get_hosts {
     return \%HOSTS;
 }
 
+sub HostSystemIdentificationInfo::deserialize {
+    # this is temporarily here to fix a bug
+}
 ################################ sub #################
 ##
 ## get_hosts
