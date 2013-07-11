@@ -15,7 +15,7 @@ use vars qw(
 );
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(remove_forceboot);
+our @EXPORT = qw(remove_forceboot set_forceboot);
 
 use LML::Common;
 use LML::Config;
@@ -23,6 +23,25 @@ use Carp;
 use Data::Dumper;
 use LML::VMware;
 use LML::VM;
+
+sub set_forceboot {
+    my ( $C, $uuid ) = @_;
+
+    if ( my $forceboot_field = $C->get( "vsphere", "forceboot_field" ) ) {
+        if ( my $VM = new LML::VM($uuid) ) {
+            # Set forceboot to ON
+            return setVmCustomValueU( $uuid, $forceboot_field, 'ON' );
+        } else {
+            # Bail out if not VM data available, probably no VM for this uuid
+            Debug("No VM data for uuid '$uuid' found.");
+            return 0;
+        }
+    } else {
+        # Bail out if not VM data available, probably no VM for this uuid
+        Debug("[vsphere] forceboot_field not set.");
+        return 0;
+    }
+}
 
 sub remove_forceboot {
     my ( $C, $uuid ) = @_;
@@ -55,7 +74,6 @@ sub remove_forceboot {
         Debug("[vsphere] forceboot_field not set.");
         return 0;
     }
-
 }
 
 1;

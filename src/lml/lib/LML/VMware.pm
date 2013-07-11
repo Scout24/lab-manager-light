@@ -13,9 +13,8 @@ use vars qw(
   @EXPORT
 );
 
-our @ISA = qw(Exporter);
-our @EXPORT =
-  qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+our @ISA    = qw(Exporter);
+our @EXPORT = qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM perform_destroy perform_poweroff perform_reboot);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -39,10 +38,7 @@ my %DATASTOREIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
-my $VM_PROPERTIES = [
-                      "name",            "config.name",            "config.uuid", "config.extraConfig",
-                      "config.template", "config.hardware.device", "customValue", "runtime.host",
-];
+my $VM_PROPERTIES = [ "name", "config.name", "config.uuid", "config.extraConfig", "config.template", "config.hardware.device", "customValue", "runtime.host", ];
 
 my %DVP_PORT_GROUP_NAMES;
 # lookup and cache port group names of DistributedVirtualSwitches
@@ -50,12 +46,12 @@ sub dvp_to_name($) {
     my $portgroupkey = shift;
     if ( !exists( $DVP_PORT_GROUP_NAMES{$portgroupkey} ) ) {
         $DVP_PORT_GROUP_NAMES{$portgroupkey} = Vim::get_view(
-                                                              mo_ref =>
-                                                                new ManagedObjectReference(
-                                                                                            type  => "DistributedVirtualPortgroup",
-                                                                                            value => $portgroupkey
-                                                                ),
-                                                              properties => ["config.name"] )->get_property("config.name");
+                                                              mo_ref => new ManagedObjectReference(
+                                                                                                    type  => "DistributedVirtualPortgroup",
+                                                                                                    value => $portgroupkey
+                                                              ),
+                                                              properties => ["config.name"]
+        )->get_property("config.name");
         Debug("Cached $portgroupkey = $DVP_PORT_GROUP_NAMES{$portgroupkey}");
     }
     return $DVP_PORT_GROUP_NAMES{$portgroupkey};
@@ -244,13 +240,13 @@ sub get_datastores {
         foreach my $e ( @{$datastoreEntityViews} ) {
             my $id = $e->{mo_ref}->value;
             $DATASTOREIDS{$id} = {
-                                   "id"    => $id,
-                                   "name"  => $e->{name},
-                                   # TODO: Limit do r/w mounted and usable, e.g. with if ($_->{mountInfo}->{accessible} and $_->{mountInfo}->{mounted} and $_->{mountInfo}->{accessMode} eq 'readWrite')
-                                   "hosts" => [ map { $_->{key}->{value} } @{ $e->{host} } ],
-                                   "vm" => [ map { $_->{value} } @{ $e->{vm} } ],
-                                   "freespace" => $e->{info}->{freeSpace},
-                                   "capacity" => exists($e->{info}->{vmfs}) ? $e->{info}->{vmfs}->{capacity} : "NOT YET IMPLEMENTED for ".$e->{info}->{url},
+                "id"   => $id,
+                "name" => $e->{name},
+                # TODO: Limit do r/w mounted and usable, e.g. with if ($_->{mountInfo}->{accessible} and $_->{mountInfo}->{mounted} and $_->{mountInfo}->{accessMode} eq 'readWrite')
+                "hosts"     => [ map { $_->{key}->{value} } @{ $e->{host} } ],
+                "vm"        => [ map { $_->{value} } @{ $e->{vm} } ],
+                "freespace" => $e->{info}->{freeSpace},
+                "capacity" => exists( $e->{info}->{vmfs} ) ? $e->{info}->{vmfs}->{capacity} : "NOT YET IMPLEMENTED for " . $e->{info}->{url},
             };
         }
     }
@@ -280,7 +276,8 @@ sub get_networks {
         my $networkEntityViews = Vim::find_entity_views(
                                                          view_type    => "Network",
                                                          begin_entity => Vim::get_service_content()->rootFolder,
-                                                         properties   => [ "name", "host" ] );
+                                                         properties   => [ "name", "host" ]
+        );
         foreach my $e ( @{$networkEntityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "Network" ] ) );
             my $id = $e->{mo_ref}->value;
@@ -318,7 +315,8 @@ sub get_networks {
         my $dvPortGroupEntityViews = Vim::find_entity_views(
                                                              view_type    => "DistributedVirtualPortgroup",
                                                              begin_entity => Vim::get_service_content()->rootFolder,
-                                                             properties   => [ "name", "host" ] );
+                                                             properties   => [ "name", "host" ]
+        );
 
         foreach my $e ( @{$dvPortGroupEntityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["DistributedVirtualPortgroup"] ) );
@@ -355,7 +353,8 @@ sub get_hosts {
         my $entityViews = Vim::find_entity_views(
                                                   view_type    => "HostSystem",
                                                   begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => [ "name", "config.product", "summary.quickStats", "summary.hardware" ] );
+                                                  properties   => [ "name", "config.product", "summary.quickStats", "summary.hardware" ]
+        );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "host" ] ) );
             $HOSTIDS{ $e->{mo_ref}->value } = $e->{name};
@@ -379,7 +378,7 @@ sub get_hosts {
                 push( @{ $HOSTS{ $HOSTIDS{$hid} }{"networks"} }, $network->{"name"} );
             }
         }
-        
+
         # add datastores to host data
         while ( my ( $did, $datastore ) = each(%DATASTOREIDS) ) {
             foreach my $hid ( @{ $datastore->{hosts} } ) {
@@ -414,12 +413,11 @@ sub get_hostids {
 
 sub get_vm_data {
     my $uuid = shift;
-    my $object =
-      Vim::find_entity_view(
-                             view_type  => 'VirtualMachine',
-                             filter     => { 'config.uuid' => $uuid },
-                             properties => $VM_PROPERTIES
-      );
+    my $object = Vim::find_entity_view(
+                                        view_type  => 'VirtualMachine',
+                                        filter     => { 'config.uuid' => $uuid },
+                                        properties => $VM_PROPERTIES
+    );
 
     return retrieve_vm_details($object);
 }
@@ -597,11 +595,94 @@ sub setVmCustomValueU {
     }
 }
 
+sub perform_reboot {
+    my ( $C, $uuid ) = @_;
+
+    # Get vm view
+    my $vm_view = Vim::find_entity_view(
+                                         view_type  => 'VirtualMachine',
+                                         filter     => { "config.uuid" => $uuid },
+                                         properties => [],                           # don't need any properties to set custom value
+    );
+
+    # Did we get an view?
+    if ($vm_view) {
+        # Reboot the VM
+        return $vm_view->RebootGuest();
+    } else {
+        return 0;
+    }
+}
+
+sub perform_destroy {
+    my ( $C, $uuid ) = @_;
+
+    # Get vm view
+    my $vm_view = Vim::find_entity_view(
+                                         view_type  => 'VirtualMachine',
+                                         filter     => { "config.uuid" => $uuid },
+                                         properties => [],                           # don't need any properties to set custom value
+    );
+
+    # Did we get an view?
+    if ($vm_view) {
+        # Destroy the VM
+        eval { $vm_view->Destroy(); };
+
+        # Check the success
+        if ($@) {
+            Debug("SDK destroy command exited abnormally");
+            return 0;
+        }
+
+        # Finally cleanup the lab configuration to do not show this machine again
+        my $LAB = new LML::Lab( $C->labfile );
+        $LAB->remove($uuid);
+        $LAB->write_file( "by " . __FILE__ );
+
+        # And additionally remove the machine from dhcp configuration
+        if ( LML::DHCP::UpdateDHCP( $C, $LAB ) ) {
+            Debug("DHCP update for uuid $uuid exited with errors");
+            return 0;
+        }
+
+    } else {
+        return 0;
+    }
+}
+
+sub perform_poweroff {
+    my ( $C, $uuid ) = @_;
+
+    # Get vm view
+    my $vm_view = Vim::find_entity_view(
+                                         view_type  => 'VirtualMachine',
+                                         filter     => { "config.uuid" => $uuid },
+                                         properties => [],                           # don't need any properties to set custom value
+    );
+
+    # Did we get an view?
+    if ($vm_view) {
+        # Reboot the VM
+        eval { $vm_view->PowerOffVM(); };
+
+        # Check the success
+        if ($@) {
+            Debug("SDK PowerOffVM command exited abnormally");
+            return 0;
+        }
+
+    } else {
+        Debug("Could not retrieve vm view for uuid $uuid");
+        return 0;
+    }
+}
+
 END {
     if ( defined &Util::disconnect ) {
         # if we have VMware code loaded then disconnect when dying.
         Util::disconnect();
-        #Debug("Disconnected from vSphere");
+        Debug("Disconnected from vSphere");
     }
 }
 

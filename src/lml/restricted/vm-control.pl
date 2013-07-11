@@ -1,10 +1,10 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
-# Purpose: Deletes an single VM identified by the uuid. The machine will be powered off if still on
-#          and then the machine will be completely deleted including the files in datastore
+# Purpose: Deletes single or multiple VM(s) identified by their name. The machine(s) will be
+#          powered off if still on and then the machine(s) will be completely deleted including
+#          the files in datastore
 #
-# Authors:
-#     Stefan Neben <stefan.neben@gmail.com>
+# License: GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full text
 
 use strict;
 use warnings;
@@ -14,135 +14,123 @@ use lib "$FindBin::Bin/../lib";
 
 use CGI ':standard';
 use JSON;
+use Getopt::Long;
 
 use LML::Common;
 use LML::Config;
 use LML::DHCP;
 use LML::Lab;
 use LML::VMware;
+use LML::VMmodify;
 
-$Util::script_version = "1.0";
-
-# initialization
+# Initialization
 my $header_sent = 0;
 my $action;
-my @VMS;
+my $action_detonate;
+my $action_destroy;
+my $show_help;
+my @vm_names;
 my @processed_hosts;
 
-# get the lml configuration
+# Get the lml configuration
 my $C = new LML::Config();
 
-# are we in CGI context?
+# Are we in CGI context?
 if ( param('action') ) {
-    # get the action
-    $action = param('action');
+    # Get the action
+    if ( param('action') eq 'detonate' ) {
+        $action_detonate = 1;
 
-    # assemble hosts array if existent
+    } elsif ( param('action') eq 'destroy' ) {
+        $action_destroy = 1;
+    }
+
+    # Assemble hosts array if existent
     if ( param('hosts') ) {
-        @VMS = param('hosts');
+        @vm_names = param('hosts');
     } else {
         print header( -status => '400 No hosts given (hosts=)' );
         print "No hosts were selected";
         exit 0;
     }
 
-    # ok commandline context
+    # Ok commandline context
 } else {
-    # define own options over the vmware api
-    my %opts = (
-                 detonate => {
-                               type     => "",
-                               help     => "The action to be executed for the given vm",
-                               required => 0
-                 },
-                 destroy => {
-                              type     => "",
-                              help     => "The name of the vm to be destroyed",
-                              required => 0
-                 }
+    # Get the long commandline options
+    GetOptions(
+                "detonate" => \$action_detonate,
+                "destroy"  => \$action_destroy,
+                "help"     => \$show_help
     );
 
-    # parse the options through vmware api
-    Opts::add_options(%opts);
-    Opts::parse();
+    # Just print the usage if the option is set and then quit
+    if ($show_help) {
+        print_usage();
+        exit 1;
+    }
 
-    # get the vm name
-    if (@ARGV or Opts::get_option('help')) {
-        # check the command option consistence
-        if ( Opts::get_option('detonate') && Opts::get_option('destroy') ) {
-            error("The option --reinstall and --destroy can not be used at the same time, quit ...");
+    # Get the vm name
+    if (@ARGV) {
+        # Check the command option consistence
+        if ( $action_detonate && $action_destroy ) {
+            error("The option --detonate and --destroy can not be used at the same time, quit ...");
         }
 
-        # save the delivered action
-        if ( Opts::get_option('detonate') ) {
-            $action = 'detonate';
-        } elsif ( Opts::get_option('destroy') ) {
-            $action = 'destroy';
-        } else {
+        # Check if paramter assembly is correct
+        if ( not $action_detonate && not $action_destroy ) {
             error("No option --reinstall or --destroy is given! Exit...");
         }
 
-        # save the delivered hostname(s)
+        # Save the delivered hostname(s)
         foreach (@ARGV) {
-            push( @VMS, $_ );
+            push( @vm_names, $_ );
         }
 
-        # if no vm name is given
+        # If no vm name is given
     } else {
-        error("The name of the vm is not defined, quit ...");
+        error("The name of the vm(s) is not given, quit ...");
     }
 }
 
-# connect to VMware
+# Connect to VMware
 connect_vi();
 
-foreach my $vm_name (@VMS) {
-    # get the view of the vm to work with
-    my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
-                                         filter    => { 'name' => $vm_name } ,
-                                         properties => [ "name", "config.uuid" ]);
+foreach my $vm_name (@vm_names) {
+    # Translate the vm name to its uuid
+    my $vm_uuid = translate_vmname_to_uuid($vm_name);
 
-    # check the success
-    if ( not defined $vm_view ) {
-        error("Unable to get view for vm \"$vm_name\", quit ...");
+    # Check the success
+    if ( not $vm_uuid ) {
+        error("Unable to find entry in lab file for vm \"$vm_name\", quit ...");
     }
 
-    if ( $action eq "detonate" ) {
-        # set the forceboot value to ON
-        set_forceboot( name => $vm_name,
-                       view => $vm_view );
-        # reboot the vm
-        reboot_vm( name => $vm_name,
-                   view => $vm_view );
-        # add the processed machine to the processed array
-        push( @processed_hosts, $vm_name );
+    if ($action_detonate) {
+        # Set the forceboot value to ON
+        set_forceboot( $C, $vm_uuid );
 
-    } elsif ( $action = 'destroy' ) {
-        # switch off the vm
-        poweroff_vm( name => $vm_name,
-                     view => $vm_view );
-        # finally destroy the vm
-        destroy_vm( name => $vm_name,
-                    view => $vm_view );
-        # add the processed machine to the processed array
-        push( @processed_hosts, $vm_name );
+        # Reboot the vm
+        reboot_vm( $C, $vm_uuid );
+
+    } elsif ($action_destroy) {
+        # Switch off the vm
+        poweroff_vm( $C, $vm_uuid );
+
+        # Finally destroy the vm
+        destroy_vm( $C, $vm_uuid );
     }
 }
 
-# print an HTML success header if we are in CGI context
+# Print an HTML success header if we are in CGI context
 if ( exists $ENV{GATEWAY_INTERFACE} ) {
     print header( -status => '200 vm created' );
 }
 
-# print out json formatted array
-print encode_json( \@processed_hosts ) . "\n";
-
-# compose a error output
+# Compose a error output
 sub error {
     my $message   = shift;
     my $linebreak = "\n";
 
-    # print html header before anything else if CGI is used
+    # Print html header before anything else if CGI is used
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
         print header( -status => '500 $message' );
         $linebreak = "<br>";
@@ -150,92 +138,34 @@ sub error {
 
     print $message. $linebreak;
 
-    Util::disconnect();
     exit 1;
 }
 
-sub destroy_vm {
-    my %args = @_;
+# Translate the given name to the appropriate uuid.
+# Make use of our lab file as data source
+sub translate_vmname_to_uuid {
+    my $vm_name = shift;
+    my $vm_uuid;
 
-    # get vm view
-    my $vm_view = $args{view};
-
-    # get the uuid of the vm to be destroyed
-    my $uuid = $vm_view->get_property("config.uuid");
-
-    # destroy the vm
-    eval { $vm_view->Destroy(); };
-
-    # check the success
-    if ($@) {
-        error( "Error destroying VM: " . ref( $@->detail ) );
-    }
-
-    # finally cleanup the lab configuration to do not show this machine again
+    # Get an object of our lab file
     my $LAB = new LML::Lab( $C->labfile );
-    $LAB->remove($uuid);
-    $LAB->write_file( "by " . __FILE__ );
 
-    # and additionally remove the machine from dhcp configuration
-    my @error = LML::DHCP::UpdateDHCP( $C, $LAB );
-
-    # if errors occured, print them out
-    if ( scalar(@error) ) {
-        error( "Error destroying VM: " . join( ', ', @error ) );
-    }
-}
-
-sub poweroff_vm {
-    my %args = @_;
-
-    # get vm view
-    my $vm_view = $args{view};
-
-    # poweroff the vm
-    eval { $vm_view->PowerOffVM(); };
-
-    # check the success
-    if ($@) {
-        error( "Error destroying VM: " . ref( $@->detail ) );
-    }
-}
-
-sub reboot_vm {
-    my %args = @_;
-
-    # get vm view
-    my $vm_view = $args{view};
-
-    # reboot the vm
-    eval { $vm_view->RebootGuest(); };
-
-    # check the success
-    if ($@) {
-        error( "Error rebooting VM: " . ref( $@->detail ) );
-    }
-}
-
-sub set_forceboot {
-    my %args = @_;
-
-    # get vm view
-    my $vm_view = $args{view};
-
-    # get view to service object for the custm field manager
-    my $customFieldsManager = Vim::get_view( mo_ref => Vim::get_service_content()->customFieldsManager );
-
-    # only if there are fields defined
-    if ( defined $customFieldsManager->{field} ) {
-        my $fields = $customFieldsManager->{field};
-
-        foreach my $field (@$fields) {
-            if ( $field->name eq $C->get( "vsphere", "forceboot_field" ) ) {
-                eval { $customFieldsManager->SetField( entity => $vm_view, key => $field->key, value => "ON" ); };
-                # check the success
-                if ($@) {
-                    error( "Error setting forceboot: " . ref( $@->detail ) );
-                }
-            }
+    # Loop through the lab file to find the correct vm
+    while ( my ( $uuid, $spec ) = each %{ $LAB->list_hosts() } ) {
+        if ( $spec->{HOSTNAME} eq $vm_name ) {
+            # Immediately return the found uuid, because we will only have one hit
+            return $uuid;
         }
     }
+
+    # Return error as default, if nothing was found
+    return 0;
 }
+
+sub print_usage {
+    print "vm-create.pl <OPTION> [vmname1, vmname2, ...]\n\n";
+
+    print "   --detonate \t\t Set forceboot and reboot the virtual machine\n";
+    print "   --destroy \t\t Wipe the vm completely\n";
+}
+
