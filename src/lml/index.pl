@@ -286,6 +286,7 @@ print thead(
                  th( { -title => "Click to sort" }, "MEM (GB)" ),
                  th( { -title => "Click to sort" }, "Fairness" ),
                  th( { -title => "Click to sort" }, "Networks" ),
+                 th( { -title => "Click to sort" }, "Datastores" ),
                  th( { -title => "Click to sort" }, "Hardware" ),
                  th( { -title => "Click to sort" }, "Product" ),
              ) ) . "\n\n    <tbody>\n";
@@ -305,6 +306,7 @@ foreach my $name (@hosts) {
                             $HOST->{"hardware"}->{"memorySize"} / 1024 / 1024 / 1024 ),
                    hostFairness($name),
                    span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"networks"} } ) ),
+                   span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"datastores"} } ) ),
                    $HOST->{"hardware"}->{"vendor"} . " " . $HOST->{"hardware"}->{"model"},
                    $HOST->{"product"}->{"fullName"},
               ] ) . "\n\n";

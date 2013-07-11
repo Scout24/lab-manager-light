@@ -15,7 +15,7 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(connect_vi get_all_vm_data get_vm_data get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
+  qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -35,6 +35,7 @@ my %CUSTOMFIELDS;
 my %HOSTIDS;
 my %HOSTS;
 my %NETWORKIDS;
+my %DATASTOREIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
@@ -228,6 +229,37 @@ sub get_custom_fields {
 
 ################################ sub #################
 ##
+## get_datastores
+##
+## returns a hash of id->data for datastores
+##
+
+sub get_datastores {
+    unless ( scalar( keys(%DATASTOREIDS) ) ) {
+        my $datastoreEntityViews = Vim::find_entity_views(
+            view_type    => "Datastore",
+            begin_entity => Vim::get_service_content()->rootFolder,
+            # not using properties => because we need various properties and their sub-properties.
+        );
+        foreach my $e ( @{$datastoreEntityViews} ) {
+            my $id = $e->{mo_ref}->value;
+            $DATASTOREIDS{$id} = {
+                                   "id"    => $id,
+                                   "name"  => $e->{name},
+                                   # TODO: Limit do r/w mounted and usable, e.g. with if ($_->{mountInfo}->{accessible} and $_->{mountInfo}->{mounted} and $_->{mountInfo}->{accessMode} eq 'readWrite')
+                                   "hosts" => [ map { $_->{key}->{value} } @{ $e->{host} } ],
+                                   "vm" => [ map { $_->{value} } @{ $e->{vm} } ],
+                                   "freespace" => $e->{info}->{freeSpace},
+                                   "capacity" => exists($e->{info}->{vmfs}) ? $e->{info}->{vmfs}->{capacity} : "NOT YET IMPLEMENTED for ".$e->{info}->{url},
+            };
+        }
+    }
+    Debug( Data::Dumper->Dump( [ \%DATASTOREIDS ], ["DATASTOREIDS"] ) );
+    return \%DATASTOREIDS;
+}
+
+################################ sub #################
+##
 ## get_networks
 ##
 ## returns a hash of id->data for networks
@@ -313,6 +345,9 @@ sub get_hosts {
     # initialize %NETWORKIDS
     get_networks();
 
+    # initialize %DATASTOREIDS
+    get_datastores();
+
     unless ( scalar( keys(%HOSTS) ) ) {
         # initialize HOSTIDS and HOSTS if they don't contain data
         %HOSTS   = ();
@@ -330,17 +365,25 @@ sub get_hosts {
                                      "name"       => $e->{name},
                                      "product"    => { %{ $e->get_property("config.product") } },
                                      "quickStats" => { %{ $e->get_property("summary.quickStats") } },
-                                     "hardware" => { %{ $e->get_property("summary.hardware") } },
-                                     "networks" => [],
+                                     "hardware"   => { %{ $e->get_property("summary.hardware") } },
+                                     "networks"   => [],
+                                     "datastores" => [],
             };
             # some systems have extra info which remains blessed after the get_property
-            delete($HOSTS{ $e->{name} }{"hardware"}{"otherIdentifyingInfo"});
+            delete( $HOSTS{ $e->{name} }{"hardware"}{"otherIdentifyingInfo"} );
+        }
+
+        # add networks to host data
+        while ( my ( $nid, $network ) = each(%NETWORKIDS) ) {
+            foreach my $hid ( @{ $network->{hosts} } ) {
+                push( @{ $HOSTS{ $HOSTIDS{$hid} }{"networks"} }, $network->{"name"} );
+            }
         }
         
-        # add networks to host data
-        while ( my ($nid,$network) = each(%NETWORKIDS)) {
-            foreach my $hid (@{$network->{hosts}}) {
-                push(@{$HOSTS{ $HOSTIDS{$hid} }{"networks"}},$network->{"name"});
+        # add datastores to host data
+        while ( my ( $did, $datastore ) = each(%DATASTOREIDS) ) {
+            foreach my $hid ( @{ $datastore->{hosts} } ) {
+                push( @{ $HOSTS{ $HOSTIDS{$hid} }{"datastores"} }, $datastore->{"name"} );
             }
         }
     }

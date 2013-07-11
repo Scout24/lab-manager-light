@@ -40,12 +40,14 @@ sub write_vm_file {
     close(VM_CONF);
 }
 
-sub maintain_labfile($$$) {
+sub maintain_labfile($$$$$) {
     # initialize needed variables
-    my $C = shift;
+    my ($C, $VM_ALL, $HOSTS, $NETWORKS, $DATASTORES)  = @_;
     carp( "1st argument must be LML::Config object and not " . ref($C) ) unless ( ref($C) eq "LML::Config" );
-    my $VM_ALL  = shift;         # this is a hash of LML::VM data structures
-    my $ESX_ALL = shift;       # this is a hash of ESX hosts
+    carp( "2st argument must be VM Hash and not " . ref($VM_ALL) ) unless ( ref($VM_ALL) eq "HASH" );
+    carp( "3st argument must be HOSTS Hash object and not " . ref($HOSTS) ) unless ( ref($HOSTS) eq "HASH" );
+    carp( "4st argument must be NETWORKS Hash object and not " . ref($NETWORKS) ) unless ( ref($NETWORKS) eq "HASH" );
+    carp( "5st argument must be DATASTORES Hash object and not " . ref($DATASTORES) ) unless ( ref($DATASTORES) eq "HASH" );
     my $labfile = $C->labfile;
     my @error   = ();
 
@@ -66,8 +68,11 @@ sub maintain_labfile($$$) {
         }
     }
 
-    # first update the info about ESX hosts
-    $LAB->update_hosts($ESX_ALL);
+    # first update the info about Hosts, Networks and Datastores
+    $LAB->update_hosts($HOSTS);
+    $LAB->update_networks($NETWORKS);
+    $LAB->update_datastores($DATASTORES);
+    
     # always write LAB file, also creates new one if it did not exist before
     $LAB->write_file( "by " . __FILE__ );
 
@@ -92,8 +97,9 @@ unless (caller) {
     my @error   = ();
 
     # get info about all ESX hosts
-    my $ESX = get_hosts();
-    
+    my $HOSTS = get_hosts();
+    my $NETWORKS = get_networks();
+    my $DATASTORES = get_datastores();
     # get a complete dump from vSphere - this is expensive and takes some time
     my $VM = get_all_vm_data();
     
@@ -102,7 +108,7 @@ unless (caller) {
 
     # $LAB describes our internal view of the lab that lml manages
     # used mainly to react to renamed VMs or VMs with changed MAC adresses
-    push( @error, maintain_labfile( $C, $VM, $ESX ) );
+    push( @error, maintain_labfile( $C, $VM, $HOSTS, $NETWORKS, $DATASTORES ) );
 
     # if errors occured, print them out
     if ( scalar(@error) ) {
