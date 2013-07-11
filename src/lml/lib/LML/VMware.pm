@@ -240,18 +240,22 @@ sub get_datastores {
         foreach my $e ( @{$datastoreEntityViews} ) {
             my $id = $e->{mo_ref}->value;
             $DATASTOREIDS{$id} = {
-                "id"   => $id,
-                "name" => $e->{name}, 
+                "id"    => $id,
+                "name"  => $e->{name},
                 "hosts" => [
                     map { $_->{key}->{value} } grep {
                         # filter datastores to those that are really usable right now
                         # TODO: Test degraded scenarios and find out if this is a good idea or not
-                              $_->{mountInfo}->{accessible}
+                        $_->{mountInfo}->{accessible}
                           and $_->{mountInfo}->{mounted}
                           and $_->{mountInfo}->{accessMode} eq 'readWrite'
                       } @{ $e->{host} }
                 ],
-                "vm"        => [ map { $_->{value} } @{ $e->{vm} } ],
+                "vm" => [
+                    map {
+                        $_->{value}
+                      } @{ $e->{vm} }
+                ],
                 "freespace" => $e->{info}->{freeSpace},
                 "capacity"  => exists( $e->{info}->{vmfs} )
                 ? $e->{info}->{vmfs}->{capacity}
@@ -597,7 +601,7 @@ sub setVmCustomValueU {
     my $vm_view = Vim::find_entity_view(
                                          view_type  => 'VirtualMachine',
                                          filter     => { "config.uuid" => $uuid },
-                                         properties => [],                           # don't need any properties to set custom value
+                                         properties => []                            # don't need any properties to set custom value
     );
     if ($vm_view) {
         return setVmCustomValue( $vm_view, $key, $value );
@@ -605,32 +609,38 @@ sub setVmCustomValueU {
 }
 
 sub perform_reboot {
-    my ( $C, $uuid ) = @_;
+    my ($uuid) = @_;
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(
                                          view_type  => 'VirtualMachine',
                                          filter     => { "config.uuid" => $uuid },
-                                         properties => [],                           # don't need any properties to set custom value
+                                         properties => []                            # don't need any properties to set custom value
     );
 
     # Did we get an view?
     if ($vm_view) {
         # Reboot the VM
-        return $vm_view->RebootGuest();
+        eval { $vm_view->RebootGuest(); };
+
+        if ($@) {
+            Debug("SDK RebootGuest command exited abnormally");
+            return 0;
+        }
+
     } else {
         return 0;
     }
 }
 
 sub perform_destroy {
-    my ( $C, $uuid ) = @_;
+    my ($uuid) = @_;
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(
                                          view_type  => 'VirtualMachine',
                                          filter     => { "config.uuid" => $uuid },
-                                         properties => [],                           # don't need any properties to set custom value
+                                         properties => []                            # don't need any properties to set custom value
     );
 
     # Did we get an view?
@@ -644,30 +654,19 @@ sub perform_destroy {
             return 0;
         }
 
-        # Finally cleanup the lab configuration to do not show this machine again
-        my $LAB = new LML::Lab( $C->labfile );
-        $LAB->remove($uuid);
-        $LAB->write_file( "by " . __FILE__ );
-
-        # And additionally remove the machine from dhcp configuration
-        if ( LML::DHCP::UpdateDHCP( $C, $LAB ) ) {
-            Debug("DHCP update for uuid $uuid exited with errors");
-            return 0;
-        }
-
     } else {
         return 0;
     }
 }
 
 sub perform_poweroff {
-    my ( $C, $uuid ) = @_;
+    my ($uuid) = @_;
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(
                                          view_type  => 'VirtualMachine',
                                          filter     => { "config.uuid" => $uuid },
-                                         properties => [],                           # don't need any properties to set custom value
+                                         properties => []                            # don't need any properties to set custom value
     );
 
     # Did we get an view?

@@ -97,26 +97,26 @@ connect_vi();
 
 foreach my $vm_name (@vm_names) {
     # Translate the vm name to its uuid
-    my $vm_uuid = translate_vmname_to_uuid($vm_name);
+    my $VM = get_vm_by_name($vm_name);
 
     # Check the success
-    if ( not $vm_uuid ) {
+    if ( not $VM ) {
         error("Unable to find entry in lab file for vm \"$vm_name\", quit ...");
     }
 
     if ($action_detonate) {
         # Set the forceboot value to ON
-        set_forceboot( $C, $vm_uuid );
+        set_forceboot( $C, $VM->uuid );
 
         # Reboot the vm
-        reboot_vm( $C, $vm_uuid );
+        $VM->reboot();
 
     } elsif ($action_destroy) {
         # Switch off the vm
-        poweroff_vm( $C, $vm_uuid );
+        $VM->poweroff();
 
         # Finally destroy the vm
-        destroy_vm( $C, $vm_uuid );
+        $VM->destroy();
     }
 }
 
@@ -143,18 +143,20 @@ sub error {
 
 # Translate the given name to the appropriate uuid.
 # Make use of our lab file as data source
-sub translate_vmname_to_uuid {
+sub get_vm_by_name {
     my $vm_name = shift;
-    my $vm_uuid;
 
     # Get an object of our lab file
     my $LAB = new LML::Lab( $C->labfile );
 
     # Loop through the lab file to find the correct vm
-    while ( my ( $uuid, $spec ) = each %{ $LAB->list_hosts() } ) {
-        if ( $spec->{HOSTNAME} eq $vm_name ) {
-            # Immediately return the found uuid, because we will only have one hit
-            return $uuid;
+    foreach my $uuid ( $LAB->list_hosts() ) {
+        # Try to get an vm object for the actual uuid
+        if ( my $VM = $LAB->get_vm($uuid) ) {
+            if ($VM->uuid eq $uuid) {
+                # Return the found vm object, if it is the one we looking for
+                return $VM;
+            }
         }
     }
 
