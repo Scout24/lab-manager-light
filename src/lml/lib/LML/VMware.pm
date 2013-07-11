@@ -244,13 +244,22 @@ sub get_datastores {
         foreach my $e ( @{$datastoreEntityViews} ) {
             my $id = $e->{mo_ref}->value;
             $DATASTOREIDS{$id} = {
-                                   "id"    => $id,
-                                   "name"  => $e->{name},
-                                   # TODO: Limit do r/w mounted and usable, e.g. with if ($_->{mountInfo}->{accessible} and $_->{mountInfo}->{mounted} and $_->{mountInfo}->{accessMode} eq 'readWrite')
-                                   "hosts" => [ map { $_->{key}->{value} } @{ $e->{host} } ],
-                                   "vm" => [ map { $_->{value} } @{ $e->{vm} } ],
-                                   "freespace" => $e->{info}->{freeSpace},
-                                   "capacity" => exists($e->{info}->{vmfs}) ? $e->{info}->{vmfs}->{capacity} : "NOT YET IMPLEMENTED for ".$e->{info}->{url},
+                "id"   => $id,
+                "name" => $e->{name}, 
+                "hosts" => [
+                    map { $_->{key}->{value} } grep {
+                        # filter datastores to those that are really usable right now
+                        # TODO: Test degraded scenarios and find out if this is a good idea or not
+                              $_->{mountInfo}->{accessible}
+                          and $_->{mountInfo}->{mounted}
+                          and $_->{mountInfo}->{accessMode} eq 'readWrite'
+                      } @{ $e->{host} }
+                ],
+                "vm"        => [ map { $_->{value} } @{ $e->{vm} } ],
+                "freespace" => $e->{info}->{freeSpace},
+                "capacity"  => exists( $e->{info}->{vmfs} )
+                ? $e->{info}->{vmfs}->{capacity}
+                : "NOT YET IMPLEMENTED for " . $e->{info}->{url},
             };
         }
     }
@@ -379,7 +388,7 @@ sub get_hosts {
                 push( @{ $HOSTS{ $HOSTIDS{$hid} }{"networks"} }, $network->{"name"} );
             }
         }
-        
+
         # add datastores to host data
         while ( my ( $did, $datastore ) = each(%DATASTOREIDS) ) {
             foreach my $hid ( @{ $datastore->{hosts} } ) {
