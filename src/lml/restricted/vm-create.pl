@@ -19,7 +19,7 @@ use Data::Dumper;
 use LWP::Simple qw(get);
 use Getopt::Long;
 use LML::VMware;
-use LML::VMNetworks;
+use LML::VMnetworks;
 
 use LML::Config;
 my $C = new LML::Config();
@@ -228,7 +228,7 @@ sub create_vm {
     my $disk_vm_dev_conf_spec       = create_virtual_disk( ds_path => $ds_path, disksize => $$args{disksize} );
 
     # get all networks, which are related to this vm
-    my @vm_nics = LML::VMNetworks::find_networks(
+    my @vm_nics = LML::VMnetworks::find_networks(
                                                   vm_name          => $$args{vmname},
                                                   host_view        => $host_view,
                                                   catchall_network => $C->get( "network_policy", "catchall" ),

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-package LML::VMNetworks;
+package LML::VMnetworks;
 
 # generate a spec of a networkcard
 # ================================
