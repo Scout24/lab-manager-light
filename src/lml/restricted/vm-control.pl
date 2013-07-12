@@ -52,9 +52,9 @@ if ( param('action') ) {
         print "No hosts were selected";
         exit 0;
     }
-
-    # Ok commandline context
-} else {
+}
+# Ok commandline context
+else {
     # Get the long commandline options
     GetOptions(
                 "detonate" => \$action_detonate,
@@ -82,7 +82,7 @@ if ( param('action') ) {
 
         # Save the delivered hostname(s)
         foreach (@ARGV) {
-            push( @vm_names, $_ );
+            push @vm_names, $_;
         }
 
         # If no vm name is given
@@ -108,7 +108,7 @@ foreach my $vm_name (@vm_names) {
         set_forceboot( $C, $VM->uuid );
 
         # Reboot the vm
-        $VM->reboot();
+        $VM->reset();
 
     } elsif ($action_destroy) {
         # Switch off the vm
@@ -169,4 +169,3 @@ sub print_usage {
     print "   --detonate \t\t Set forceboot and reboot the virtual machine\n";
     print "   --destroy \t\t Wipe the vm completely\n";
 }
-

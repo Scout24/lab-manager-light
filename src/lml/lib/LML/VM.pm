@@ -28,7 +28,7 @@ sub new {
     } else {
 
         unless ($uuid) {
-            carp( "Give the VM uuid as arg to the constructor in " . ( caller(0) )[3] );
+            carp( "Give the VM uuid as arg to the constructor in " . ( caller 0 )[3] );
             return undef;
         }
         $self = get_vm_data($uuid);
@@ -38,7 +38,7 @@ sub new {
         }
     }
     $self->{filter_networks} = [];
-    bless( $self, $class );
+    bless $self, $class;
     return $self;
 }
 
@@ -87,12 +87,12 @@ sub customfields {
 sub get_macs {
     my $self = shift;
     return undef unless ( exists $self->{"MAC"} and ref( $self->{"MAC"} ) eq "HASH" );
-    return keys( %{ $self->{"MAC"} } );
+    return keys %{ $self->{"MAC"} };
 }
 
 sub set_networks_filter {
     my ( $self, @filter_networks ) = @_;
-    croak( "Give a list of networks to set filter in " . ( caller(0) )[3] ) unless (@filter_networks);
+    croak( "Give a list of networks to set filter in " . ( caller 0 )[3] ) unless (@filter_networks);
     Debug( "setting networks filter '" . join( ",", @filter_networks ) . "'" );
     $self->{filter_networks} = \@filter_networks;
 }
@@ -100,15 +100,15 @@ sub set_networks_filter {
 sub get_filtered_macs {
     my $self            = shift;
     my @filter_networks = @{ $self->{filter_networks} };
-    return $self->get_macs unless ( scalar(@filter_networks) );    #return filtered macs, no filter set means return all
+    return $self->get_macs unless ( scalar @filter_networks );    #return filtered macs, no filter set means return all
     my @matching_macs;
     for my $mac ( $self->get_macs ) {
         if ( grep { $self->{"MAC"}->{$mac} =~ qr(^$_$) } @filter_networks ) {
-            push( @matching_macs, $mac );
+            push @matching_macs, $mac;
         }
     }
     return @matching_macs if (wantarray);
-    return scalar(@matching_macs);
+    return scalar @matching_macs;
 }
 
 sub forcenetboot {
@@ -124,6 +124,11 @@ sub activate_forcenetboot {
 sub reboot {
     my $self = shift;
     return perform_reboot( $self->uuid );
+}
+
+sub reset {
+    my $self = shift;
+    return perform_reset( $self->uuid );
 }
 
 sub poweroff {

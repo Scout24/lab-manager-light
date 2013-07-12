@@ -44,7 +44,7 @@ my %DVP_PORT_GROUP_NAMES;
 # lookup and cache port group names of DistributedVirtualSwitches
 sub dvp_to_name($) {
     my $portgroupkey = shift;
-    if ( !exists( $DVP_PORT_GROUP_NAMES{$portgroupkey} ) ) {
+    if ( !exists $DVP_PORT_GROUP_NAMES{$portgroupkey} ) {
         $DVP_PORT_GROUP_NAMES{$portgroupkey} = Vim::get_view(
                                                               mo_ref => new ManagedObjectReference(
                                                                                                     type  => "DistributedVirtualPortgroup",
@@ -128,11 +128,11 @@ sub retrieve_vm_details ($) {
             }
 
             $VM_DATA{"MAC"}{$mac} = $net;
-            push( @vm_macs, { "MAC" => $mac, "NETWORK" => $net } );
+            push @vm_macs, { "MAC" => $mac, "NETWORK" => $net };
 
         }
     }
-    if ( scalar(@vm_macs) ) {
+    if ( scalar @vm_macs ) {
         $VM_DATA{"NETWORKING"} = \@vm_macs;
     }
     if ( $vm->customValue ) {
@@ -386,16 +386,16 @@ sub get_hosts {
         }
 
         # add networks to host data
-        while ( my ( $nid, $network ) = each(%NETWORKIDS) ) {
+        while ( my ( $nid, $network ) = each %NETWORKIDS ) {
             foreach my $hid ( @{ $network->{hosts} } ) {
-                push( @{ $HOSTS{ $HOSTIDS{$hid} }{"networks"} }, $network->{"name"} );
+                push @{ $HOSTS{ $HOSTIDS{$hid} }{"networks"} }, $network->{"name"};
             }
         }
 
         # add datastores to host data
-        while ( my ( $did, $datastore ) = each(%DATASTOREIDS) ) {
+        while ( my ( $did, $datastore ) = each %DATASTOREIDS ) {
             foreach my $hid ( @{ $datastore->{hosts} } ) {
-                push( @{ $HOSTS{ $HOSTIDS{$hid} }{"datastores"} }, $datastore->{"name"} );
+                push @{ $HOSTS{ $HOSTIDS{$hid} }{"datastores"} }, $datastore->{"name"};
             }
         }
     }
@@ -625,6 +625,31 @@ sub perform_reboot {
 
         if ($@) {
             Debug("SDK RebootGuest command exited abnormally");
+            return 0;
+        }
+
+    } else {
+        return 0;
+    }
+}
+
+sub perform_reset {
+    my ($uuid) = @_;
+
+    # Get vm view
+    my $vm_view = Vim::find_entity_view(
+                                         view_type  => 'VirtualMachine',
+                                         filter     => { "config.uuid" => $uuid },
+                                         properties => []                            # don't need any properties to set custom value
+    );
+
+    # Did we get an view?
+    if ($vm_view) {
+        # Reboot the VM
+        eval { $vm_view->ResetVM(); };
+
+        if ($@) {
+            Debug("SDK ResetVM command exited abnormally");
             return 0;
         }
 

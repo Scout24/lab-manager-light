@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib glob("{/opt/vmware/,/usr/lib/vmware-}vcli/?pps");    # the ? makes sure that only existing paths will match.
+use lib glob "{/opt/vmware/,/usr/lib/vmware-}vcli/?pps";    # the ? makes sure that only existing paths will match.
 use lib "$FindBin::RealBin/../lib";
 
 $Util::script_version = "1.0";
@@ -68,12 +68,12 @@ if ( exists $ENV{GATEWAY_INTERFACE} ) {
 
 # paramters must be set and valid!
 my $check_param = check_parameter(
-                                   vm_name         => $vm_name,
-                                   username        => $username,
-                                   expiration_date => $expiration_date,
-#                                   esx_host          => $esx_host,
-#                                   force_boot_target => $force_boot_target,
-#                                   vm_folder         => $vm_folder
+    vm_name         => $vm_name,
+    username        => $username,
+    expiration_date => $expiration_date,
+    #                                   esx_host          => $esx_host,
+    #                                   force_boot_target => $force_boot_target,
+    #                                   vm_folder         => $vm_folder
 );
 
 # was the paramter check unsuccessful?
@@ -97,52 +97,52 @@ create_vms(@vms);
 # represents a virtual machine to be created
 # ============================================
 sub generate_vms_array {
-    my %args              = @_;
+    my %args = @_;
 
     # assemble custom fields hash
     %custom_fields = (
                        'Contact User ID'   => $args{username},
                        'Expires'           => $args{expiration_date},
                        'Force Boot'        => 'ON',
-                       'Force Boot Target' => $args{force_boot_target}
+                       'Force Boot Target' => $args{force_boot_target},
     );
 
     # because it is possible that a machine don't exist in subversion we call
     # the generation now (temporary disabled)
-    get( sprintf( $C->get( "vm_spec", "host_announcement" ), $args{vm_name} ) );
+    get sprintf $C->get( "vm_spec", "host_announcement" ), $args{vm_name};
 
     # get now the json spec for this vm
-    my $answer = get( sprintf( $C->get( "vm_spec", "host_spec" ), $args{vm_name} ) );
+    my $answer = get sprintf $C->get( "vm_spec", "host_spec" ), $args{vm_name};
     # check if we got something from web call
     error( "ERROR: Unable to get JSON description file for VM " . $args{vm_name} ) unless defined $answer;
 
     # convert the HTML answer to pure json
-    $answer =~ s/<[^>]*>//g;
-    $answer =~ s/&quot;/"/g;
-    $answer =~ s/esx\.json//g;
+    $answer =~ s/<[^>]*>//gx;
+    $answer =~ s/&quot;/"/gx;
+    $answer =~ s/esx\.json//gx;
     # put the json structure to a perl data structure
     my $vm_spec = decode_json($answer);
 
     # strip down the real hostname from given fqdn
-    $args{esx_host} =~ /(^[^\.]+).*$/;
+    $args{esx_host} =~ /(^[^\.]+).*$/x;
     my $esx_host_name = $1;
 
     @vms = (
-             {
-               vmname        => $args{vm_name},
-               vmhost        => $args{esx_host},
-               datacenter    => $C->get( "vsphere", "datacenter" ),
-               guestid       => $guestid,
-               datastore     => $esx_host_name . ':datastore1',
-               disksize      => $vm_spec->{virtualMachine}->{diskSize},
-               memory        => $vm_spec->{virtualMachine}->{memory},
-               num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
-               custom_fields => \%custom_fields,
-               # Temporary deactivated (we using cmd or post data for this atm)
-               #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
-               target_folder => $args{vm_folder},
-               has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend}
-             }
+        {
+           vmname        => $args{vm_name},
+           vmhost        => $args{esx_host},
+           datacenter    => $C->get( "vsphere", "datacenter" ),
+           guestid       => $guestid,
+           datastore     => $esx_host_name . ':datastore1',
+           disksize      => $vm_spec->{virtualMachine}->{diskSize},
+           memory        => $vm_spec->{virtualMachine}->{memory},
+           num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
+           custom_fields => \%custom_fields,
+           # Temporary deactivated (we using cmd or post data for this atm)
+           #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
+           target_folder => $args{vm_folder},
+           has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend}
+        }
     );
 
     return @vms;
@@ -239,14 +239,14 @@ sub create_vm {
 
     # check the success and add the found networks
     if (@vm_nics) {
-        push( @vm_devices, @vm_nics );
+        push @vm_devices, @vm_nics;
 
     } else {
         error("ERROR: No networks for host '$$args{vmname}' found");
     }
 
-    push( @vm_devices, $controller_vm_dev_conf_spec );
-    push( @vm_devices, $disk_vm_dev_conf_spec );
+    push @vm_devices, $controller_vm_dev_conf_spec;
+    push @vm_devices, $disk_vm_dev_conf_spec;
 
     my $files = VirtualMachineFileInfo->new(
                                              logDirectory      => undef,
@@ -284,9 +284,9 @@ sub create_vm {
 
     # get the wished folder
     my $target_folder_view;
-    my @found = split( /\//, $$args{target_folder} );
+    my @found = split /\//x, $$args{target_folder};
     # remove any empty lines
-    @found = grep( /\S/, @found );
+    @found = grep /\S/x, @found;
     get_folder(
                 folder      => $datacenter_vm_folder,
                 found       => \@found,
@@ -357,7 +357,7 @@ sub get_folder {
     # are we in the target folder?
     if ( $folder->name eq ${$found}[0] ) {
         # cut the first found array element, if we are in that folder
-        shift( @{$found} );
+        shift @{$found};
         # do we have a hit?
         if ( not @{$found} ) {
             ${$target_view} = $folder;
@@ -479,8 +479,8 @@ sub check_parameter {
     # Check User-Name
     my $contactuserid_minuid = $C->get( "vsphere", "contactuserid_minuid" );
     my @pwnaminfo;
-    @pwnaminfo = getpwnam( $args{username} ) if ( $args{username} );
-    $result = $result . "invalid username" . $/ if ( !scalar(@pwnaminfo) or $pwnaminfo[2] < $contactuserid_minuid );
+    @pwnaminfo = getpwnam $args{username} if ( $args{username} );
+    $result = $result . "invalid username" . $/ if ( !scalar @pwnaminfo or $pwnaminfo[2] < $contactuserid_minuid );
 
     # TODO: Check force_boot_target
 
