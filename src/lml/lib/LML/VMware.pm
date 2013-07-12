@@ -14,7 +14,7 @@ use vars qw(
 );
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM perform_destroy perform_poweroff perform_reboot);
+our @EXPORT = qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM perform_destroy perform_poweroff perform_reboot perform_reset);
 
 use VMware::VIRuntime;
 use LML::Common;
