@@ -30,7 +30,6 @@ my $action_detonate;
 my $action_destroy;
 my $show_help;
 my @vm_names;
-my @processed_hosts;
 
 # Get the lml configuration
 my $C = new LML::Config();
@@ -78,7 +77,7 @@ if ( param('action') ) {
 
         # Check if paramter assembly is correct
         if ( not $action_detonate && not $action_destroy ) {
-            error("No option --reinstall or --destroy is given! Exit...");
+            error("No option --detonate or --destroy is given! Exit...");
         }
 
         # Save the delivered hostname(s)
@@ -153,7 +152,7 @@ sub get_vm_by_name {
     foreach my $uuid ( $LAB->list_hosts() ) {
         # Try to get an vm object for the actual uuid
         if ( my $VM = $LAB->get_vm($uuid) ) {
-            if ($VM->uuid eq $uuid) {
+            if ($VM->name eq $vm_name) {
                 # Return the found vm object, if it is the one we looking for
                 return $VM;
             }
