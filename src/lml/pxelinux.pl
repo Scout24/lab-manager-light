@@ -58,14 +58,14 @@ connect_vi();
 # read history to detect renamed VMs and to be able to update the DHCP
 my $LAB = new LML::Lab( $C->labfile );
 # find VM
-my $VM     = new LML::VM($search_uuid);
+my $VM = new LML::VM($search_uuid);
 my $result = new LML::Result( $C, url() );
 
 my @body;    # body to return to HTTP client
 
 # if there are VMs and if we find the VM we are looking for:
 if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
-    $vm_name       = $VM->name;
+    $vm_name = $VM->name;
     $append_domain = $C->get( "dhcp", "appenddomain" );
 
     # set redirect paramters
@@ -80,7 +80,9 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
         $Policy->handle_unmanaged();
 
-        $result->add_error( $Policy->validate_vm_name, $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones, $Policy->validate_contact_user, $Policy->validate_expiry, $Policy->validate_vm_dns_name($LAB), );
+        $result->add_error( $Policy->validate_vm_name,      $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones,
+                            $Policy->validate_contact_user, $Policy->validate_expiry,            $Policy->validate_vm_dns_name($LAB),
+        );
 
         $Policy->handle_forceboot($result);
 

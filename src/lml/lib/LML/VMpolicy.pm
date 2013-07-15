@@ -13,8 +13,8 @@ use LML::Lab;
 
 sub new {
     my ( $class, $config, $VM ) = @_;
-    croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Common::Config object" ) unless ( ref($config) eq "LML::Config" );
-    croak( "2nd parameter to " . ( caller(0) )[3] . " must be a LML::VMware::VM object" )     unless ( ref($VM)     eq "LML::VM" );
+    croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Config object" ) unless ( ref($config) eq "LML::Config" );
+    croak( "2nd parameter to " . ( caller(0) )[3] . " must be a LML::VM object" )     unless ( ref($VM)     eq "LML::VM" );
     my $self = {
                  Config => $config,
                  VM     => $VM,
