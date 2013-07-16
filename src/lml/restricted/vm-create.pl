@@ -227,15 +227,9 @@ sub create_vm {
     my $controller_vm_dev_conf_spec = create_conf_spec();
     my $disk_vm_dev_conf_spec       = create_virtual_disk( ds_path => $ds_path, disksize => $$args{disksize} );
 
-    # get all networks, which are related to this vm
-    my @vm_nics = LML::VMnetworks::find_networks(
-                                                  vm_name          => $$args{vmname},
-                                                  host_view        => $host_view,
-                                                  catchall_network => $C->get( "network_policy", "catchall" ),
-                                                  hostname_pattern => $C->get( "network_policy", "hostname_pattern" ),
-                                                  network_pattern  => $C->get( "network_policy", "network_pattern" ),
-                                                  has_frontend     => $$args{has_frontend}
-    );
+    # Get all networks, which are related to this vm
+    my $networks = new LML::VMnetworks( $C, $host_view );
+    my @vm_nics = $networks->find_networks( $$args{vmname} );
 
     # check the success and add the found networks
     if (@vm_nics) {

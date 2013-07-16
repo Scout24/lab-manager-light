@@ -1,7 +1,18 @@
+package LML::VMnetworks;
+
 use strict;
 use warnings;
 
-package LML::VMnetworks;
+sub new {
+    my ( $class, $config, $host_view ) = @_;
+
+    my $self = {
+                 config    => $config,
+                 host_view => $host_view,
+    };
+    bless $self, $class;
+    return $self;
+}
 
 # generate a spec of a networkcard
 # ================================
@@ -22,7 +33,7 @@ sub create_nic {
     my $vd_connect_info = VirtualDeviceConnectInfo->new(
                                                          allowGuestControl => 1,
                                                          connected         => 0,
-                                                         startConnected    => 1
+                                                         startConnected    => 1,
     );
 
     # now generate the network card (just a view atm)
@@ -45,92 +56,39 @@ sub create_nic {
 # Find all networks related to this vm
 # ====================================
 sub find_networks {
-    my %args = @_;
-    my @vm_networks;
-    my @vm_networks_temp;
-    my $catchall_network = undef;
-    my $network_pattern  = $args{network_pattern};
-    # Get the configured hostname pattern for later comparision
-    my $hostname_pattern_extracted = undef;
-    my $hostname_pattern           = $args{hostname_pattern};
-    if ( $args{vm_name} =~ /($hostname_pattern)/ix ) {
-        $hostname_pattern_extracted = $1;
-    }
+    my ( $self, $vm_name ) = @_;
+    my @vm_nics;
+    my @vm_networks_labels;
 
-    # Get all networks, which the selected esx host can see
-    my $full_network_list = Vim::get_views( mo_ref_array => $args{host_view}->network );
+    # Get the parameters related to network assignment logic
+    my @network_search_order = $self->{config}->get_array( "vm_create", "network_search_order" );
 
-    foreach (@$full_network_list) {
-        # Get the configured network pattern
-        my $network_pattern_extracted = undef;
-        if ( $_->name =~ /($network_pattern)/ix ) {
-            $network_pattern_extracted = $1;
-        }
-        # If the hostname pattern matches the network pattern, take it
-        if (     defined $network_pattern_extracted
-             and defined $hostname_pattern_extracted
-             and lc $network_pattern_extracted eq lc $hostname_pattern_extracted )
-        {
-            # Push the generated card spec to our array for network cards
-            my %wrapped = wrap_network_spec_for_sorting( create_nic( network => $_ ), $_->name );
-            push @vm_networks_temp, \%wrapped;
-
-            # Else check if we have the catchall network, if yes rembember it
-        } elsif ( $_->name eq $args{catchall_network} ) {
-            $catchall_network = $_;
+    # The search order controls the outer loop
+    LOOP:
+    foreach my $net_label (@network_search_order) {
+        # Use the current net_label as index for the network assignment structure
+        foreach my $rule ( $self->{config}->get_array( "network_assignment", $net_label ) ) {
+            if ( $vm_name =~ qr{^$rule$}x ) {
+                push @vm_networks_labels, $net_label;
+                # Set the loop marker to done and quit this loop
+                last LOOP;
+            }
         }
     }
 
-    # Add a nic connected to the catchall network
-    if ( not @vm_networks_temp and defined $catchall_network ) {
-        my $nic = create_nic( network => $catchall_network );
-        my %wrapped = wrap_network_spec_for_sorting( $nic, $catchall_network );
-        push @vm_networks_temp, \%wrapped;
+    # After retrieving a full list of networks to be assigned, get the appropriate specs
+    # Begin with getting all networks, which the selected esx host can see
+    my $full_network_list = Vim::get_views( mo_ref_array => $self->{host_view}->network );
+
+    # Go through each network, which is assigned to the host vieww
+    foreach my $network (@$full_network_list) {
+        if ( grep { $_ eq $network->name } @vm_networks_labels ) {
+            push @vm_nics, create_nic( network => $network );
+        }
+
+        # When we finished, return the generated network cards as an array
+        return @vm_nics;
     }
-
-    # Now make sure, that the the networks are sorted in the correct order
-    sort_networks(@vm_networks_temp);
-    foreach (@vm_networks_temp) {
-        push @vm_networks, unwrap_network_spec($_);
-    }
-
-    # When we finished, return the generated network cards as an array
-    return @vm_networks;
-}
-
-sub is_backend {
-    my $network = shift;
-    my %network = %{$network};
-    return $network{"name"} =~ /_BE_/i;
-}
-
-sub compare {
-    my $first             = shift;
-    my $is_first_backend  = is_backend($first);
-    my $second            = shift;
-    my $is_second_backend = is_backend($second);
-    return 1  if ( $is_second_backend and not $is_first_backend );
-    return -1 if ( $is_first_backend  and not $is_second_backend );
-    return 0;
-}
-
-sub sort_networks {
-    return sort { compare( $a, $b ) } @_;
-}
-
-sub wrap_network_spec_for_sorting {
-    my $spec = shift;
-    my $name = shift;
-    return (
-             "name" => $name,
-             "spec" => $spec
-    );
-}
-
-sub unwrap_network_spec {
-    my $wrapped = shift;
-    my %wrapped = %{$wrapped};
-    return $wrapped{"spec"};
 }
 
 1;
