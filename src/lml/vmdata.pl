@@ -53,6 +53,7 @@ sub display_vm_data {
         my $im = new GD::Image( 640, 480 );    # always return VGA-sized image
         my $orange = $im->colorAllocate( 224, 102, 102 );
         my $white  = $im->colorAllocate( 255, 255, 255 );
+        my $black  = $im->colorAllocate( 0, 0, 0 );
 
         $im->fill( 0, 0, $white );
         # image height = (17+(Version*4)+8)*ModuleSize (learned from GD::Barcode::QRcode source)
@@ -61,17 +62,19 @@ sub display_vm_data {
         my $y = 70;
         # NOTE: With %{..} we dereference the hashref and use the fact that in perl a hash is also an array!
         foreach (
-                  "Name:", $VM->{HOSTNAME},
+                  "VM Name:", $VM->{HOSTNAME},
+                  "",      defined $VM->{DNS_DOMAIN} ? ( "DNS Domain:", $VM->{DNS_DOMAIN} ) : (),
                   "",      exists $VM->{MAC} ? ( "Network:", %{ $VM->{MAC} } ) : (),
                   "",      exists $VM->{CUSTOMFIELDS} ? ( "Custom Fields:", %{ $VM->{CUSTOMFIELDS} } ) : (),
-                  "",      exists $VM->{VM_ID} ? ( "Mo-Ref:", $VM->{VM_ID} ) : (),
-                  "",      exists $VM->{HOST} ? ( "Host:", $VM->{HOST} ) : (),
-                  "",      exists $VM->{LMLHOST} ? ( "LML:", $VM->{LMLHOST} ) : (),
+                  "",      exists $VM->{VM_ID} ? ( "VM ID:", $VM->{VM_ID} ) : (),
+                  "",      exists $VM->{HOST} ? ( "VM Host:", $VM->{HOST} ) : (),
+                  "",      exists $VM->{LMLHOST} ? ( "LML Server:", $VM->{LMLHOST} ) : (),
           )
         {
             #Debug("Writing $_");
-            $im->string( GD::Font->Giant, 480, $y, $_, $orange );
-            $y += $_ eq "" ? GD::Font->Tiny->height : GD::Font->Giant->height;
+            my ($font,$color) = $_ =~ qr(:$) ? (GD::Font->MediumBold,$orange) : (GD::Font->Small,$black); # larger and organge font for headings
+            $im->string( $font, 480, $y, $_, $color );
+            $y += $_ eq "" ? 5 : $font->height; # 5px vertical spacing for blank lines
         }
         my $logo = new GD::Image( $INC[0] . "/images/LabManagerLightlogo-small.png" );    # logo is 200x75
         $im->copy( $logo, 481, 0, 0, 0, 160, 60 );
