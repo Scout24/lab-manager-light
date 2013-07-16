@@ -46,7 +46,7 @@ if ( exists $ENV{GATEWAY_INTERFACE} ) {
     $expiration_date   = param('expiration');
     $esx_host          = param('esx_host');
     $vm_folder         = param('folder');
-    $force_boot_target = param('force_boot_target');
+    $force_boot_target = param('force_boot_target') || "default";
 
     # or are we called via commandline
 } elsif ( @ARGV > 0 ) {
