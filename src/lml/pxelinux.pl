@@ -121,7 +121,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             foreach my $e (@error) {
                 $e =~ s/\^/^^/g;    # pxelinux menu uses ^ to mark keyboard shortcuts. ^^ comes out as plain ^
                 push( @body, "label l$c", "menu label $c. $e" );
-                push( @body, @{ $C->get( "pxelinux", "error_item" ) } );
+                push( @body, $C->get( "pxelinux", "error_item" ) );
                 $c++;
             }
 
