@@ -79,11 +79,13 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         # Set dns domain of VM from first network card
         $VM->set_dns_domain($C->appenddomain(($VM->networks())[0]));
         
+        my @extra_dns_check_zones = map { $C->get_array("dnscheckzones",$_) } $VM->networks;
+        
         my $Policy = new LML::VMpolicy( $C, $VM );
 
         $Policy->handle_unmanaged();
 
-        $result->add_error( $Policy->validate_vm_name,      $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones,
+        $result->add_error( $Policy->validate_vm_name,      $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones(@extra_dns_check_zones),
                             $Policy->validate_contact_user, $Policy->validate_expiry,            $Policy->validate_vm_dns_name($LAB),
         );
 

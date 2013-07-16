@@ -29,9 +29,6 @@ use LML::Lab;
 
 use_ok "LML::VMpolicy";
 
-# load shipped configuration
-my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
-
 #$isDebug = 1;
 
 ######## validate_vm_dns_name

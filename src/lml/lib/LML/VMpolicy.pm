@@ -51,13 +51,13 @@ sub validate_hostrules_pattern {
 
 sub validate_dns_zones {
     # check VM name against other DNS zones to prevent creating duplicate entries
-    my $self = shift;
+    my ($self,@extrazones) = @_;
     my @error;
     my $dnscheck = $self->{Config}->get( "hostrules", "dnscheck" );
 
     # only process the dnscheck, if it is enabled in configuration
     if ($dnscheck) {
-        my @dnscheckzones = $self->{Config}->get_array( "hostrules", "dnscheckzones" );
+        my @dnscheckzones = ($self->{Config}->get_array( "hostrules", "dnscheckzones" ), @extrazones);
         my $vm_name = $self->{VM}->name;
         if ( scalar(@dnscheckzones) ) {
             for my $z (@dnscheckzones) {

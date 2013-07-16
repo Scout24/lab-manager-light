@@ -155,19 +155,6 @@ is(
     "should return error message for non-matching VM name"
 );
 
-#### validate_dns_zones
-#
-#
-is_deeply( [ $Pgood->validate_dns_zones ], [], "should return undef as test VM is not present in any zone" );
-is_deeply( [
-              new LML::VMpolicy(
-                             new LML::Config( { "hostrules" => { "dnscheckzones" => [ "google.com", "google.de" ], "dnscheck" => 1 } } ),
-                             new LML::VM( { "NAME" => "www" } ) )->validate_dns_zones
-           ],
-           [ "Name conflict with 'www.google.com.'", "Name conflict with 'www.google.de.'" ],
-           "should return two error messages as we test www.google.de and www.google.com"
-);
-
 #### validate_contact_user
 #
 #
