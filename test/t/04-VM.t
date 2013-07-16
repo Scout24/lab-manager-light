@@ -195,6 +195,8 @@ is_deeply(
            "should return the customfields table"
 );
 
+is_deeply([$VM->networks()],["arc.int","foo"],"should return list of network labels");
+
 ok( $VM->forcenetboot, "should return that forcenetboot is active for managed VM" );
 ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot,
     "should return that forcenetboot is not active for unmanaged VM" );

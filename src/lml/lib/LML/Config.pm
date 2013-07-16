@@ -2,7 +2,7 @@ package LML::Config;
 
 use strict;
 use warnings;
-
+use Carp;
 use LML::Common;
 
 sub new {
@@ -20,15 +20,34 @@ sub new {
     return $self;
 }
 
-sub get {
+sub get_array {
+    # return list, even if only single item
     my ( $self, $section, $key ) = @_;
+    # config sections and keys are always lowercase.
+    $section = lc $section;
+    $key     = lc $key;
+    my @raw_value = ();
     if ( exists( $self->{$section}->{$key} ) ) {
-        return $self->{$section}->{$key};
-    } else {
-        return undef;
+        @raw_value = ref( $self->{$section}->{$key} ) eq "ARRAY" ? @{ $self->{$section}->{$key} } : ( $self->{$section}->{$key} );
     }
+    Debug("Config->get_array($section,$key) at ".( caller(0) )[1].":".( caller(0) )[2]." = ".join(", ",@raw_value ? @raw_value : ("<empty array>")));
+    return @raw_value;
 }
 
+sub get {
+    # return string, multi-line values will be concatenated with newlines
+    my ( $self, $section, $key ) = @_;
+    # config sections and keys are always lowercase.
+    $section = lc $section;
+    $key     = lc $key;
+    my $raw_value = undef;
+    if ( exists( $self->{$section}->{$key} ) ) {
+        $raw_value = ref( $self->{$section}->{$key} ) eq "ARRAY" ? join("\n",@{ $self->{$section}->{$key} }) : $self->{$section}->{$key};
+    }
+    Debug("Config->get($section,$key) at ".( caller(0) )[1].":".( caller(0) )[2]." = ".(defined($raw_value) ? $raw_value : "<undef>"));
+    return $raw_value;
+}
+    
 sub set {
     my ( $self, $section, $key, $value ) = @_;
     $self->{$section}->{$key} = $value;
@@ -52,20 +71,15 @@ sub labfile {
     return $self->get( "lml", "datadir" ) . "/lab.conf";
 }
 
+sub appenddomain {
+    # get the appenddomain for given network.
+    my ( $self, $network ) = @_;
+    $network = "" unless ($network);    # network is optional
+    return exists( $self->{"appenddomains"}->{$network} ) ? $self->{"appenddomains"}->{$network} : $self->{"dhcp"}->{"appenddomain"};
+}
+
 sub vsphere_networks {
-    my $self                    = shift;
-    my @vsphere_networks        = ();                                    # list of network names for which LML is responsible.
-    my $config_vsphere_networks = $self->get( "vsphere", "networks" );
-    if ($config_vsphere_networks) {
-        if ( ref($config_vsphere_networks) eq "ARRAY" ) {
-            @vsphere_networks = @{$config_vsphere_networks};
-        } else {
-            @vsphere_networks = ($config_vsphere_networks);
-        }
-    } else {
-        @vsphere_networks = (".*");                                      # match all networks if not configured
-    }
-    return @vsphere_networks;
+   confess("Not implemented");
 }
 
 1;

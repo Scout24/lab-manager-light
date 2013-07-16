@@ -20,6 +20,7 @@ sub UpdateDHCP {
     my @error = ();
     if ( my $dhcpconf = $C->get( "dhcp", "hostsfile" ) ) {
         my $dhcp_hosts = "";
+        my $default_appenddomain = $C->appenddomain;
         for my $u ( keys( %{ $LAB->{HOSTS} } ) ) {
             my $count = 0;
             if ( exists( $LAB->{HOSTS}->{$u}->{MACS} ) ) {
@@ -27,8 +28,9 @@ sub UpdateDHCP {
                     $dhcp_hosts .= "host $u" . ( $count > 0 ? "-$count" : "" ) . " { \n";
                     $dhcp_hosts .= "\thardware ethernet $m;\n";
                     my $hostname = $LAB->{HOSTS}->{$u}->{HOSTNAME} . ( $count > 0 ? "-$count" : "" );
+                    Debug(Data::Dumper->Dump([$LAB->{HOSTS}->{$u}],["LAB->{HOSTS}->{$u}"]));
                     $dhcp_hosts .= "\toption host-name \"$hostname"
-                      . ( $C->get( "dhcp", "appenddomain" ) ? "." . $C->get( "dhcp", "appenddomain" ) : "" ) . "\";\n";
+                      . "." . (defined($LAB->{HOSTS}->{$u}->{DNS_DOMAIN}) ? $LAB->{HOSTS}->{$u}->{DNS_DOMAIN} : $default_appenddomain) . "\";\n";
 
                 # the following forces the dhcpd to update the DNS records even if the client did NOT send a hostname!!!
                 # took me full day to figure that out :-(

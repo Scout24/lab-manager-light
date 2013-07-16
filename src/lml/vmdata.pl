@@ -130,7 +130,7 @@ unless (caller) {
     if ( $content_type eq "pxelinux" and $C->get( "pxelinux", "qrdata_template" ) ) {
         # pxelinux content-type actually contains other content
         $content_type = "text/plain";
-        $result = join( "\n", @{ $C->get( "pxelinux", "qrdata_template" ) } );
+        $result = $C->get( "pxelinux", "qrdata_template" );
         my $url = url() . "/" . $search_uuid . ".png";    # write image as query path
         $result =~ s/URL/$url/;
     } else {

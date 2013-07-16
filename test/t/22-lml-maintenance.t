@@ -253,6 +253,7 @@ my %LAB_TESTDATA = (
 
 #write test data to lab file
 
+#$isDebug= 1;
 write_file( $C->labfile, Data::Dumper->Dump( [ \%LAB_TESTDATA ], [qw(LAB)] ) );
 
 # execute the maintenance function which should remove the selected host above

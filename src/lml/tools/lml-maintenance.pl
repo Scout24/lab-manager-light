@@ -58,7 +58,9 @@ sub maintain_labfile($$$$$) {
     for my $uuid ( $LAB->list_hosts ) {
         if ( exists( $VM_ALL->{$uuid} ) ) {
             my $VM = new LML::VM( $VM_ALL->{$uuid} );
-            $VM->set_networks_filter( $C->vsphere_networks );    # set network filter
+            # Set dns domain of VM from first network card
+            $VM->set_dns_domain($C->appenddomain(($VM->networks())[0]));            
+            $VM->set_networks_filter( $C->get_array("vsphere","networks") );    # set network filter
             $LAB->update_vm($VM);
         } else {
             # remember that we deleted a host

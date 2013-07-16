@@ -36,8 +36,9 @@ sub new {
             Debug("Could not load any data for uuid '$uuid'");
             return undef;
         }
+        $self->{filter_networks} = [];
+        $self->{dns_domain} = undef;
     }
-    $self->{filter_networks} = [];
     bless $self, $class;
     return $self;
 }
@@ -58,6 +59,26 @@ sub vm_id {
     my $self = shift;
     return undef unless ( exists $self->{"VM_ID"} );
     return $self->{"VM_ID"};
+}
+
+sub networks {
+    # return list of network labels. First one is most likely the PXE boot network
+    my $self = shift;
+    my @result = map { $_->{"NETWORK"} } @{ $self->{"NETWORKING"} };
+    if ( scalar(@result) == 0 ) {
+        confess( "VM " . $self->uuid . " has no NETWORKING data, please check how LML could feel responsible for this VM\n" );
+    }
+    return @result;
+}
+
+sub matching_networks {
+    # returns the networks from the list given that this VM is attached to.
+    # Networks can be names or regex patterns
+    my ( $self, @networks ) = @_;
+    return grep {
+        my $vm_network = $_;
+        grep { $vm_network =~ qr(^$_$) } @networks
+    } $self->networks();
 }
 
 sub mac {
@@ -111,6 +132,16 @@ sub get_filtered_macs {
     return scalar @matching_macs;
 }
 
+sub set_dns_domain {
+    my ($self,$new_dns_domain) = @_;
+    $self->{dns_domain} = $new_dns_domain;
+}
+
+sub dns_domain {
+    my $self = shift;
+    return exists($self->{dns_domain}) ? $self->{dns_domain} : undef;
+}
+
 sub forcenetboot {
     my $self = shift;
     return exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} eq "allow:net";
@@ -150,10 +181,10 @@ sub destroy {
 
         # And additionally remove the machine from dhcp configuration
         if ( LML::DHCP::UpdateDHCP( $C, $LAB ) ) {
-            Debug("DHCP update for uuid " . $self->uuid . " exited with errors");
+            Debug( "DHCP update for uuid " . $self->uuid . " exited with errors" );
             return 0;
         }
     }
 }
 
-    1;
+1;

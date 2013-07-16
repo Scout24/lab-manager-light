@@ -213,6 +213,7 @@ sub update_vm {
                                 UUID            => $uuid,
                                 HOSTNAME        => $name,
                                 NAME            => $name,
+                                DNS_DOMAIN      => $VM->dns_domain,
                                 MACS            => \@vm_lab_macs,
                                 VM_ID           => $vm_id,
                                 MAC             => $VM->mac,
@@ -220,7 +221,6 @@ sub update_vm {
                                 PATH            => $VM->path,
                                 HOST            => $VM->host,
     };
-
     return $update_dhcp;
 }
 

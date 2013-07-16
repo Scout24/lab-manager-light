@@ -57,7 +57,7 @@ sub validate_dns_zones {
 
     # only process the dnscheck, if it is enabled in configuration
     if ($dnscheck) {
-        my @dnscheckzones = @{ $self->{Config}->get( "hostrules", "dnscheckzones" ) };
+        my @dnscheckzones = $self->{Config}->get_array( "hostrules", "dnscheckzones" );
         my $vm_name = $self->{VM}->name;
         if ( scalar(@dnscheckzones) ) {
             for my $z (@dnscheckzones) {
@@ -86,20 +86,22 @@ sub validate_vm_dns_name {
     my ( $self, $LAB ) = @_;
     # validate arg
     croak( "Parameter to " . ( caller(0) )[3] . " must be LML::Lab object" ) unless ( ref($LAB) eq "LML::Lab" );
-
-    my $dnscheck = $self->{Config}->get( "hostrules", "dnscheck" );
-
-    # only process the dnscheck, if it is enabled in configuration
-    if ($dnscheck) {
+    
+    my $vm_name = $self->{VM}->name;
+    
+    if ($self->{VM}->matching_networks($self->{Config}->get_array("dhcp","managed_networks"))) {
+        # this test is only relevant for those networks, where we manage a DHCP server
         my $result;
-        my $vm_name = $self->{VM}->name;
         my $vm_uuid = $self->{VM}->uuid;
-
-        my $appenddomain = $self->{Config}->get( "dhcp", "appenddomain" );
-        return unless ($appenddomain);    # nothing to do if no DNS domain to append given
+        my $appenddomain = $self->{VM}->dns_domain;
+        if (! $appenddomain) {
+            # This test needs an fqdn of the VM, it should be set elsewhere
+            Debug(Data::Dumper->Dump([$self->{VM}],['self->{VM}']));
+            confess("VM $vm_uuid ($vm_name) has no DNS Domain set\n")
+        }
         my $vm_fqdn = $vm_name . ".$appenddomain.";
         my ( $dns_fqdn, $aliases, $addrtype, $length, @addrs ) = gethostbyname($vm_fqdn);
-
+    
         Debug( "validating name '$vm_name' in managed DNS domain: $appenddomain: " . join( ", ", map { inet_ntoa($_) } @addrs ) );
         if ( exists( $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) ) {
             # we have old data
@@ -108,7 +110,7 @@ sub validate_vm_dns_name {
                 return;
             } elsif ($dns_fqdn) {
                 # new VM name exists in DNS
-                $result = "Renamed VM '$vm_fqdn' name exists already in '$appenddomain'";
+                $result = "Renamed VM '$vm_fqdn' exists already in '$appenddomain'";
             }    # else new VM name does not exist in DNS -> all OK
         } else {
             # we don't have old data, must be new VM
@@ -121,8 +123,10 @@ sub validate_vm_dns_name {
             Debug("Result: $result");
             return $result;
         }
+    
+    } else {
+        Debug("NOT validating name '$vm_name', it is not on [dhcp] managed_networks");
     }
-
     return;
 }
 

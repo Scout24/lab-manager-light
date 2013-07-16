@@ -34,7 +34,7 @@ $SIG{__DIE__} = sub {
     chomp($message);                      # remove trailing newlines
     $message =~ s/\n/; /;                 # turn message into single line
     print header( -status => '200 Fatal Error', -type => 'text/plain' );
-    my $body = join( "\n", @{ $C->get( "pxelinux", "fatalerror_template" ) } ) . "\n";
+    my $body = $C->get( "pxelinux", "fatalerror_template" ). "\n";
     $body =~ s/MESSAGE/$message/;
     print $body;
 };
@@ -72,10 +72,13 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name . "." . $append_domain ) );
 
     # check if we should handle this VM
-    $VM->set_networks_filter( $C->vsphere_networks );
+    $VM->set_networks_filter( $C->get_array("vsphere","networks") );
     if ( $VM->get_filtered_macs ) {
         # This VM uses our managed network
 
+        # Set dns domain of VM from first network card
+        $VM->set_dns_domain($C->appenddomain(($VM->networks())[0]));
+        
         my $Policy = new LML::VMpolicy( $C, $VM );
 
         $Policy->handle_unmanaged();
@@ -112,7 +115,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             $result->set_status( 200, "for", $vm_name, $search_uuid );
 
             # build body with error page
-            push( @body, @{ $C->get( "pxelinux", "error_main" ) } );
+            push( @body, $C->get( "pxelinux", "error_main" ) );
             push( @body, "menu title " . $C->get( "pxelinux", "error_title" ) . " " . $vm_name );
             my $c = 1;
             foreach my $e (@error) {

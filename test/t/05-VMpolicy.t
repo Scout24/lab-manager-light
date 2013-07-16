@@ -160,8 +160,9 @@ is(
 #
 is_deeply( [ $Pgood->validate_dns_zones ], [], "should return undef as test VM is not present in any zone" );
 is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "hostrules" => { "dnscheckzones" => [ "google.com", "google.de" ], "dnscheck" => 1 } } ),
-                                 new LML::VM( { "NAME" => "www" } ) )->validate_dns_zones
+              new LML::VMpolicy(
+                             new LML::Config( { "hostrules" => { "dnscheckzones" => [ "google.com", "google.de" ], "dnscheck" => 1 } } ),
+                             new LML::VM( { "NAME" => "www" } ) )->validate_dns_zones
            ],
            [ "Name conflict with 'www.google.com.'", "Name conflict with 'www.google.de.'" ],
            "should return two error messages as we test www.google.de and www.google.com"
@@ -316,51 +317,6 @@ is_deeply( [
            "should return error as 2012 is in the past (US Date format)"
 );
 
-######## validate_vm_dns_name
-#
-#
-#
-is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "junk.world", }, } ),
-                                 new LML::VM( { "NAME" => "www", "UUID" => "01234" } ) )
-                ->validate_vm_dns_name( new LML::Lab( { "HOSTS" => { "01234" => { "HOSTNAME" => "www" } } } ) )
-           ],
-           [],
-           "should not return error as new VM name equals old VM name"
-);
-is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "junk.world", }, } ),
-                                 new LML::VM( { "NAME" => "www", "UUID" => "01234" } ) )
-                ->validate_vm_dns_name( new LML::Lab( { "HOSTS" => {} } ) )
-           ],
-           [],
-           "should not return error as VM is new and has no conflict with managed domain"
-);
-is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "google.com" }, "hostrules" => { "dnscheck" => 1 } } ),
-                                 new LML::VM( { "NAME" => "www", "UUID" => "01234" } ) )
-                ->validate_vm_dns_name( new LML::Lab( { "HOSTS" => {} } ) )
-           ],
-           ["New VM name exists already in 'google.com'"],
-           "should return error as new VM name conflicts with managed domain"
-);
-is_deeply( [
-              new LML::VMpolicy( new LML::Config( { "dhcp" => { "appenddomain" => "google.com" }, "hostrules" => { "dnscheck" => 1 } } ),
-                                 new LML::VM( { "NAME" => "www", "UUID" => "01234" } ) )
-                ->validate_vm_dns_name( new LML::Lab( { "HOSTS" => { "01234" => { "HOSTNAME" => "zzz" } } } ) )
-           ],
-           ["Renamed VM 'www.google.com.' name exists already in 'google.com'"],
-           "should return error as renamed VM name exists in managed domain"
-);
-is_deeply( [
-              new LML::VMpolicy(
-                                new LML::Config( { "dhcp" => { "appenddomain" => "google.com", }, } ),
-                                new LML::VM( { "NAME" => "frobinicate_foo_bar_baz", "UUID" => "01234" } )
-                )->validate_vm_dns_name( new LML::Lab( { "HOSTS" => { "01234" => { "HOSTNAME" => "www" } } } ) )
-           ],
-           [],
-           "should return no error as renamed VM name has no conflict with managed domain"
-);
 
 ######### handle_forceboot
 #
@@ -385,7 +341,8 @@ is_deeply( $result->get_errors,
 
 # test for intended fatal error
 dies_ok {
-    ( new LML::VMpolicy( $C, new LML::VM( { "CUSTOMFIELDS" => { "Force Boot" => "ON", "Force Boot Target" => "fatalerror" } } ) ) )->handle_forceboot($result);
+    ( new LML::VMpolicy( $C, new LML::VM( { "CUSTOMFIELDS" => { "Force Boot" => "ON", "Force Boot Target" => "fatalerror" } } ) ) )
+      ->handle_forceboot($result);
 }
 "should die if fatalerror requested";
 

@@ -10,6 +10,8 @@ BEGIN {
     use_ok "LML::Config";
     use_ok "LML::Lab";
 }
+use LML::Common;
+#$isDebug=1;
 
 # load test config
 my $C = new_ok( "LML::Config" => [ "src/lml/default.conf", "test/data/test.conf" ] );
@@ -21,6 +23,7 @@ my %LAB_TESTDATA = (
                                                              "LASTSEEN"         => "1354790575",
                                                              "LASTSEEN_DISPLAY" => "Thu Dec  6 11:42:55 2012",
                                                              "MACS"             => ["01:02:03:04:69:b0"],
+                                                             # DNS_DOMAIN is NOT set here to test migration
                                                              "EXTRAOPTS"        => "option foo2 \"bar2\"",
                  },
                  "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf" => {
@@ -28,6 +31,7 @@ my %LAB_TESTDATA = (
                                                              "LASTSEEN"         => "1351688243",
                                                              "LASTSEEN_DISPLAY" => "Wed Oct 31 13:57:23 2012",
                                                              "MACS"             => ["01:02:03:04:6e:4e"],
+                                                             "DNS_DOMAIN"       => "other.domain",
                                                              "IP"               => "1.2.3.4",
                                                              "VM_ID"            => "vm-1000",
                                                              "EXTRAOPTS"        => "option foo \"bar\";option bar baz;",
@@ -69,7 +73,7 @@ my $VM = new LML::VM( {
                         "VM_ID" => "vm-1000",
                         "UUID"  => "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf",
                       } );
-$VM->set_networks_filter( $C->vsphere_networks );    # set network filter
+$VM->set_networks_filter( $C->get_array("vsphere","networks") );    # set network filter
 is(
     $LAB->update_vm($VM),
     1,
@@ -84,8 +88,8 @@ is_deeply( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{MACS},
 $LAB->set_filename("test/temp/new_lab.conf");
 is(
     $LAB->write_file( "by " . __FILE__, "test" ),
-    3048,
-"Writing to 'test/temp/new_lab.conf' should write 3048 bytes and it would be better to analyse the content but at least we notice change"
+    3137,
+"Writing to 'test/temp/new_lab.conf' should write 3137 bytes and it would be better to analyse the content but at least we notice change"
 );
 
 is_deeply( [ $LAB->list_hosts ],
@@ -111,7 +115,6 @@ is_deeply(
               "HOSTNAME" => "foo",
               "NAME" => "foo",
               "MACS"     => [ "1:2:3", "4:5:6" ],
-              "filter_networks" => []
            },
            "should return test data from previous test"
 );

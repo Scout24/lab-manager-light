@@ -24,7 +24,7 @@ ok( $C->get( "dhcp", "triggercommand" ), "dhcp triggercommand is set" );
 my $expected_dhcp_hosts = <<EOF;
 host 4213038e-9203-3a2b-ce9d-c6dac1f2dbbf { 
 	hardware ethernet 01:02:03:04:6e:4e;
-	option host-name "tsthst001.arc.int";
+	option host-name "tsthst001.other.domain";
 	ddns-hostname "tsthst001";
 	fixed-address 1.2.3.4;
 	option foo "bar";
@@ -33,18 +33,19 @@ host 4213038e-9203-3a2b-ce9d-c6dac1f2dbbf {
 
 host 4213059e-70c2-6f34-1986-50463d0222f8 { 
 	hardware ethernet 01:02:03:04:69:b0;
-	option host-name "tstgag002.arc.int";
+	option host-name "tstgag002.test.data";
 	ddns-hostname "tstgag002";
 	option foo2 "bar2";
 }
 
 EOF
 
+#$isDebug=1;
 # read data file created from $LAB_TESTDATA in 00-Common.t
 my $LAB    = new LML::Lab($C->labfile);
 my @errors = LML::DHCP::UpdateDHCP( $C, $LAB );
 ok( scalar(@errors) == 0, "create dhcp hosts file" );
-is( $expected_dhcp_hosts, read_file($dhcpconf), "dhcp hosts file matches test data" );
+is( read_file($dhcpconf),$expected_dhcp_hosts , "dhcp hosts file matches test data" );
 ok( -r "test/temp/triggercommand.txt", "dhcp triggercommand ran" );
 
 # negative test for triggercommand

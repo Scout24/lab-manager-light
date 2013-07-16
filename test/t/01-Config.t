@@ -10,12 +10,15 @@ BEGIN {
 
 # test if we can load config from config files
 my $C = new_ok( "LML::Config" => [ "src/lml/default.conf", "test/data/test.conf" ] );
-is_deeply( $C->get( 'hostrules', 'dnscheckzones' ),
+is_deeply( [ $C->get_array( 'hostrules', 'dnscheckzones' ) ],
            [ "some.zone", "some.other.zone" ],
            "should give the value from default.conf (some.zone, some.other.zone)" );
 is( $C->get( 'lml', 'datadir' ), "test/temp", "should give the value from test.conf (test/temp)" );
 is( $C->labfile, "test/temp/lab.conf", "should give lab file from test data" );
-is_deeply( [ $C->vsphere_networks ], ["arc.int"], "should give list of managed networks" );
+is ($C->appenddomain(), "test.data", "should give default append domain");
+is ($C->appenddomain("SOME_NET"), "some.test", "should give special append domain for some_net");
+is ($C->appenddomain("other network"), "test.data", "should give default append domain for network without special config");
+is_deeply( [ $C->get_array("vsphere","networks") ], ["arc.int"], "should give list of managed networks" );
 # update config
 $C->set( "foo", "bar", "baz" );
 is( $C->get( "foo", "bar" ), "baz", "should give config item we just set" );
