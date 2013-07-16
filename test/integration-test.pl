@@ -19,7 +19,7 @@ use JSON;
 
 use constant MAX_QR_CODE_AGE_SEC => 180;    # 3 minutes
 
-my $boot_timeout = 30;
+my $boot_timeout = 45;
 my $test_host;
 my $vm_name_prefix;
 my $vm_number = generate_vm_number();
