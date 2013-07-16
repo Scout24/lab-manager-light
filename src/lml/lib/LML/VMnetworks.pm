@@ -53,7 +53,7 @@ sub find_networks {
     # Get the configured hostname pattern for later comparision
     my $hostname_pattern_extracted = undef;
     my $hostname_pattern           = $args{hostname_pattern};
-    if ( $args{vm_name} =~ /($hostname_pattern)/i ) {
+    if ( $args{vm_name} =~ /($hostname_pattern)/ix ) {
         $hostname_pattern_extracted = $1;
     }
 
@@ -62,36 +62,36 @@ sub find_networks {
 
     foreach (@$full_network_list) {
         # Get the configured network pattern
-
         my $network_pattern_extracted = undef;
-        if ( $_->name =~ /($network_pattern)/i ) {
+        if ( $_->name =~ /($network_pattern)/ix ) {
             $network_pattern_extracted = $1;
         }
         # If the hostname pattern matches the network pattern, take it
         if (     defined $network_pattern_extracted
              and defined $hostname_pattern_extracted
-             and lc($network_pattern_extracted) eq lc($hostname_pattern_extracted) )
+             and lc $network_pattern_extracted eq lc $hostname_pattern_extracted )
         {
             # Push the generated card spec to our array for network cards
             my %wrapped = wrap_network_spec_for_sorting( create_nic( network => $_ ), $_->name );
-            push( @vm_networks_temp, \%wrapped );
+            push @vm_networks_temp, \%wrapped;
 
             # Else check if we have the catchall network, if yes rembember it
         } elsif ( $_->name eq $args{catchall_network} ) {
             $catchall_network = $_;
         }
     }
+
     # Add a nic connected to the catchall network
     if ( not @vm_networks_temp and defined $catchall_network ) {
         my $nic = create_nic( network => $catchall_network );
         my %wrapped = wrap_network_spec_for_sorting( $nic, $catchall_network );
-        push( @vm_networks_temp, \%wrapped );
+        push @vm_networks_temp, \%wrapped;
     }
 
     # Now make sure, that the the networks are sorted in the correct order
     sort_networks(@vm_networks_temp);
     foreach (@vm_networks_temp) {
-        push( @vm_networks, unwrap_network_spec($_) );
+        push @vm_networks, unwrap_network_spec($_);
     }
 
     # When we finished, return the generated network cards as an array
