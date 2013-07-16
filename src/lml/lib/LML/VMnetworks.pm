@@ -68,7 +68,7 @@ sub find_networks {
     foreach my $net_label (@network_search_order) {
         # Use the current net_label as index for the network assignment structure
         foreach my $rule ( $self->{config}->get_array( "network_assignment", $net_label ) ) {
-            if ( $vm_name =~ qr{^$rule$}x ) {
+            if ( $vm_name =~ m/$rule$/x ) {
                 push @vm_networks_labels, $net_label;
                 # Set the loop marker to done and quit this loop
                 last LOOP;
@@ -85,10 +85,10 @@ sub find_networks {
         if ( grep { $_ eq $network->name } @vm_networks_labels ) {
             push @vm_nics, create_nic( network => $network );
         }
-
-        # When we finished, return the generated network cards as an array
-        return @vm_nics;
     }
+
+    # When we finished, return the generated network cards as an array
+    return @vm_nics;
 }
 
 1;

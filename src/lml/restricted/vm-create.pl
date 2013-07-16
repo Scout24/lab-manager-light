@@ -55,10 +55,10 @@ if ( exists $ENV{GATEWAY_INTERFACE} ) {
     GetOptions(
                 "name=s"              => \$vm_name,
                 "username=s"          => \$username,
-                "expiration_date=s"   => \$expiration_date,
+                "expiration=s"        => \$expiration_date,
                 "esx_host=s"          => \$esx_host,
                 "folder=s"            => \$vm_folder,
-                "force_boot_target=s" => \$force_boot_target
+                "force_boot_target=s" => \$force_boot_target,
     );
 
     # we have nothing, print help
@@ -491,5 +491,8 @@ sub print_usage {
 
     print "   --name=value \t\t Name of the vm to be created (e.g. devxyz01)\n";
     print "   --username=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n";
-    print "   --expiration_date=value \t Date where the vm will be expired (e.g. 01.01.2015) \n\n";
+    print "   --expiration=value \t Date where the vm will be expired (e.g. 01.01.2015) \n";
+    print "   --esx_host=value \t\t FQDN of the ESX host where the vm should be created\n";
+    print "   --folder=value \t\t VM folder name, where the vm should be placed\n";
+    print "   --force_boot=value \t\t Force boot value for the new vm\n\n";
 }
