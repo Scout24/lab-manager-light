@@ -5,7 +5,6 @@ use warnings;
 
 use Carp;
 use Socket;
-use LML::VMware;
 use LML::VM;
 use LML::Common;
 use LML::Config;
@@ -194,6 +193,22 @@ sub validate_expiry {
     } else {
         return;
     }
+}
+
+sub validate_network_assignment {
+    my $self = shift;
+    my @results = ();
+    my $name = $self->{VM}->name;
+    for my $net ($self->{VM}->networks) {
+        if (my @rules = $self->{Config}->get_array("network_assignment",$net)) {
+            Debug("validating network assignment for '$net': ^".join('$, ^',@rules).'$');
+            if (not grep { $name =~ qr(^$_$) } @rules) {
+                # if none of the patterns matched the VM name then this VM is not authorized on this net.
+                push(@results,"VM not authorized for network '".$net."'");
+            }
+        }
+    }
+    return @results;
 }
 
 sub handle_unmanaged {

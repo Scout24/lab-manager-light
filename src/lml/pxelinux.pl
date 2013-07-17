@@ -89,6 +89,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
         $result->add_error( $Policy->validate_vm_name,      $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones(@extra_dns_check_zones),
                             $Policy->validate_contact_user, $Policy->validate_expiry,            $Policy->validate_vm_dns_name($LAB),
+                            $Policy->validate_network_assignment
         );
 
         $Policy->handle_forceboot($result);
