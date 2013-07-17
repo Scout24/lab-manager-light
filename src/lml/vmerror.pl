@@ -28,11 +28,11 @@ sub display_vm_error {
         return $im->png;
 }
 
-my @Error = ("No Error");
-if ( param("error") )
+my @Error = ("No known Error");
+if ( param("data") )
 {
 	my $Error = decode_entities(param("error"));
-	@Error = split(/XXX/, $Error);
+	@Error = split(/\m/, $Error);
 } 
 my $result = display_vm_error( \@Error );
 

@@ -117,8 +117,11 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             $result->set_status( 200, "for", $vm_name, $search_uuid );
 
             # build body with error page
+            my $error_data = "?data=Error: ".$/;
+			$error_data = $error_data . $_ . $/ for @error;
+			my $decoded_error_data = encode_entities($error_data);
             my $error_main = $C->get( "pxelinux", "error_main" );
-            my $url = "../lml/vmerror.pl" . "?error=Fehler";
+            my $url = "../lml/vmerror.pl" . $decoded_error_data;
             $error_main =~ s/URL/$url/;
             
             push( @body, $error_main );
