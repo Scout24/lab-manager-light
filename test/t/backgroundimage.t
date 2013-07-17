@@ -20,8 +20,7 @@ write_file("test/temp/backgroundimage_good.png",$result);
 my $reference_image = read_file("test/data/backgroundimage_good_reference.png");
 is($result,$reference_image,"should give same image as good reference image");
 if ($doqrdecoding) {
-    my $qr_read=qx(zbarimg --quiet --raw test/temp/backgroundimage_good.png);
-    is($qr_read,"Hello World\n","QR code should contain Hello World");
+    is(qx(zbarimg --quiet --raw test/temp/backgroundimage_good.png),"Hello World\n","QR code should contain Hello World");
 }
 
 # error case
@@ -31,8 +30,7 @@ write_file("test/temp/backgroundimage_error.png",$result);
 $reference_image = read_file("test/data/backgroundimage_error_reference.png");
 is($result,$reference_image,"should give same image as error reference image");
 if ($doqrdecoding) {
-    my $qr_read=qx(zbarimg --quiet --raw test/temp/backgroundimage_error.png);
-    like($qr_read,qr/ERROR/,"QR code should contain ERROR");
+    like(qx(zbarimg --quiet --raw test/temp/backgroundimage_error.png),qr/ERROR/,"QR code should contain ERROR");
 }
 
 done_testing();
