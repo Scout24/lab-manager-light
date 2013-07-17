@@ -28,11 +28,11 @@ sub display_vm_error {
         return $im->png;
 }
 
-my @Error = ("No known Error");
+my @Error = ("No Data");
 if ( param("data") )
 {
 	my $Error = uri_unescape(param("data"));
-	@Error = split(/\m/, $Error);
+	@Error = split(/\n/, $Error);
 } 
 my $result = display_vm_error( \@Error );
 
