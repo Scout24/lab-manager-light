@@ -118,11 +118,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         if ( @error = $result->get_errors ) {
             # got some errors, report to client
             $result->set_status( 200, "for", $vm_name, $search_uuid );
-
-            # build body with error page
-            
-            
-            
+            # build data for backgroundimage.pl QR code
             my $error_data = {
             	NAME =>  $vm_name,
             	HAS_ERRORS => scalar(@error),
@@ -130,9 +126,8 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             };
             my $encoded_error_data = uri_escape(to_json( $error_data, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } ));
             my $error_main = $C->get( "pxelinux", "error_main" );
-            my $url = "../lml/backgroundimage.pl?data=" . $encoded_error_data;
-            $error_main =~ s/URL/$url/;
-            
+            my $url = "/lml/backgroundimage.pl?data=" . $encoded_error_data;
+            $error_main =~ s/QRIMAGE/$url/;
             push( @body, $error_main );
             push( @body, "menu title " . $C->get( "pxelinux", "error_title" ) . " " . $vm_name );
             my $c = 1;

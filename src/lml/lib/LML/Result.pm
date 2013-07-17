@@ -71,6 +71,21 @@ sub get_errors {
     return scalar( @{ $self->{errors} } );    # return amount of errors in scalar context
 }
 
+sub get_full_url {
+    my ( $self, $url ) = @_;
+    my $my_url = $self->{full_url};
+    if ( $url =~ qr(://) ) {
+        return $url;
+    } elsif ( $url =~ qr(^/) ) {
+        # going to absolute url on our host
+        $my_url =~ s#^(.*://[^/]+).*$#$1#;    # strip everything after the host part
+    } else {
+        # going to relative url (probably to /boot/) on our host
+        $my_url =~ s#pxelinux.cfg/.*$##;      # strip pxelinux.cfg/*
+    }
+    return $my_url . $url;
+}
+
 sub render {
     my ( $self, @body ) = @_;
     my $status = $self->{status};
@@ -87,14 +102,6 @@ sub render {
     };
 
     if ( $self->{redirect_target} ) {
-        my $redirect_base = $self->{full_url};
-        if ( substr( $self->{redirect_target}, 0, 1 ) eq "/" ) {
-            # redirect to absolute url on our host
-            $redirect_base =~ s#^(.*://[^/]+).*$#$1#;    # strip everything after the host part
-        } else {
-            # redirect to relative url (probably to /boot/) on our host
-            $redirect_base =~ s#pxelinux.cfg/.*$##;      # strip pxelinux.cfg/*
-        }
         # compose the paramter string (hostname is always present)
         my $parameter = '?';
         foreach ( keys( %{ $self->{redirect_parameter} } ) ) {
@@ -102,7 +109,7 @@ sub render {
         }
         # remove the last ampersand
         chop($parameter);
-        $header_args->{-location} = $redirect_base . $self->{redirect_target} . $parameter;
+        $header_args->{-location} = $self->get_full_url( $self->{redirect_target}) . $parameter;
     }
     return header($header_args) . join( "\n", @body );
 }
