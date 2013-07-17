@@ -10,6 +10,7 @@ use GD::Barcode::QRcode;
 use GD::Image;
 use JSON;
 use CGI ':standard';
+use HTML::Entities;
 
 sub display_vm_error {
 
@@ -27,9 +28,13 @@ sub display_vm_error {
         return $im->png;
 }
 
-my @Test = ("Fehler 1", "Fehler 2", "Fehler 3", "Fehler 4 dadadadadasdadasldfjasdladifjakdfjakjdf");
-
-my $result = display_vm_error( \@Test );
+my @Error = ("No Error");
+if ( param("error") )
+{
+	my $Error = decode_entities(param("error"));
+	@Error = split(/XXX/, $Error);
+} 
+my $result = display_vm_error( \@Error );
 
 print header(
                   -status => ( $result ? 200 : 404 ),
