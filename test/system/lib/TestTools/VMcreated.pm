@@ -1,6 +1,4 @@
-package TestTools::VMdata;
-
-#TODO: rename to CreatedVM (inkl. lokaler Variablen)
+package TestTools::VMcreated;
 
 use strict;
 use warnings;
@@ -14,11 +12,11 @@ sub new {
     my ( $class, $uuid, $vm_create_options ) = @_;
 
     my $self = {
-        uuid    => $uuid,
-        vm_create_options => $vm_create_options,
+                 uuid              => $uuid,
+                 vm_create_options => $vm_create_options,
     };
 
-    bless( $self, $class );
+    bless $self, $class;
 
     return $self;
 }
@@ -26,12 +24,10 @@ sub new {
 sub load_qrdata {
     my ($self) = @_;
 
-    my $starttime = time();
+    my $starttime = time;
     my $vm_spec;
     my $file;
     my $screenshot_count = 0;
-
-    print 'DEBUG timeout: ' . $self->{vm_create_options}->{boot_timeout} . "\n";
 
     while ( not $vm_spec and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
         $screenshot_count++;
@@ -39,15 +35,16 @@ sub load_qrdata {
         $vm_spec = $self->_decode_qr($file);
         sleep 3;    # be nice to vSphere and try again only after a few seconds
     }
+
     if ($vm_spec) {
-        link( $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png" );
+        link $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png";
         # do an minimal check for matching uuid
         $self->_fail_team_city_build( "expected uuid:" . $self->{uuid} . ", actual: " . $vm_spec->{UUID} ) if ( $vm_spec->{UUID} ne $self->{uuid} );
     } else {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
-    return new TestTools::QRdata($vm_spec, $self->{vm_create_options});
+    return new TestTools::QRdata( $vm_spec, $self->{vm_create_options} );
 }
 
 #####################################################################
@@ -55,7 +52,6 @@ sub load_qrdata {
 # PRIVATE FUNCTIONS
 #####################################################################
 #####################################################################
-
 
 # downloads VM screenshot and saves it in a file and return file name
 sub _download_vm_screenshot {
@@ -66,9 +62,9 @@ sub _download_vm_screenshot {
     print "##teamcity[progressMessage 'Downloading VM Screenshot from $url to $file']\n";
     my $png = $self->_do_http_get_request($url);
 
-    open( FILE, ">$file" ) or $self->_fail_team_city_build("Could not open $file for writing");
-    print FILE $png or $self->_fail_team_city_build("Could not write to $file");
-    close(FILE);
+    open my $FILE, ">$file" or $self->_fail_team_city_build("Could not open $file for writing");
+    print $FILE $png or $self->_fail_team_city_build("Could not write to $file");
+    close $FILE;
     return $file;
 }
 

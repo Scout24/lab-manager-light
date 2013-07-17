@@ -19,7 +19,7 @@ sub new {
     my $lmlhostpattern;
 
     my $vm_number;
-    my @time = localtime(time);
+    my @time = localtime time;
     my $time = $time[1] + 1;
     if ( $time < 10 ) {
         $vm_number = "0" . $time;
@@ -63,7 +63,7 @@ sub new {
                  force_boot_target => $force_boot_target,
     };
 
-    bless( $self, $class );
+    bless $self, $class;
 
     return $self;
 }

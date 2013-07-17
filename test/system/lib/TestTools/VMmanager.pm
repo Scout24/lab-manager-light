@@ -4,18 +4,19 @@ use strict;
 use warnings;
 
 use TestTools::VmCreateOptions;
-use TestTools::VMdata;
+use TestTools::VMcreated;
 
 use LWP::UserAgent;
 use HTTP::Request;
 use DateTime;
 
+# Constructor
 sub new {
     my ($class) = @_;
 
-    my $self = { 
-        vm_create_options => new TestTools::VmCreateOptions(),
-        already_deleted => 0
+    my $self = {
+                 vm_create_options => new TestTools::VmCreateOptions(),
+                 already_deleted   => 0
     };
 
     bless( $self, $class );
@@ -23,16 +24,16 @@ sub new {
     return $self;
 }
 
-# creates a new vm
-# returns new TestTools::VMdata instance or cause a teamcity fail
+# Creates a new vm
+# Returns new TestTools::VMcreated instance or cause a teamcity fail
 sub create_vm {
     my ($self) = @_;
-    
+
     if ( $self->{already_deleted} ) {
         print "##teamcity[buildStatus status='FAILURE' text='Wrong usage - the created VM must be deleted before create a new one']\n";
         exit 1;
     }
-    
+
     $self->_report_progress( "Creating " . $self->{vm_create_options}->{vm_host} );
 
     my $uuid = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", "name=" . $self->{vm_create_options}->{vm_host} . "&esx_host=" . $self->{vm_create_options}->{esx_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target} );
@@ -41,18 +42,18 @@ sub create_vm {
         print "##teamcity[buildStatus status='FAILURE' text='Could not retrieve uuid " . $uuid . "']\n";
         exit 1;
     }
-    return new TestTools::VMdata( $uuid, $self->{vm_create_options} );
+    return new TestTools::VMcreated( $uuid, $self->{vm_create_options} );
 }
 
 # deletes the vm
 sub delete_vm {
     my ($self) = @_;
-    
-    if ($self->{already_deleted}) {
+
+    if ( $self->{already_deleted} ) {
         return;
     } else {
-        $self->_report_progress("Deleting " . $self->{vm_create_options}->{vm_host});
-        my $res = $self->_do_http_post_request( "http://" .$self->{vm_create_options}->{test_host} . "/lml/restricted/vm-control.pl", "action=destroy&hosts=" .  $self->{vm_create_options}->{vm_host} );
+        $self->_report_progress( "Deleting " . $self->{vm_create_options}->{vm_host} );
+        my $res = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-control.pl", "action=destroy&hosts=" . $self->{vm_create_options}->{vm_host} );
         if ( $res =~ /ERROR/ ) {
             print "##teamcity[buildStatus status='FAILURE' text='Could not delete " . $res . "']\n";
             exit 1;
@@ -69,7 +70,7 @@ sub delete_vm {
 #####################################################################
 
 sub _report_progress {
-    my ($self,$message) = @_;
+    my ( $self, $message ) = @_;
 
     print "##teamcity[progressMessage '$message']" . $/;
 }
