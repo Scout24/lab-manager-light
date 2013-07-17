@@ -114,7 +114,7 @@ sub get_macs {
 sub set_networks_filter {
     my ( $self, @filter_networks ) = @_;
     croak( "Give a list of networks to set filter in " . ( caller 0 )[3] ) unless (@filter_networks);
-    Debug( "setting networks filter '" . join( ",", @filter_networks ) . "'" );
+    Debug( 'setting networks filter ^' . join( '$, ^', @filter_networks ) . '$' );
     $self->{filter_networks} = \@filter_networks;
 }
 
@@ -128,6 +128,7 @@ sub get_filtered_macs {
             push @matching_macs, $mac;
         }
     }
+    Debug("get_filtered_macs(".$self->name.")=".join(", ",@matching_macs));
     return @matching_macs if (wantarray);
     return scalar @matching_macs;
 }
