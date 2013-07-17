@@ -6,17 +6,20 @@
 # perl-JSON
 # perl-DateTime
 
+# Defaults
 use strict;
 use warnings;
+use FindBin;
+use lib "$FindBin::RealBin/lib";
 
+# Our test modules
 use TestTools::VMmanager;
+
+# For debugging
 use Data::Dumper;
 
-
+# 
 my $vm_manager = new TestTools::VMmanager();
-
-
-
 my $vm_data = $vm_manager->create_vm();
 my $qr_data = $vm_data->load_qrdata();
 
