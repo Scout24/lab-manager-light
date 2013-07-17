@@ -10,7 +10,7 @@ use GD::Barcode::QRcode;
 use GD::Image;
 use JSON;
 use CGI ':standard';
-use HTML::Entities;
+use URI::Escape;
 
 sub display_vm_error {
 
@@ -31,7 +31,7 @@ sub display_vm_error {
 my @Error = ("No known Error");
 if ( param("data") )
 {
-	my $Error = decode_entities(param("error"));
+	my $Error = uri_unescape(param("data"));
 	@Error = split(/\m/, $Error);
 } 
 my $result = display_vm_error( \@Error );

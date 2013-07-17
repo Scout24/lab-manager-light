@@ -10,7 +10,7 @@ use FindBin;
 use lib "$FindBin::RealBin/lib";
 
 use CGI ':standard';
-use HTML::Entities;
+use URI::Escape;
 use LML::Common;
 use LML::VMware;
 use LML::VM;
@@ -120,7 +120,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             # build body with error page
             my $error_data = "?data=Error: ".$/;
 			$error_data = $error_data . $_ . $/ for @error;
-			my $decoded_error_data = encode_entities($error_data);
+			my $decoded_error_data = uri_escape($error_data);
             my $error_main = $C->get( "pxelinux", "error_main" );
             my $url = "../lml/vmerror.pl" . $decoded_error_data;
             $error_main =~ s/URL/$url/;
