@@ -24,7 +24,7 @@ sub display_vm_error {
         $im->fill( 0, 0, $black );
         # image height = (17+(Version*4)+8)*ModuleSize (learned from GD::Barcode::QRcode source)
         $im->copy( GD::Barcode::QRcode->new( $json_data, { Ecc => 'M', Version => 23, ModuleSize => 2 } )->plot,
-                   0, 195, 0, 0, 230, 230 );
+                   0, 195, 0, 0, 235, 235 );
         return $im->png;
 }
 
