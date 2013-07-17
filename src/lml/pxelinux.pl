@@ -10,6 +10,7 @@ use FindBin;
 use lib "$FindBin::RealBin/lib";
 
 use CGI ':standard';
+use HTML::Entities;
 use LML::Common;
 use LML::VMware;
 use LML::VM;
