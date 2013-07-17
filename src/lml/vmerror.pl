@@ -16,8 +16,8 @@ sub display_vm_error {
 
 
         my $data = shift;
-        my $json_data = to_json( $data, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
-       # return data as PNG only if we return data for a single VM, otherwise it would be too much data for the QR code.
+        my $json_data = encode_json( $data );
+        # return data as PNG only if we return data for a single VM, otherwise it would be too much data for the QR code.
         my $im = new GD::Image( 640, 480 );    # always return VGA-sized image
         my $black  = $im->colorAllocate( 0, 0, 0 );
 
