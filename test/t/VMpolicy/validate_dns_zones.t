@@ -31,7 +31,7 @@ use LML::Lab;
 
 use_ok "LML::VMpolicy";
 
-$isDebug = 1;
+#$isDebug = 1;
 
 ######## validate_vm_dns_name
 #
