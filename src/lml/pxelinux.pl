@@ -118,7 +118,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
 
             # build body with error page
             my $error_main = $C->get( "pxelinux", "error_main" );
-            my $url = url() . "/lml/vmerror.pl" . "?error=Fehler";
+            my $url = "../lml/vmerror.pl" . "?error=Fehler";
             $error_main =~ s/URL/$url/;
             
             push( @body, $error_main );
