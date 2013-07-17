@@ -15,6 +15,8 @@ if ($? > 0) {
 }
 
 # good case
+$ENV{HOME}="test/data";
+
 my ($header,$result) = split("\r\n\r\n",qx(src/lml/backgroundimage.pl data="Hello World"),2);
 write_file("test/temp/backgroundimage_good.png",$result);
 my $reference_image = read_file("test/data/backgroundimage_good_reference.png");
