@@ -72,10 +72,14 @@ sub get_errors {
 }
 
 sub get_full_url {
+    # give full url as seen by HTTP client
+    # this is needed by everything talking to pxelinux because pxelinux prepends the TFTP PREFIX to
+    # relative URLs when used over HTTP.
     my ( $self, $url ) = @_;
+    return "" unless($url);
     my $my_url = $self->{full_url};
     if ( $url =~ qr(://) ) {
-        return $url;
+        $my_url = "";
     } elsif ( $url =~ qr(^/) ) {
         # going to absolute url on our host
         $my_url =~ s#^(.*://[^/]+).*$#$1#;    # strip everything after the host part
