@@ -17,7 +17,7 @@ sub new {
     my $folder;
     my $force_boot_target = 'qrdata';
     my $lmlhostpattern;
-
+    my $force_network = undef;
     my $vm_number;
     my @time = localtime time;
     my $time = $time[1] + 1;
@@ -37,6 +37,7 @@ sub new {
                       "expiration_date=s" => \$expiration_date,
                       "folder=s"          => \$folder,
                       "lmlhostpattern=s"  => \$lmlhostpattern,
+                      "force_network=s"   => \$force_network
          )
       )
     {
@@ -61,6 +62,7 @@ sub new {
                  lmlhostpattern    => $lmlhostpattern,
                  vm_host           => $vm_name_prefix . $vm_number,
                  force_boot_target => $force_boot_target,
+                 force_network     => $force_network
     };
 
     bless $self, $class;
