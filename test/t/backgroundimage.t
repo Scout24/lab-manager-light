@@ -26,7 +26,7 @@ is_deeply(from_json(qx(zbarimg --quiet --raw test/temp/backgroundimage_good_n_e.
       "And this is just a test"
    ],
    "NAME" => "foobar12"
-},"QR code should contain Hello World");
+},"QR code should name and 3 errors");
 
 
 # error case
