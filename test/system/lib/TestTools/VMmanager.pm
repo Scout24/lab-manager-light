@@ -38,6 +38,7 @@ sub create_vm {
 
     my $uuid = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", "name=" . $self->{vm_create_options}->{vm_host} . "&esx_host=" . $self->{vm_create_options}->{esx_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target} );
 
+    
     if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
         print "##teamcity[buildStatus status='FAILURE' text='Could not retrieve uuid " . $uuid . "']\n";
         exit 1;

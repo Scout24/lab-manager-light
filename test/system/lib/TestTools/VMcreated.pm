@@ -44,7 +44,7 @@ sub load_qrdata {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
-    return new TestTools::QRdata( $vm_spec, $self->{vm_create_options} );
+    return new TestTools::QRdata($self->{uuid}, $vm_spec, $self->{vm_create_options} );
 }
 
 #####################################################################
