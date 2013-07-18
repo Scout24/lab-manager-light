@@ -35,8 +35,13 @@ sub create_vm {
     }
 
     $self->_report_progress( "Creating " . $self->{vm_create_options}->{vm_host} );
-
-    my $uuid = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", "name=" . $self->{vm_create_options}->{vm_host} . "&esx_host=" . $self->{vm_create_options}->{esx_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target} );
+    my $vm_create_url_data = "name=" . $self->{vm_create_options}->{vm_host} . "&esx_host=" . $self->{vm_create_options}->{esx_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target} ;
+    
+    if ($self->{vm_create_options}->{force_network}){
+        $vm_create_url_data = $vm_create_url_data . "&force_network=" . $self->{vm_create_options}->{force_network}
+    }
+    
+    my $uuid = $self->_do_http_post_request("http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", $vm_create_url_data);
 
     
     if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
