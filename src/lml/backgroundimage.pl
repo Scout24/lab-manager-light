@@ -11,6 +11,7 @@ use GD::Image;
 use CGI ':standard';
 use URI::Escape;
 use LML::Config;
+use JSON;
 use Carp;
 
 sub generate_image {
@@ -57,7 +58,14 @@ sub generate_image {
 }
 
 my $data;
-if ( param("data") )
+if (param("n") and param("e")) {
+    # special use case for pxelinux.pl error handling, pxelinux can pass only about 220 chars so that passing
+    # a full json document from pxelinux.pl would be too long.
+    my $name = param("n");
+    my @errors = param("e");
+    $data = to_json( {NAME=>$name,ERRORS=>\@errors,ERRORCOUNT=>scalar(@errors)}, { utf8 => 0, pretty => 1, allow_blessed => 1, canonical => 1 } );
+}
+elsif ( param("data") )
 {
 	$data = uri_unescape(param("data"));
 }
