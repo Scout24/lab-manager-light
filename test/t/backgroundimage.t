@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::More;
-
+use JSON;
 use File::Slurp;
 #$isDebug = 1;
 
@@ -18,17 +18,15 @@ is(qx(zbarimg --quiet --raw test/temp/backgroundimage_good.png),"Hello World\n",
 
 ($header,$result) = split("\r\n\r\n",qx(src/lml/backgroundimage.pl 'n=foobar12;e=There was an error;e=Another error happened;e=And this is just a test'),2);
 write_file("test/temp/backgroundimage_good_n_e.png",$result);
-is(qx(zbarimg --quiet --raw test/temp/backgroundimage_good_n_e.png),'{
-   "ERRORCOUNT" : 3,
-   "ERRORS" : [
+is_deeply(from_json(qx(zbarimg --quiet --raw test/temp/backgroundimage_good_n_e.png)),{
+   "ERRORCOUNT" => 3,
+   "ERRORS" => [
       "There was an error",
       "Another error happened",
       "And this is just a test"
    ],
-   "NAME" : "foobar12"
-}
-
-',"QR code should contain Hello World");
+   "NAME" => "foobar12"
+},"QR code should contain Hello World");
 
 
 # error case
