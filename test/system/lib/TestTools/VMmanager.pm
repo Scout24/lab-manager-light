@@ -12,10 +12,10 @@ use DateTime;
 
 # Constructor
 sub new {
-    my ($class) = @_;
+    my ($class, $vm_create_options) = @_;
 
     my $self = {
-                 vm_create_options => new TestTools::VmCreateOptions(),
+                 vm_create_options => $vm_create_options,
                  already_deleted   => 0
     };
 
@@ -87,7 +87,7 @@ sub _do_http_post_request {
     $req->content("$data");
 
     my $res = $ua->request($req);
-    return $res->is_success ? $res->content : "ERROR: " . $res->status_line;
+    return $res->is_success ? $res->content : "ERROR: " . $res->content;
 }
 
 1;

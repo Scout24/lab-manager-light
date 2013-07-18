@@ -3,20 +3,23 @@ package TestTools::VmCreateOptions;
 use strict;
 use warnings;
 
+# For debugging
+use Data::Dumper;
+
 use Getopt::Long;
 
 sub new {
-    my ($class) = @_;
+    my ($class,%args) = @_;
 
     my $boot_timeout = 45;
-    my $test_host;
-    my $vm_name_prefix;
-    my $esx_host;
-    my $username;
+    my $test_host = $args{test_host};
+    my $vm_name_prefix = $args{vm_name_prefix} ;
+    my $esx_host = $args{esx_host};
+    my $username = $args{username};
     my $expiration_date = DateTime->today()->add( days => 1 )->dmy(".");
-    my $folder;
+    my $folder = $args{vm_folder};
     my $force_boot_target = 'qrdata';
-    my $lmlhostpattern;
+    my $lmlhostpattern = $args{lmlhostpattern};;
 
     my $vm_number;
     my @time = localtime time;
@@ -25,23 +28,6 @@ sub new {
         $vm_number = "0" . $time;
     } else {
         $vm_number = $time;
-    }
-
-    if (
-         !GetOptions(
-                      "boot_timeout=i"    => \$boot_timeout,
-                      "test_host=s"       => \$test_host,
-                      "vm_name_prefix=s"  => \$vm_name_prefix,
-                      "esx_host=s"        => \$esx_host,
-                      "username=s"        => \$username,
-                      "expiration_date=s" => \$expiration_date,
-                      "folder=s"          => \$folder,
-                      "lmlhostpattern=s"  => \$lmlhostpattern,
-         )
-      )
-    {
-        print "##teamcity[buildStatus status='FAILURE' text='Missing options']\n";
-        exit 1;
     }
 
     # make sure that everything is set
@@ -64,6 +50,9 @@ sub new {
     };
 
     bless $self, $class;
+
+    #print "DEBUG1: ".Data::Dumper->Dump([%{$self}])."\n";
+    
 
     return $self;
 }
