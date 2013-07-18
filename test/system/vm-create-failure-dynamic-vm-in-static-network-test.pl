@@ -20,17 +20,7 @@ use TestTools::VmCreateOptions;
 use Data::Dumper;
 
 #
-
-my $vm_create_options = new TestTools::VmCreateOptions(
-                                                    vm_name_prefix    => 'devxxx',
-                                                    username          => 'webadmin',
-                                                    esx_host          => 'tuvesx04.dev.is24.loc',
-                                                    test_host         => 'devnic01.rz.is',
-                                                    lmlhostpattern    => 'devnic',
-                                                    vm_folder         => '/Infrastructure/Integration-Tests',
-);
-
-my $vm_manager = new TestTools::VMmanager($vm_create_options);
+my $vm_manager = new TestTools::VMmanager();
 
 my $vm_created = $vm_manager->create_vm();
 
