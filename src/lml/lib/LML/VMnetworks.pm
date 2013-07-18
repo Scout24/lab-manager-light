@@ -56,22 +56,29 @@ sub create_nic {
 # Find all networks related to this vm
 # ====================================
 sub find_networks {
-    my ( $self, $vm_name ) = @_;
+    my ( $self, $vm_name, $force_network ) = @_;
     my @vm_nics;
     my @vm_networks_labels;
 
-    # Get the parameters related to network assignment logic
-    my @network_search_order = $self->{config}->get_array( "vm_create", "network_search_order" );
+    # Check if we forced to a network, or if the network should be detected automatically
+    if ( defined $force_network and length $force_network ) {
+        push @vm_networks_labels, $force_network;
+    }
+    # Network should be detected automatically
+    else {
+        # Get the parameters related to network assignment logic
+        my @network_search_order = $self->{config}->get_array( "vm_create", "network_search_order" );
 
-    # The search order controls the outer loop
-    LOOP:
-    foreach my $net_label (@network_search_order) {
-        # Use the current net_label as index for the network assignment structure
-        foreach my $rule ( $self->{config}->get_array( "network_assignment", $net_label ) ) {
-            if ( $vm_name =~ m/$rule$/x ) {
-                push @vm_networks_labels, $net_label;
-                # Set the loop marker to done and quit this loop
-                last LOOP;
+        # The search order controls the outer loop
+      LOOP:
+        foreach my $net_label (@network_search_order) {
+            # Use the current net_label as index for the network assignment structure
+            foreach my $rule ( $self->{config}->get_array( "network_assignment", $net_label ) ) {
+                if ( $vm_name =~ m/$rule$/x ) {
+                    push @vm_networks_labels, $net_label;
+                    # Set the loop marker to done and quit this loop
+                    last LOOP;
+                }
             }
         }
     }
