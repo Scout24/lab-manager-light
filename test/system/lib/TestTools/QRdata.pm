@@ -8,10 +8,10 @@ use warnings;
 use constant MAX_QR_CODE_AGE_SEC => 180;    # 3 minutes
 
 sub new {
-    my ( $class, $vm_data, $vm_create_options ) = @_;
+    my ( $class, $vm_created, $vm_create_options ) = @_;
 
     my $self = {
-                 vm_data           => $vm_data,
+                 vm_created           => $vm_created,
                  vm_create_options => $vm_create_options
     };
 
@@ -33,7 +33,7 @@ sub assert {
 # asserts that the QR code is not too old
 sub assert_qr_code_age {
     my ($self) = @_;
-    my $time = $self->{vm_data}->{"UPDATED"};
+    my $time = $self->{vm_created}->{"UPDATED"};
     $self->_fail_team_city_build( "QR code " . ( time - $time ) . " seconds old, more than allowed " . MAX_QR_CODE_AGE_SEC, "1" )
       if ( time - $time > MAX_QR_CODE_AGE_SEC );
 }

@@ -20,11 +20,14 @@ use Data::Dumper;
 
 # 
 my $vm_manager = new TestTools::VMmanager();
-my $vm_data = $vm_manager->create_vm();
-my $qr_data = $vm_data->load_qrdata();
+my $vm_created = $vm_manager->create_vm();
 
-#print "DEBUG-HOST: " . $qr_data->{vm_data}->{HOST} . "\n";
-#print "DEBUG1: ".Data::Dumper->Dump([%{$qr_data->{vm_data}}])."\n";
+
+
+my $qr_data = $vm_created->load_qrdata();
+
+#print "DEBUG-HOST: " . $qr_data->{vm_created}->{HOST} . "\n";
+#print "DEBUG1: ".Data::Dumper->Dump([%{$qr_data->{vm_created}}])."\n";
 
 $qr_data->assert_qr_code_age();
 
