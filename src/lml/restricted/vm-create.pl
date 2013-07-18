@@ -38,6 +38,7 @@ my $expiration_date;
 my $esx_host;
 my $vm_folder;
 my $force_boot_target;
+my $force_network = undef;
 
 # are we called via webui?
 if ( exists $ENV{GATEWAY_INTERFACE} ) {
@@ -47,6 +48,7 @@ if ( exists $ENV{GATEWAY_INTERFACE} ) {
     $esx_host          = param('esx_host');
     $vm_folder         = param('folder');
     $force_boot_target = param('force_boot_target') || "default";
+    $force_network     = param('force_network');
 
     # or are we called via commandline
 } elsif ( @ARGV > 0 ) {
@@ -59,10 +61,13 @@ if ( exists $ENV{GATEWAY_INTERFACE} ) {
                 "esx_host=s"          => \$esx_host,
                 "folder=s"            => \$vm_folder,
                 "force_boot_target=s" => \$force_boot_target,
+                "force_network=s"     => \$force_network,
     );
 
-    # we have nothing, print help
-} else {
+
+}
+# We have nothing, print help
+else {
     error("no Parameters");
 }
 
@@ -88,7 +93,8 @@ my @vms = generate_vms_array(
                               expiration_date   => $expiration_date,
                               esx_host          => $esx_host,
                               force_boot_target => $force_boot_target,
-                              vm_folder         => $vm_folder
+                              vm_folder         => $vm_folder,
+                              force_network     => $force_network,
 );
 
 create_vms(@vms);
@@ -141,7 +147,8 @@ sub generate_vms_array {
            # Temporary deactivated (we using cmd or post data for this atm)
            #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
            target_folder => $args{vm_folder},
-           has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend}
+           has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend},
+           force_network => $args{force_network},
         }
     );
 
@@ -229,7 +236,7 @@ sub create_vm {
 
     # Get all networks, which are related to this vm
     my $networks = new LML::VMnetworks( $C, $host_view );
-    my @vm_nics = $networks->find_networks( $$args{vmname} );
+    my @vm_nics = $networks->find_networks( $$args{vmname}, $$args{force_network} );
 
     # check the success and add the found networks
     if (@vm_nics) {
@@ -468,7 +475,7 @@ sub check_parameter {
 
     # Check VM-Name
     my $hostname_pattern = $C->get( "hostrules", "pattern" );
-    $result = $result . "invalid vm_name" . $/ if ( !$args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/ );
+    $result = $result . "invalid vm_name" . $/ if ( !$args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/x );
 
     # Check User-Name
     my $contactuserid_minuid = $C->get( "vsphere", "contactuserid_minuid" );
@@ -491,8 +498,9 @@ sub print_usage {
 
     print "   --name=value \t\t Name of the vm to be created (e.g. devxyz01)\n";
     print "   --username=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n";
-    print "   --expiration=value \t Date where the vm will be expired (e.g. 01.01.2015) \n";
+    print "   --expiration=value \t\t Date where the vm will be expired (e.g. 01.01.2015) \n";
     print "   --esx_host=value \t\t FQDN of the ESX host where the vm should be created\n";
     print "   --folder=value \t\t VM folder name, where the vm should be placed\n";
+    print "   --force_network=label \t OPTIONAL: Network which the new VM should be attached\n";
     print "   --force_boot=value \t\t Force boot value for the new vm\n\n";
 }
