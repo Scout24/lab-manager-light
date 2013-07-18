@@ -88,8 +88,8 @@ is_deeply( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{MACS},
 $LAB->set_filename("test/temp/new_lab.conf");
 is(
     $LAB->write_file( "by " . __FILE__, "test" ),
-    3137,
-"Writing to 'test/temp/new_lab.conf' should write 3137 bytes and it would be better to analyse the content but at least we notice change"
+    3140,
+"Writing to 'test/temp/new_lab.conf' should write 3140 bytes and it would be better to analyse the content but at least we notice change"
 );
 
 is_deeply( [ $LAB->list_hosts ],
