@@ -93,7 +93,11 @@ sub _decode_qr {
     print "##teamcity[progressMessage 'Decoding QR code from $file']\n";
 
     my $raw_data = `zbarimg -q --raw $file`;
-    return $raw_data ? decode_json($raw_data) : undef;
+    if ($? > 0){
+         print "##teamcity[progressMessage 'Decoding of rq-code image failed.']\n";
+    }
+#    return $raw_data ? decode_json($raw_data) : undef;
+    return $raw_data;
 }
 
 1;

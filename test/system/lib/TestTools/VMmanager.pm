@@ -12,10 +12,10 @@ use DateTime;
 
 # Constructor
 sub new {
-    my ($class) = @_;
+    my ($class, $vm_create_options) = @_;
 
     my $self = {
-                 vm_create_options => new TestTools::VmCreateOptions(),
+                 vm_create_options => $vm_create_options,
                  already_deleted   => 0
     };
 
