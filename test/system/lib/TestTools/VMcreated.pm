@@ -38,12 +38,35 @@ sub load_qrdata {
 
     if ($vm_spec) {
         link $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png";
-    }
-    else {
+    } else {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
-    return new TestTools::QRdata($self->{uuid}, $vm_spec, $self->{vm_create_options} );
+    return new TestTools::QRdata( $self->{uuid}, $vm_spec, $self->{vm_create_options} );
+}
+
+sub match_ocr {
+    my ( $self, $test_definition ) = @_;
+
+    my $starttime = time;
+    my $test_passed;
+    my $file;
+    my $screenshot_count = 0;
+
+    while ( not $test_passed and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
+        $screenshot_count++;
+        $file = $self->_download_vm_screenshot( $self->{uuid}, $screenshot_count );
+        $test_passed = $self->_ocr_match($file, $test_definition);
+        sleep 3;    # be nice to vSphere and try again only after a few seconds
+    }
+
+    if ($test_passed) {
+        link $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png";
+    } else {
+        $self->_fail_team_city_build( "No OCR match after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
+    }
+
+    return $test_passed;
 }
 
 #####################################################################
@@ -92,12 +115,33 @@ sub _decode_qr {
 
     print "##teamcity[progressMessage 'Decoding QR code from $file']\n";
 
-    my $raw_data = `zbarimg -q --raw $file`;
-    if ($? > 0){
-         print "##teamcity[progressMessage 'Decoding of rq-code image failed.']\n";
+    my $raw_data = qx(zbarimg -q --raw $file);
+    if ( ($? >>8) > 0 ) {
+        print "##teamcity[progressMessage 'Decoding of rq-code image failed.']\n";
     }
-#    return $raw_data ? decode_json($raw_data) : undef;
+    #    return $raw_data ? decode_json($raw_data) : undef;
     return $raw_data;
 }
 
+sub _ocr_match {
+    my ( $self, $file, $test_definition ) = @_;
+    print "##teamcity[progressMessage 'OCR scan on $file']\n";
+
+    my $raw_data = qx(gocr -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
+    if ( ($? >>8) > 0 ) {
+        print "##teamcity[progressMessage 'OCR scan of image failed.']\n";
+        return 0;
+    } else {
+        print "OCR Result:\n" . $raw_data ;
+        my $match = 0;
+        foreach my $pattern ( @{ $test_definition->{expect} } ) {
+            print "##teamcity[progressMessage 'Validating OCR text for matching pattern \"$pattern\"']\n";
+            $match += $raw_data =~ qr(^$pattern)m;
+        }
+        return $match;
+    }
+
+    #    return $raw_data ? decode_json($raw_data) : undef;
+
+}
 1;
