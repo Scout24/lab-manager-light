@@ -16,12 +16,9 @@ use CGI ':standard';
 use JSON;
 use Getopt::Long;
 
-use LML::Common;
 use LML::Config;
-use LML::DHCP;
-use LML::Lab;
 use LML::VMware;
-use LML::VMmodify;
+use LML::VM;
 
 # Initialization
 my $header_sent = 0;
@@ -96,7 +93,9 @@ connect_vi();
 
 foreach my $vm_name (@vm_names) {
     # Translate the vm name to its uuid
-    my $VM = get_vm_by_name($vm_name);
+    #my $VM = get_vm_by_name($vm_name);
+    my $uuid = get_uuid_by_name($vm_name);
+    my $VM   = new LML::VM($uuid);
 
     # Check the success
     if ( not $VM ) {
@@ -138,29 +137,6 @@ sub error {
     print $message. $linebreak;
 
     exit 1;
-}
-
-# Translate the given name to the appropriate uuid.
-# Make use of our lab file as data source
-sub get_vm_by_name {
-    my $vm_name = shift;
-
-    # Get an object of our lab file
-    my $LAB = new LML::Lab( $C->labfile );
-
-    # Loop through the lab file to find the correct vm
-    foreach my $uuid ( $LAB->list_hosts() ) {
-        # Try to get an vm object for the actual uuid
-        if ( my $VM = $LAB->get_vm($uuid) ) {
-            if ( $VM->name eq $vm_name ) {
-                # Return the found vm object, if it is the one we looking for
-                return $VM;
-            }
-        }
-    }
-
-    # Return error as default, if nothing was found
-    return 0;
 }
 
 sub print_usage {

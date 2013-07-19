@@ -14,7 +14,7 @@ use vars qw(
 );
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM perform_destroy perform_poweroff perform_reboot perform_reset);
+our @EXPORT = qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -176,16 +176,16 @@ sub connect_vi() {
     Opts::parse();
 
     # TODO: the validate call seems to query for VI credentials
-    #	even though they are not required on VMA
-    #	fix so that it won't do that anymore
+    #   even though they are not required on VMA
+    #   fix so that it won't do that anymore
     eval { Opts::validate(); };
     croak("Could not validate VI options: $@") if ($@);
 
-    #	eval {
-    #		my @targets = VmaTargetLib::enumerate_targets;
-    #		# TODO: walk through all available VI systems, not only the first one
-    #		$targets[0]->login()
-    #	};
+    #   eval {
+    #       my @targets = VmaTargetLib::enumerate_targets;
+    #       # TODO: walk through all available VI systems, not only the first one
+    #       $targets[0]->login()
+    #   };
     eval { Util::connect(); };
     croak("Could not connect to VI: $@") if ($@);
     Debug("Connected to vSphere");
@@ -199,7 +199,7 @@ sub connect_vi() {
 ## returns a hash of name->id pairs of defined custom fields
 ##
 sub get_custom_fields {
-    unless ( scalar( keys(%CUSTOMFIELDS) ) ) {
+    unless ( scalar( keys %CUSTOMFIELDS ) ) {
         # initialize CUSTOMFIELDIDS and retrieve custom fields if they are not set
         %CUSTOMFIELDIDS = ();
         %CUSTOMFIELDS   = ();
@@ -231,7 +231,7 @@ sub get_custom_fields {
 ##
 
 sub get_datastores {
-    unless ( scalar( keys(%DATASTOREIDS) ) ) {
+    unless ( scalar( keys %DATASTOREIDS ) ) {
         my $datastoreEntityViews = Vim::find_entity_views(
             view_type    => "Datastore",
             begin_entity => Vim::get_service_content()->rootFolder,
@@ -275,7 +275,7 @@ sub get_datastores {
 ##
 
 sub get_networks {
-    unless ( scalar( keys(%NETWORKIDS) ) ) {
+    unless ( scalar( keys %NETWORKIDS ) ) {
         # $networkEntityViews is an array of this:
         #Network=HASH(0x51f57e0)
         #      'host' => ARRAY(0x5207ad0)
@@ -359,7 +359,7 @@ sub get_hosts {
     # initialize %DATASTOREIDS
     get_datastores();
 
-    unless ( scalar( keys(%HOSTS) ) ) {
+    unless ( scalar( keys %HOSTS ) ) {
         # initialize HOSTIDS and HOSTS if they don't contain data
         %HOSTS   = ();
         %HOSTIDS = ();
@@ -415,6 +415,21 @@ sub get_hostids {
 
     get_hosts;
     return \%HOSTIDS;
+}
+
+# Get the uuid of an vm by a given vm name
+sub get_uuid_by_name {
+    my $vm_name = shift;
+
+    # Try to get an view for the given vm name
+    my $object = Vim::find_entity_view(
+                                        view_type  => 'VirtualMachine',
+                                        filter     => { 'config.name' => $vm_name },
+                                        properties => ["config.uuid"],
+    );
+
+    # Return the retrieved uuid
+    return $object->{"config.uuid"};
 }
 
 ################################ sub #################
