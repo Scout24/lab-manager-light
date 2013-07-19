@@ -15,11 +15,14 @@ use JSON;
 use AppUtil::XMLInputUtil;
 use AppUtil::HostUtil;
 use AppUtil::VMUtil;
-use Data::Dumper;
 use LWP::Simple qw(get);
 use Getopt::Long;
 use LML::VMware;
 use LML::VMnetworks;
+
+# Only for debugging
+use Data::Dumper;
+#print "DEBUG: ".Data::Dumper->Dump([%{$vm_config_spec}])."\n";
 
 use LML::Config;
 my $C = new LML::Config();
@@ -120,7 +123,7 @@ sub generate_vms_array {
     # get now the json spec for this vm
     my $answer = get sprintf $C->get( "vm_spec", "host_spec" ), $args{vm_name};
     # check if we got something from web call
-    error( "ERROR: Unable to get JSON description file for VM " . $args{vm_name} ) unless defined $answer;
+    error( "Unable to get JSON description file for VM " . $args{vm_name} ) unless defined $answer;
 
     # convert the HTML answer to pure json
     $answer =~ s/<[^>]*>//gx;
@@ -212,7 +215,7 @@ sub create_vm {
                                            filter    => { 'name' => $$args{vmhost} } );
 
     if ( !$host_view ) {
-        error( "ERROR: " . "Host '$$args{vmhost}' not found" );
+        error( "Host '$$args{vmhost}' not found" );
     }
 
     my %ds_info = HostUtils::get_datastore(
@@ -223,10 +226,10 @@ sub create_vm {
 
     if ( $ds_info{mor} eq 0 ) {
         if ( $ds_info{name} eq 'datastore_error' ) {
-            error( "ERROR: " . "Datastore $$args{datastore} not available." );
+            error( "Datastore $$args{datastore} not available." );
         }
         if ( $ds_info{name} eq 'disksize_error' ) {
-            error("ERROR: The free space available is less than the specified disksize.");
+            error("The free space available is less than the specified disksize.");
         }
     }
 
@@ -243,7 +246,7 @@ sub create_vm {
         push @vm_devices, @vm_nics;
 
     } else {
-        error("ERROR: No networks for host '$$args{vmname}' found");
+        error("No networks for host '$$args{vmname}' found");
     }
 
     push @vm_devices, $controller_vm_dev_conf_spec;
@@ -269,11 +272,11 @@ sub create_vm {
                                                    filter    => { name => $$args{datacenter} } );
 
     unless (@$datacenter_views) {
-        error( "ERROR: " . "Datacenter '$$args{datacenter}' not found" );
+        error( "Datacenter '$$args{datacenter}' not found" );
     }
 
     if ( $#{$datacenter_views} != 0 ) {
-        error( "ERROR: " . "Datacenter '$$args{datacenter}' not unique" );
+        error( "Datacenter '$$args{datacenter}' not unique" );
     }
 
     my $datacenter           = shift @$datacenter_views;
@@ -294,30 +297,27 @@ sub create_vm {
                 target_view => \$target_folder_view
     );
 
-    # just for testing purposes
-    #print "DEBUG: ".Data::Dumper->Dump([%{$vm_config_spec}])."\n";
-
     eval { $target_folder_view->CreateVM( config => $vm_config_spec, pool => $comp_res_view->resourcePool ); };
 
     if ($@) {
         if ( ref($@) eq 'SoapFault' ) {
             if ( ref( $@->detail ) eq 'PlatformConfigFault' ) {
-                error( "ERROR: Invalid VM configuration: " . ${ $@->detail }{'text'} );
+                error( "Invalid VM configuration: " . ${ $@->detail }{'text'} );
             } elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
-                error( "ERROR: Invalid Device configuration: " . ${ $@->detail }{'property'} );
+                error( "Invalid Device configuration: " . ${ $@->detail }{'property'} );
             } elsif ( ref( $@->detail ) eq 'DatacenterMismatch' ) {
-                error("ERROR: DatacenterMismatch, the input arguments had entities that did not belong to the same datacenter");
+                error("DatacenterMismatch, the input arguments had entities that did not belong to the same datacenter");
             } elsif ( ref( $@->detail ) eq 'HostNotConnected' ) {
-                error("ERROR: Unable to communicate with the remote host, since it is disconnected");
+                error("Unable to communicate with the remote host, since it is disconnected");
             } elsif ( ref( $@->detail ) eq 'InvalidState' ) {
-                error("ERROR: The operation is not allowed in the current state");
+                error("The operation is not allowed in the current state");
             } elsif ( ref( $@->detail ) eq 'DuplicateName' ) {
-                error("ERROR: Virtual machine already exists");
+                error("Virtual machine already exists");
             } else {
-                error( "ERROR: " . $@ );
+                error( $@ );
             }
         } else {
-            error( "ERROR: " . $@ );
+            error( $@ );
         }
     }
 
@@ -331,7 +331,7 @@ sub create_vm {
     eval { $vm_view->PowerOnVM(); };
     # handle errors
     if ($@) {
-        error("ERROR: Switch on");
+        error("Switch on failed");
     }
     # if everything went find give an success status
     success( $vm_view->config->uuid );

@@ -38,9 +38,8 @@ sub load_qrdata {
 
     if ($vm_spec) {
         link $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png";
-        # do an minimal check for matching uuid
-        $self->_fail_team_city_build( "expected uuid:" . $self->{uuid} . ", actual: " . $vm_spec->{UUID} ) if ( $vm_spec->{UUID} ne $self->{uuid} );
-    } else {
+    }
+    else {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
