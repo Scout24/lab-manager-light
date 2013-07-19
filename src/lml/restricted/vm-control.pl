@@ -93,13 +93,12 @@ connect_vi();
 
 foreach my $vm_name (@vm_names) {
     # Translate the vm name to its uuid
-    #my $VM = get_vm_by_name($vm_name);
     my $uuid = get_uuid_by_name($vm_name);
     my $VM   = new LML::VM($uuid);
 
     # Check the success
     if ( not $VM ) {
-        error("Unable to find entry in lab file for vm \"$vm_name\", quit ...");
+        error("Unable to find vm \"$vm_name\", quit ...");
     }
 
     if ($action_detonate) {
