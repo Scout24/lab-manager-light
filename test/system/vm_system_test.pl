@@ -5,6 +5,7 @@
 # perl-libwww-perl
 # perl-JSON
 # perl-DateTime
+# per-Config-IniFiles
 
 # Defaults
 use strict;
