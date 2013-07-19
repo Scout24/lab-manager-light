@@ -67,7 +67,7 @@ sub find_networks {
     # Network should be detected automatically
     else {
         # Get the parameters related to network assignment logic
-        my @network_search_order = $self->{config}->get_array( "vm_create", "network_search_order" );
+        my @network_search_order = $self->{config}->get_array( "new_vm", "network_search_order" );
 
         # The search order controls the outer loop
       LOOP:
