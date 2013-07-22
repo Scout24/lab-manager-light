@@ -15,18 +15,16 @@ sub new {
     return $self;
 }
 
-
-
 # Find all networks related to this vm
 # ====================================
 
 sub find_networks {
     my ( $self, $vm_name, $force_network ) = @_;
-    my @network_labels = $self->_find_first_network($vm_name, $force_network);
-    push @network_labels, $self->_find_second_network($vm_name, @network_labels);
-    
+    my @network_labels = $self->_find_first_network( $vm_name, $force_network );
+    push @network_labels, $self->_find_second_network( $vm_name, @network_labels );
+
     my @vm_nics = $self->_create_nics_by_network_labels(@network_labels);
-    
+
     return @vm_nics;
 }
 
@@ -42,7 +40,7 @@ sub _find_first_network {
     else {
         # Get the parameters related to network assignment logic
         my @network_search_order = $self->{config}->get_array( "new_vm", "network_search_order" );
-        
+
         # The search order controls the outer loop
       LOOP:
         foreach my $net_label (@network_search_order) {
@@ -56,40 +54,40 @@ sub _find_first_network {
             }
         }
     }
-    
+
     return @vm_networks_labels;
 }
 
 sub _find_second_network {
-    my ($self, $vm_name, @network_labels) = @_;
-    
+    my ( $self, $vm_name, @network_labels ) = @_;
+
     # Read out patterns which vm name should match, if the vm should get an 2nd interface
-    my @second_interface_patterns =  $self->{config}->get_array( "new_vm", "2nd_interface" );
+    my @second_interface_patterns = $self->{config}->get_array( "new_vm", "2nd_interface" );
     # Read out the string, which should be appended to indentify the 2nd interface network label
-    my $second_interface_suffix =  $self->{config}->get( "new_vm", "2nd_interface_suffix" );
-    
+    my $second_interface_suffix = $self->{config}->get( "new_vm", "2nd_interface_suffix" );
+
     my @second_network_labels = ();
-    
+
     # Loop through each found pattern and try if the vm name is matching against one
     foreach my $pattern (@second_interface_patterns) {
-           # If we found a pattern which is matching, the vm is allowed to get an 2nd interface
-           if ( $vm_name =~ m/^$pattern$/x ) {
-               # So take every submitted network label, put the configured 2nd_interface_suffix to the labels
-               # and create a new array with that labels
-               foreach my $network_label (@network_labels) {
-                   push @second_network_labels, $network_label . $second_interface_suffix;
-               }
-               # Our work is done here, so break the outer loop
-               last;
-           }
-    }    
-    
+        # If we found a pattern which is matching, the vm is allowed to get an 2nd interface
+        if ( $vm_name =~ m/^$pattern$/x ) {
+            # So take every submitted network label, put the configured 2nd_interface_suffix to the labels
+            # and create a new array with that labels
+            foreach my $network_label (@network_labels) {
+                push @second_network_labels, $network_label . $second_interface_suffix;
+            }
+            # Our work is done here, so break the outer loop
+            last;
+        }
+    }
+
     # Finally return the array with the generated 2nd interface pendants
     return @second_network_labels;
 }
 
 sub _create_nics_by_network_labels {
-    my ($self, $network_labels) = @_;
+    my ( $self, @network_labels ) = @_;
     my @vm_nics;
     # After retrieving a full list of networks to be assigned, get the appropriate specs
     # Begin with getting all networks, which the selected esx host can see
@@ -97,7 +95,7 @@ sub _create_nics_by_network_labels {
 
     # Go through each network, which is assigned to the host vieww
     foreach my $network (@$full_network_list) {
-        if ( grep { $_ eq $network->name } $network_labels ) {
+        if ( grep { $_ eq $network->name } @network_labels ) {
             push @vm_nics, _create_nic( network => $network );
         }
     }
