@@ -28,8 +28,15 @@ sub assert_qr_code_age {
     print "##teamcity[progressMessage 'Validating QR-code age']\n";
     my ($self) = @_;
     my $time = $self->{vm_created_json}->{"UPDATED"};
-    $self->_fail_team_city_build( "QR code " . ( time - $time ) . " seconds old, more than allowed " . MAX_QR_CODE_AGE_SEC, "1" )
-      if ( time - $time > MAX_QR_CODE_AGE_SEC );
+    my $age = -1;
+
+    if (defined($time)){
+        $age = time - $time;
+        $self->_fail_team_city_build( "QR code " . ( $age ) . " seconds old, more than allowed " . MAX_QR_CODE_AGE_SEC, "1" )
+            if ( $age > MAX_QR_CODE_AGE_SEC );
+    } else {
+        $self->_fail_team_city_build( "QR code is an error code and not a expected qr code for a successfully created vm.")
+    }
 }
 
 # asserts the vm path
