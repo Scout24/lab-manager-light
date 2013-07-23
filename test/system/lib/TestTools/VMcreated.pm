@@ -94,7 +94,7 @@ sub _download_vm_screenshot {
 sub _fail_team_city_build {
     my ( $self, $reason ) = @_;
     print "##teamcity[buildStatus status='FAILURE' text='$reason']\n";
-    exit 1;
+    die "An error occured while creating vm";
 }
 
 sub _do_http_get_request {
@@ -117,7 +117,7 @@ sub _decode_qr {
 
     my $raw_data = qx(zbarimg -q --raw $file);
     if ( ($? >>8) > 0 ) {
-        print "##teamcity[progressMessage 'Decoding of rq-code image failed.']\n";
+        print "##teamcity[progressMessage 'Decoding of qr-code image failed.']\n";
     }
     #    return $raw_data ? decode_json($raw_data) : undef;
     return $raw_data;
