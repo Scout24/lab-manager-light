@@ -52,7 +52,9 @@ sub excute_test_case {
     my $vm_created = $vm_manager->create_vm();
     eval {
         if ( "qrdata" eq $test_definition->{result} ) {
-            assert_qrdata($vm_created->load_qrdata());
+            my $qrdata = $vm_created->load_qrdata();
+            assert_qrdata($qrdata);
+            assert_qr($qrdata,$test_definition );
         } elsif ( "qr" eq $test_definition->{result} ) {
             assert_qr( $vm_created->load_qrdata(), $test_definition );
         } elsif ("ocr" eq $test_definition->{result} ) {

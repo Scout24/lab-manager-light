@@ -133,7 +133,7 @@ sub _assert {
 sub _fail_team_city_build {
     my ( $self, $reason ) = @_;
     print "##teamcity[buildStatus status='FAILURE' text='$reason']\n";
-    exit 1;
+    die "An error occured - skipping tests.";
 }
 
 1;
