@@ -2,16 +2,52 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::MockModule;
 use Test::Exception;
 use File::Slurp;
 use Data::Dumper;
 
-BEGIN {
-    use_ok "LML::Config";
-    use_ok "LML::Lab";
-}
+use LML::Config;
+
 use LML::Common;
 #$isDebug=1;
+
+my $VM_ALL = {
+                    "42130272-a509-8010-6e85-4e01cb1b7284" => {
+                                                          "CUSTOMFIELDS" => {
+                                                                              "Contact User ID" => "User1",
+                                                                              "Expires"         => "31.12.2013"
+                                                          },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
+                                                          "MAC"          => { "01:02:03:04:00:15"      => "arc.int" },
+                                                          "NAME"         => "lochst001",
+                                                          "HOST"         => "testesx01.domain",
+                                                          "NETWORKING"   => [ {
+                                                                              "MAC"     => "01:02:03:04:00:15",
+                                                                              "NETWORK" => "arc.int"
+                                                                            }
+                                                          ],
+                                                          "PATH"  => "development/vm/path/lochst001",
+                                                          "VM_ID" => "vm-0500",
+                                                          "UUID"  => "42130272-a509-8010-6e85-4e01cb1b7284"
+                    },
+};
+
+# we use the following here to mock it, it is basically only used within Lab
+use LML::VMware;
+
+my $mock            = new Test::MockModule('LML::VMware');
+$mock->mock(
+    get_vm_data =>
+    sub {
+        my $uuid = shift;
+        #diag("Mock get_vm_data($uuid):\n");
+        return \() unless ( exists $VM_ALL->{$uuid} );
+        return $VM_ALL->{$uuid};
+
+    } );
+use LML::VM;
+use_ok "LML::Lab";
 
 # load test config
 my $C = new_ok( "LML::Config" => [ "src/lml/default.conf", "test/data/test.conf" ] );

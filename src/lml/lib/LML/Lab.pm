@@ -23,11 +23,11 @@ sub new {
     } elsif ( ref($arg) eq "" ) {
         # arg is not a reference but a scalar, should be file name of lab file
         my $LAB = {
-                    "HOSTS"    => {},
-                    "ESXHOSTS" => {},
-                    "NETWORKS" => {},
+                    "HOSTS"      => {},
+                    "ESXHOSTS"   => {},
+                    "NETWORKS"   => {},
                     "DATASTORES" => {},
-                  };
+        };
         if ( -r $arg ) {
             local $/ = undef;
             open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
@@ -69,31 +69,49 @@ sub list_hosts {
     return sort( keys( %{ $self->{HOSTS} } ) );
 }
 
-# return single vm
+# return single vm given by uuid or name
 sub get_vm {
-    my ( $self, $uuid ) = @_;
-    croak( "Must give VM uuid as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($uuid);
-    if ( exists $self->{HOSTS}{$uuid} ) {
-        return new LML::VM($self->{HOSTS}{$uuid});
+    my ( $self, $search_vm ) = @_;
+    croak( "Must give VM uuid or name as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($search_vm);
+    if ( exists $self->{HOSTS}{$search_vm} ) {
+        return new LML::VM( $self->{HOSTS}{$search_vm} );
     } else {
-        return;
+        # try to find VM by name
+        my @vms = grep { defined( $_->{NAME} ) and $_->{NAME} eq $search_vm } values( %{ $self->{HOSTS} } );
+        if ( scalar(@vms) > 1 ) {
+            croak("Found more than one VM matching '$search_vm', please make sure that VM names are unique");
+        } elsif ( scalar(@vms) == 1 ) {
+            return new LML::VM( $vms[0] );
+        } else {
+            # try to load VM from backend, put it into our Lab data
+            if ( my $new_VM = new LML::VM($search_vm) ) {
+                $self->update_vm($new_VM);
+                return $new_VM;
+            }
+        }
     }
+    return undef; # we found nothing
 }
 
-# return list of all vms
+# return list of all vms or the ones given as args
 sub get_vms {
-    my $self = shift;
-    return map { new LML::VM($_) } values(%{$self->{HOSTS}});    
+    my ($self,@search_vms) = @_;
+    if (@search_vms) {
+        return map { $self->get_vm($_) } @search_vms;
+    } else {
+        # everything we have
+        return map { new LML::VM($_) } values( %{ $self->{HOSTS} } );
+    }
 }
 
 # return Virtualisation Host
 sub get_host {
-    my ($self, $search_host) = @_;
-    croak ("Must give host moref or name as first parameter in ". ( caller(0) )[3]."\n") unless ($search_host);
+    my ( $self, $search_host ) = @_;
+    croak( "Must give host moref or name as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($search_host);
     # first try to lookup by name
-    return $self->{ESXHOSTS}->{$search_host} if (exists($self->{ESXHOSTS}->{$search_host}));
+    return $self->{ESXHOSTS}->{$search_host} if ( exists( $self->{ESXHOSTS}->{$search_host} ) );
     # then search for a host with this ref
-    my @results = grep { $_->{id} eq $search_host } values(%{$self->{ESXHOSTS}});
+    my @results = grep { $_->{id} eq $search_host } values( %{ $self->{ESXHOSTS} } );
     # cannot be more than one result because ESXHOSTS is ATM a hash with name as key
     # even though vSphere probably supports different ESX servers with the same name (who would do that...)
     return scalar(@results) ? $results[0] : undef;
@@ -102,60 +120,72 @@ sub get_host {
 # return list of all hosts
 sub get_hosts {
     my $self = shift;
-    return map { $_ } values(%{$self->{ESXHOSTS}});
+    return map { $_ } values( %{ $self->{ESXHOSTS} } );
 
 }
 # return datastore given by reference or by name
 # NOTE: datastore Names are NOT unique in vSphere! If we find that we abort!
 sub get_datastore {
-    my ($self, $search_datastore) = @_;
-    croak ("Must give datastore moref or name as first parameter in ". ( caller(0) )[3]."\n") unless ($search_datastore);
+    my ( $self, $search_datastore ) = @_;
+    croak( "Must give datastore moref or name as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($search_datastore);
     # first try to lookup by moref
-    return $self->{DATASTORES}->{$search_datastore} if (exists($self->{DATASTORES}->{$search_datastore}));
+    return $self->{DATASTORES}->{$search_datastore} if ( exists( $self->{DATASTORES}->{$search_datastore} ) );
     # then search for a datastore with this name, this could yield to more than one result!
-    my @results = grep { $_->{name} eq $search_datastore } values(%{$self->{DATASTORES}});
-    if (scalar(@results) > 1) {
-        croak ("Datastore names must be unique in ". ( caller(0) )[3].", $search_datastore has several results:\n".Data::Dumper->Dump(\@results)."\n");
-    } elsif (scalar(@results) == 1) {
+    my @results = grep { $_->{name} eq $search_datastore } values( %{ $self->{DATASTORES} } );
+    if ( scalar(@results) > 1 ) {
+        croak(   "Datastore names must be unique in "
+               . ( caller(0) )[3]
+               . ", $search_datastore has several results:\n"
+               . Data::Dumper->Dump( \@results )
+               . "\n" );
+    } elsif ( scalar(@results) == 1 ) {
         return $results[0];
     } else {
         return undef;
-    }   
+    }
 }
 
 # return a list of datastores
 sub get_datastores {
     my $self = shift;
-    return map { $_ } values(%{$self->{DATASTORES}});
+    return map { $_ } values( %{ $self->{DATASTORES} } );
 }
 
 # return network given by reference or by name
 # NOTE: network Names are NOT unique in vSphere! If we find that we abort!
 sub get_network {
-    my ($self, $search_network) = @_;
-    croak ("Must give network moref or name as first parameter in ". ( caller(0) )[3]."\n") unless ($search_network);
+    my ( $self, $search_network ) = @_;
+    croak( "Must give network moref or name as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($search_network);
     # first try to lookup by moref
-    return $self->{NETWORKS}->{$search_network} if (exists($self->{NETWORKS}->{$search_network}));
+    return $self->{NETWORKS}->{$search_network} if ( exists( $self->{NETWORKS}->{$search_network} ) );
     # then search for a datastore with this name, this could yield to more than one result!
-    my @results = grep { $_->{name} eq $search_network } values(%{$self->{NETWORKS}});
-    if (scalar(@results) > 1) {
-        croak ("Network names must be unique in ". ( caller(0) )[3].", $search_network has several results:\n".Data::Dumper->Dump(\@results)."\n");
-    } elsif (scalar(@results) == 1) {
+    my @results = grep { $_->{name} eq $search_network } values( %{ $self->{NETWORKS} } );
+    if ( scalar(@results) > 1 ) {
+        croak(   "Network names must be unique in "
+               . ( caller(0) )[3]
+               . ", $search_network has several results:\n"
+               . Data::Dumper->Dump( \@results )
+               . "\n" );
+    } elsif ( scalar(@results) == 1 ) {
         return $results[0];
     } else {
         return undef;
-    }   
+    }
 }
 
 # return a list of networks
 sub get_networks {
     my $self = shift;
-    return map { $_ } values(%{$self->{NETWORKS}});
+    return map { $_ } values( %{ $self->{NETWORKS} } );
 }
 
 sub remove {
     my ( $self, $uuid ) = @_;
     croak( "Must give UUID to remove " . ( caller(0) )[3] ) unless ($uuid);
+    if (defined($self->{HOSTS}->{$uuid}->{MACS}) and scalar(@{$self->{HOSTS}->{$uuid}->{MACS}})) {
+        # this VM has network cards in the [dhcp] managed_network networks, remove from DHCP as well
+        push( @{ $self->{vms_to_update} }, $uuid );
+    }
     if ( delete $self->{HOSTS}{$uuid} ) {
         Debug("Removing $uuid from LAB");
     }
@@ -238,9 +268,9 @@ sub write_file {
     print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
     my $LAB = {};
     # copy just relevant parts (by reference)
-    $LAB->{HOSTS}    = $self->{HOSTS};
-    $LAB->{ESXHOSTS} = $self->{ESXHOSTS};
-    $LAB->{NETWORKS} = $self->{NETWORKS};
+    $LAB->{HOSTS}      = $self->{HOSTS};
+    $LAB->{ESXHOSTS}   = $self->{ESXHOSTS};
+    $LAB->{NETWORKS}   = $self->{NETWORKS};
     $LAB->{DATASTORES} = $self->{DATASTORES};
     print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] ) or croak "Could not write to '$filename': $!\n";
     my $bytes_written = tell LAB_CONF;

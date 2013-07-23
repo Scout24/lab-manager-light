@@ -20,17 +20,19 @@ our @EXPORT = qw(remove_forceboot set_forceboot);
 use LML::Common;
 use LML::Config;
 use Carp;
-use Data::Dumper;
-use LML::VMware;
 use LML::VM;
 
 sub set_forceboot {
     my ( $C, $uuid ) = @_;
+    croak( "1st parameter must be LML::Config object and not " . ref($C) . " in " . ( caller(0) )[3] )
+      unless ( ref($C) eq "LML::Config" );
+    croak( "2nd parameter must be uuid and not '" . ref($uuid) . "' in " . ( caller(0) )[3] )
+      unless ( not ref($uuid) and $uuid );
 
     if ( my $forceboot_field = $C->get( "vsphere", "forceboot_field" ) ) {
         if ( my $VM = new LML::VM($uuid) ) {
             # Set forceboot to ON
-            return setVmCustomValueU( $uuid, $forceboot_field, 'ON' );
+            return $VM->set_custom_value($forceboot_field, 'ON' );
         } else {
             # Bail out if not VM data available, probably no VM for this uuid
             Debug("No VM data for uuid '$uuid' found.");
@@ -63,7 +65,7 @@ sub remove_forceboot {
             }
 
             # unset forceboot in the determined way
-            return setVmCustomValueU( $uuid, $forceboot_field, $off_value );
+            return $VM->set_custom_value($forceboot_field, $off_value );
         } else {
             # bail out if not VM data available, probably no VM for this uuid
             Debug("No VM data for uuid '$uuid' found.");

@@ -112,13 +112,13 @@ $mock->mock(
     } );
 
 $mock->mock(
-    'setVmCustomValueU',
+    'setVmCustomValue',
     sub {
         my $uuid            = shift;
         my $forceboot_field = shift;
         $off_value = shift;
 
-        #diag("Mock setVmCustomValueU($uuid,$forceboot_field,$off_value)\n");
+        #diag("Mock setVmCustomValue($uuid,$forceboot_field,$off_value)\n");
         return 1;
     } );
 

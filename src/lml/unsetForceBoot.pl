@@ -11,7 +11,6 @@ use CGI ':standard';
 use LML::Common;
 use LML::Config;
 use LML::VMmodify;
-use LML::VMware;
 
 # load the configuration. Is provided by %CONFIG then
 my $C = new LML::Config;
@@ -25,7 +24,7 @@ my $search_uuid = param('uuid') ? lc( param('uuid') ) : "";
 if ($search_uuid) {
     # Deactivate forceboot
     my $result =
-      remove_forceboot( $C, $search_uuid ) ? "200 Successfully removed forceboot" : "400 Could not remve force boot";
+      remove_forceboot( $C, $search_uuid ) ? "200 Successfully removed forceboot" : "400 Could not remove force boot";
     print header(
                   -status => $result,
                   -type   => "text/plain"

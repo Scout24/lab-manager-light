@@ -110,13 +110,13 @@ $mock->mock(
     } );
 
 $mock->mock(
-    'setVmCustomValueU',
+    'setVmCustomValue',
     sub {
         my $uuid            = shift;
         my $forceboot_field = shift;
         $off_value = shift;
 
-        #diag("Mock setVmCustomValueU($uuid,$forceboot_field,$off_value)\n");
+        #diag("Mock setVmCustomValue($uuid,$forceboot_field,$off_value)\n");
         return 1;
     } );
 
@@ -132,7 +132,7 @@ $mock->mock(
 use_ok "LML::VM";
 
 my $VM;
-warning_like { $VM = new LML::VM() } qr(Give the VM uuid as arg), "contructor should fail on missing argument";
+warning_like { $VM = new LML::VM() } qr(Give the VM), "contructor should fail on missing argument";
 is( $VM,                   undef, "failed constructor should return undef" );
 is( new LML::VM("foobar"), undef, "constructor should return undef if no VM found for given uuid" );
 

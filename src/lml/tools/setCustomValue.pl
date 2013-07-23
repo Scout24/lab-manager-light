@@ -1,15 +1,7 @@
 #!/usr/bin/perl
 #
 #
-# setCustomValue.pl	Lab Manager Light unset Force Boot
-#
-# Authors:	
-# GSS		Schlomo Schapiro <lml@schlomo.schapiro.org>
-# 
-# Copyright:	Schlomo Schapiro, Immobilien Scout GmbH
-# License:	GNU General Public License, see http://www.gnu.org/licenses/gpl.txt for full text
-#
-#
+# setCustomValue.pl	can be used to set any custom value
 
 use strict;
 use warnings;
@@ -36,7 +28,7 @@ my $value=param('value')?param('value'):$ARGV[2];
 
 if ($search_uuid and $key and $value) {
     print header('text/plain');
-    setVmCustomValueU($search_uuid,$key,$value);
+    setVmCustomValue($search_uuid,$key,$value);
 } else {
     print header(-status=>404,-type=>'text/plain');
     print "URL call: uuid=...&key=...value=...\nCLI call: <uuid> <key> <value>\n";

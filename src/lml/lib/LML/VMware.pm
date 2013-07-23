@@ -13,8 +13,9 @@ use vars qw(
   @EXPORT
 );
 
-our @ISA    = qw(Exporter);
-our @EXPORT = qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValueU setVmCustomValueM perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+our @ISA = qw(Exporter);
+our @EXPORT =
+  qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -38,7 +39,19 @@ my %DATASTOREIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
-my $VM_PROPERTIES = [ "name", "config.name", "config.uuid", "config.extraConfig", "config.template", "config.hardware.device", "customValue", "runtime.host", ];
+my $VM_PROPERTIES = [
+                      "name",            "config.name",            "config.uuid", "config.extraConfig",
+                      "config.template", "config.hardware.device", "customValue", "runtime.host",
+];
+
+# return if arg looks like a UUID
+sub is_uuid {
+    my $text = shift;
+    my $hex  = qr([A-Fa-f0-9]);
+    # If you name your VMs with something that looks like a UUID but is not the UUID of the VM then
+    # you successfully shot yourself in the foot. This sub will never find your VMS.
+    return $text =~ qr(^$hex{8}-$hex{4}-$hex{4}-$hex{4}-$hex{12}$);
+}
 
 my %DVP_PORT_GROUP_NAMES;
 # lookup and cache port group names of DistributedVirtualSwitches
@@ -46,12 +59,12 @@ sub dvp_to_name($) {
     my $portgroupkey = shift;
     if ( !exists $DVP_PORT_GROUP_NAMES{$portgroupkey} ) {
         $DVP_PORT_GROUP_NAMES{$portgroupkey} = Vim::get_view(
-                                                              mo_ref => new ManagedObjectReference(
-                                                                                                    type  => "DistributedVirtualPortgroup",
-                                                                                                    value => $portgroupkey
-                                                              ),
-                                                              properties => ["config.name"]
-        )->get_property("config.name");
+                                                              mo_ref =>
+                                                                new ManagedObjectReference(
+                                                                                            type  => "DistributedVirtualPortgroup",
+                                                                                            value => $portgroupkey
+                                                                ),
+                                                              properties => ["config.name"] )->get_property("config.name");
         Debug("Cached $portgroupkey = $DVP_PORT_GROUP_NAMES{$portgroupkey}");
     }
     return $DVP_PORT_GROUP_NAMES{$portgroupkey};
@@ -91,7 +104,8 @@ sub retrieve_vm_details ($) {
 
                 # no distributed vSwitch
                 $net = $vm_dev->backing->deviceName;
-            } else {
+            }
+            else {
 
                 # this is probably a distributed vSwitch, need to retrieve infos by following the vSwitch UUID
 
@@ -251,11 +265,7 @@ sub get_datastores {
                           and $_->{mountInfo}->{accessMode} eq 'readWrite'
                       } @{ $e->{host} }
                 ],
-                "vm" => [
-                    map {
-                        $_->{value}
-                      } @{ $e->{vm} }
-                ],
+                "vm"        => [ map { $_->{value} } @{ $e->{vm} } ],
                 "freespace" => $e->{info}->{freeSpace},
                 "capacity"  => exists( $e->{info}->{vmfs} )
                 ? $e->{info}->{vmfs}->{capacity}
@@ -263,7 +273,7 @@ sub get_datastores {
             };
         }
     }
-    Debug( Data::Dumper->Dump( [ \%DATASTOREIDS ], ["DATASTOREIDS"] ) );
+    #Debug( Data::Dumper->Dump( [ \%DATASTOREIDS ], ["DATASTOREIDS"] ) );
     return \%DATASTOREIDS;
 }
 
@@ -289,8 +299,7 @@ sub get_networks {
         my $networkEntityViews = Vim::find_entity_views(
                                                          view_type    => "Network",
                                                          begin_entity => Vim::get_service_content()->rootFolder,
-                                                         properties   => [ "name", "host" ]
-        );
+                                                         properties   => [ "name", "host" ] );
         foreach my $e ( @{$networkEntityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "Network" ] ) );
             my $id = $e->{mo_ref}->value;
@@ -328,8 +337,7 @@ sub get_networks {
         my $dvPortGroupEntityViews = Vim::find_entity_views(
                                                              view_type    => "DistributedVirtualPortgroup",
                                                              begin_entity => Vim::get_service_content()->rootFolder,
-                                                             properties   => [ "name", "host" ]
-        );
+                                                             properties   => [ "name", "host" ] );
 
         foreach my $e ( @{$dvPortGroupEntityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["DistributedVirtualPortgroup"] ) );
@@ -366,8 +374,7 @@ sub get_hosts {
         my $entityViews = Vim::find_entity_views(
                                                   view_type    => "HostSystem",
                                                   begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => [ "name", "config.product", "summary.quickStats", "summary.hardware" ]
-        );
+                                                  properties   => [ "name", "config.product", "summary.quickStats", "summary.hardware" ] );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "host" ] ) );
             $HOSTIDS{ $e->{mo_ref}->value } = $e->{name};
@@ -434,20 +441,22 @@ sub get_uuid_by_name {
 
 ################################ sub #################
 ##
-## get_vm_data (<uuid>)
+## get_vm_data (<uuid|name>)
 ##
 ##
 ##
 
 sub get_vm_data {
-    my $uuid = shift;
-    my $object = Vim::find_entity_view(
+    my $search_vm = shift;
+    # search by uuid if we are given something that looks like a uuid
+    my $filter = is_uuid($search_vm) ? 'config.uuid' : 'config.name';
+    my $result = Vim::find_entity_view(
                                         view_type  => 'VirtualMachine',
-                                        filter     => { 'config.uuid' => $uuid },
+                                        filter     => { $filter => $search_vm },
                                         properties => $VM_PROPERTIES
     );
-
-    return retrieve_vm_details($object);
+    # find_entity_view returns the first object found if there are several.
+    return retrieve_vm_details($result);
 }
 
 ################################ sub #################
@@ -475,7 +484,8 @@ sub get_all_vm_data {
             }    # else is probably a template
         }
         return $results;
-    } else {
+    }
+    else {
         return {};
     }
 }
@@ -506,15 +516,19 @@ sub setVmExtraOptsU {
         if ( ref($@) eq 'SoapFault' ) {
             if ( ref( $@->detail ) eq 'TooManyDevices' ) {
                 Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            } elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
+            }
+            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
                 Util::trace( 0, "The Device configuration is not valid\n" );
                 Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            } elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
+            }
+            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
                 Util::trace( 0, "\nOperation failed because file already exists" );
-            } else {
+            }
+            else {
                 Util::trace( 0, "\n" . $@ . "\n" );
             }
-        } else {
+        }
+        else {
             Util::trace( 0, "\n" . $@ . "\n" );
         }
     }
@@ -541,15 +555,19 @@ sub setVmExtraOptsM {
         if ( ref($@) eq 'SoapFault' ) {
             if ( ref( $@->detail ) eq 'TooManyDevices' ) {
                 Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            } elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
+            }
+            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
                 Util::trace( 0, "The Device configuration is not valid\n" );
                 Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            } elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
+            }
+            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
                 Util::trace( 0, "\nOperation failed because file already exists" );
-            } else {
+            }
+            else {
                 Util::trace( 0, "\n" . $@ . "\n" );
             }
-        } else {
+        }
+        else {
             Util::trace( 0, "\n" . $@ . "\n" );
         }
         return 0;
@@ -562,9 +580,9 @@ sub setVmExtraOptsM {
 ## setVmCustomValue (<VM object>,<option key>,<option value>)
 ##
 ##
-sub setVmCustomValue {
+sub _setVmCustomValue {
     my $vm = shift;
-    die "vm argument was not a VirtualMachine object!\n" unless ( ref($vm) eq "VirtualMachine" );
+    croak("vm argument was not a VirtualMachine object!") unless ( ref($vm) eq "VirtualMachine" );
     my $key   = shift;
     my $value = shift;
     eval { $vm->setCustomValue( key => $key, value => $value ) };
@@ -573,16 +591,20 @@ sub setVmCustomValue {
         if ( ref($@) eq 'SoapFault' ) {
             if ( ref( $@->detail ) eq 'TooManyDevices' ) {
                 Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            } elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
+            }
+            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
                 Util::trace( 0, "The Device configuration is not valid\n" );
                 Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            } elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
+            }
+            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
                 Util::trace( 0, "\nOperation failed because file already exists" );
-            } else {
+            }
+            else {
                 Util::trace( 0, "\n" . $@ . "\n" );
             }
-        } else {
-            die $@;
+        }
+        else {
+            croak($@);
         }
         return 0;
     }
@@ -591,35 +613,27 @@ sub setVmCustomValue {
 
 ############################### sub #################
 ##
-## setVmCustomValueM (<moref of VM>,<option key>,<option value>)
+## setVmCustomValueM (<moref|uuid of VM>,<option key>,<option value>)
 ##
 ##
-sub setVmCustomValueM {
-    my $mo_ref  = shift;
-    my $key     = shift;
-    my $value   = shift;
-    my $vm_view = Vim::get_view( mo_ref => $mo_ref );
-    if ($vm_view) {
-        return setVmCustomValue( $vm_view, $key, $value );
-    }
-}
+sub setVmCustomValue {
+    my ( $search_vm, $key, $value ) = @_;
 
-############################### sub #################
-##
-## setVmCustomValueU (<uuid of VM>,<option key>,<option value>)
-##
-##
-sub setVmCustomValueU {
-    my $uuid  = shift;
-    my $key   = shift;
-    my $value = shift;
-    my $vm_view = Vim::find_entity_view(
-                                         view_type  => 'VirtualMachine',
-                                         filter     => { "config.uuid" => $uuid },
-                                         properties => []                            # don't need any properties to set custom value
-    );
+    # search for uuid if uuid is given or assume that we got a moref
+    # TODO: Check that the moref is actually a moref object
+    my $vm_view;
+    if ( is_uuid($search_vm) ) {
+        $vm_view = Vim::find_entity_view(
+                                          view_type  => 'VirtualMachine',
+                                          filter     => { "config.uuid" => $search_vm },
+                                          properties => []                                 # don't need any properties to set custom value
+        );
+    }
+    else {
+        $vm_view = Vim::get_view( mo_ref => $search_vm );
+    }
     if ($vm_view) {
-        return setVmCustomValue( $vm_view, $key, $value );
+        return _setVmCustomValue( $vm_view, $key, $value );
     }
 }
 
@@ -643,7 +657,8 @@ sub perform_reboot {
             return 0;
         }
 
-    } else {
+    }
+    else {
         return 0;
     }
 }
@@ -668,7 +683,8 @@ sub perform_reset {
             return 0;
         }
 
-    } else {
+    }
+    else {
         return 0;
     }
 }
@@ -687,16 +703,11 @@ sub perform_destroy {
     if ($vm_view) {
         # Destroy the VM
         eval { $vm_view->Destroy(); };
-
         # Check the success
-        if ($@) {
-            Debug("SDK destroy command exited abnormally");
-            return 0;
-        }
-
-    } else {
-        return 0;
+        croak("VM destroy failed with $@") if ($@);
+        return 1; # signal success
     }
+    return 0;
 }
 
 sub perform_poweroff {
@@ -720,7 +731,8 @@ sub perform_poweroff {
             return 0;
         }
 
-    } else {
+    }
+    else {
         Debug("Could not retrieve vm view for uuid $uuid");
         return 0;
     }

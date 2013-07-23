@@ -17,130 +17,75 @@ use JSON;
 use Getopt::Long;
 
 use LML::Config;
-use LML::VMware;
 use LML::VM;
+use LML::VMware;
+use LML::Lab;
+use LML::DHCP;
 
 # Initialization
 my $header_sent = 0;
-my $action;
-my $action_detonate;
-my $action_destroy;
-my $show_help;
-my @vm_names;
+my $action      = param("action") ? param("action") : undef;
+my @hosts       = param("hosts") ? param("hosts") : ();
 
-# Get the lml configuration
-my $C = new LML::Config();
+if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
+    # Get the lml configuration
+    my $C = new LML::Config();
+    # Connect to VMware
+    connect_vi();
 
-# Are we in CGI context?
-if ( param('action') ) {
-    # Get the action
-    if ( param('action') eq 'detonate' ) {
-        $action_detonate = 1;
-
-    } elsif ( param('action') eq 'destroy' ) {
-        $action_destroy = 1;
+    my $LAB     = new LML::Lab( $C->labfile );
+    my @errors  = ();                            # collect errors
+    my $removed = 0;
+    foreach my $target (@hosts) {
+        my $VM = $LAB->get_vm($target);
+        # Check the success
+        if ($VM) {
+            if ( $action eq "detonate" ) {
+                # Set the forceboot value to ON
+                my $forceboot_field = $C->get( "vsphere", "forceboot_field" );
+                if ( $VM->set_custom_value( $forceboot_field, "ON" ) ) {
+                    $VM->reset();                # Restart the vm after activating force boot
+                }
+                else {
+                    push @errors, "Could not set custom value '$forceboot_field' = ON";
+                }
+            }
+            else {
+                # ATM this could be only destroy
+                $VM->poweroff();
+                $VM->destroy();
+                $LAB->remove( $VM->uuid );       # remove VM from lab data
+                $removed++;
+            }
+        }
+        else {
+            push @errors, "Unable to find vm '$target'";
+        }
     }
-
-    # Assemble hosts array if existent
-    if ( param('hosts') ) {
-        @vm_names = param('hosts');
-    } else {
-        print header( -status => '400 No hosts given (hosts=)' );
-        print "No hosts were selected";
-        exit 0;
+    if ($removed) {
+        # always write LAB file, also creates new one if it did not exist before
+        $LAB->write_file( "by " . __FILE__ );
+    }
+    if ( $LAB->vms_to_update ) {
+        # rewrite the DHCP configuration with the new data, but only if there is a change that was relevant for DHCP
+        push( @errors, LML::DHCP::UpdateDHCP( $C, $LAB ) );
+    }
+    if (@errors) {
+        my $msg = "ERRORS: " . join( ", ", @errors );
+        print header( -status => "500 $msg" )
+          . start_html( -title => "LML VM Control" )
+          . p("The following ERRORS occured:")
+          . ul( li( \@errors ) )
+          . end_html . "\n";
+    }
+    else {
+        print header( -status => "200 $action " . scalar(@hosts) . " target(s)" );
     }
 }
-# Ok commandline context
 else {
-    # Get the long commandline options
-    GetOptions(
-                "detonate" => \$action_detonate,
-                "destroy"  => \$action_destroy,
-                "help"     => \$show_help
-    );
-
-    # Just print the usage if the option is set and then quit
-    if ($show_help) {
-        print_usage();
-        exit 1;
-    }
-
-    # Get the vm name
-    if (@ARGV) {
-        # Check the command option consistence
-        if ( $action_detonate && $action_destroy ) {
-            error("The option --detonate and --destroy can not be used at the same time, quit ...");
-        }
-
-        # Check if paramter assembly is correct
-        if ( ( not $action_detonate ) && ( not $action_destroy ) ) {
-            error("No option --detonate or --destroy is given! Exit...");
-        }
-
-        # Save the delivered hostname(s)
-        foreach (@ARGV) {
-            push @vm_names, $_;
-        }
-
-        # If no vm name is given
-    } else {
-        error("The name of the vm(s) is not given, quit ...");
-    }
+    # error handling for invalid or missing args
+    my $msg = "Arg ERROR: action must be detonate or destroy, hosts must contain at least one target";
+    print header( -status => "500 $msg" ) . start_html( -title => "LML VM Control" ) . p($msg) . end_html . "\n";
 }
 
-# Connect to VMware
-connect_vi();
-
-foreach my $vm_name (@vm_names) {
-    # Translate the vm name to its uuid
-    my $uuid = get_uuid_by_name($vm_name);
-    my $VM   = new LML::VM($uuid);
-
-    # Check the success
-    if ( not $VM ) {
-        error("Unable to find vm \"$vm_name\", quit ...");
-    }
-
-    if ($action_detonate) {
-        # Set the forceboot value to ON
-        set_forceboot( $C, $VM->uuid );
-
-        # Reboot the vm
-        $VM->reset();
-
-    } elsif ($action_destroy) {
-        # Switch off the vm
-        $VM->poweroff();
-
-        # Finally destroy the vm
-        $VM->destroy();
-    }
-}
-
-# Print an HTML success header if we are in CGI context
-if ( exists $ENV{GATEWAY_INTERFACE} ) {
-    print header( -status => '200 vm created' );
-}
-
-# Compose a error output
-sub error {
-    my $message   = shift;
-    my $linebreak = "\n";
-
-    # Print html header before anything else if CGI is used
-    if ( exists $ENV{GATEWAY_INTERFACE} ) {
-        print header( -status => '500 $message' );
-        $linebreak = "<br>";
-    }
-
-    print $message. $linebreak;
-
-    exit 1;
-}
-
-sub print_usage {
-    print "vm-create.pl <OPTION> [vmname1, vmname2, ...]\n\n";
-
-    print "   --detonate \t\t Set forceboot and reboot the virtual machine\n";
-    print "   --destroy \t\t Wipe the vm completely\n";
-}
+1;
