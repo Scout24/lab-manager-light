@@ -89,14 +89,20 @@ sub _find_second_network {
 sub _create_nics_by_network_labels {
     my ( $self, @network_labels ) = @_;
     my @vm_nics;
+
     # After retrieving a full list of networks to be assigned, get the appropriate specs
     # Begin with getting all networks, which the selected esx host can see
     my $full_network_list = Vim::get_views( mo_ref_array => $self->{host_view}->network );
 
-    # Go through each network, which is assigned to the host vieww
-    foreach my $network (@$full_network_list) {
-        if ( grep { $_ eq $network->name } @network_labels ) {
-            push @vm_nics, _create_nic( network => $network );
+    # Go through each network label. Take this way, because the order is important here!
+    foreach my $label (@network_labels) {
+        # Now look if the actual label has an pendant in the real world
+        foreach my $network (@$full_network_list) {
+            if ( $network->name eq $label ) {
+                push @vm_nics, _create_nic( network => $network );
+                # Because we found the network now, go over to the next label
+                last;
+            }
         }
     }
 
