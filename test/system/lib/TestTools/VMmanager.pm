@@ -12,7 +12,7 @@ use DateTime;
 
 # Constructor
 sub new {
-    my ($class, $vm_create_options) = @_;
+    my ( $class, $vm_create_options ) = @_;
 
     my $self = {
                  vm_create_options => $vm_create_options,
@@ -35,18 +35,17 @@ sub create_vm {
     }
 
     $self->_report_progress( "Creating " . $self->{vm_create_options}->{vm_host} );
-    my $vm_create_url_data = "name=" . $self->{vm_create_options}->{vm_host} . "&esx_host=" . $self->{vm_create_options}->{esx_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target} ;
-    
-    if ($self->{vm_create_options}->{force_network}){
-        $vm_create_url_data = $vm_create_url_data . "&force_network=" . $self->{vm_create_options}->{force_network}
-    }
-    
-    my $uuid = $self->_do_http_post_request("http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", $vm_create_url_data);
+    my $vm_create_url_data = "name=" . $self->{vm_create_options}->{vm_host} . "&esx_host=" . $self->{vm_create_options}->{esx_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target};
 
-    
+    if ( $self->{vm_create_options}->{force_network} ) {
+        $vm_create_url_data = $vm_create_url_data . "&force_network=" . $self->{vm_create_options}->{force_network};
+    }
+
+    my $uuid = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", $vm_create_url_data );
+
     if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
         print "##teamcity[buildStatus status='FAILURE' text='Could not retrieve uuid " . $uuid . "']\n";
-        exit 1;
+        die "An error occured while creating a vm";
     }
     return new TestTools::VMcreated( $uuid, $self->{vm_create_options} );
 }
@@ -57,13 +56,15 @@ sub delete_vm {
 
     if ( $self->{already_deleted} ) {
         return;
-    } else {
+    }
+    else {
         $self->_report_progress( "Deleting " . $self->{vm_create_options}->{vm_host} );
         my $res = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-control.pl", "action=destroy&hosts=" . $self->{vm_create_options}->{vm_host} );
         if ( $res =~ /ERROR/ ) {
             print "##teamcity[buildStatus status='FAILURE' text='Could not delete " . $res . "']\n";
-            exit 1;
-        } else {
+            die "An error occured while deleting a vm";
+        }
+        else {
             $self->{already_deleted} = 1;
         }
     }
