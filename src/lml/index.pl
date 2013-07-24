@@ -168,10 +168,10 @@ sub hostFairness($) {
     # See https://www.vmware.com/support/developer/vc-sdk/visdk2xpubs/ReferenceGuide/vim.host.Summary.QuickStats.html
     # for an explanation of the Fairness values. As a first approximation we simply add the values here.
     my $h = shift;
-    return 0 unless ( exists( $LAB->{ESXHOSTS}->{$h}->{"quickStats"} ) );
+    return 0 unless ( exists( $LAB->{ESXHOSTS}->{$h}->{stats} ) );
     my $fairness = (
-                     abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedCpuFairness"} ) +
-                       abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"distributedMemoryFairness"} ) ) / 2;
+                     abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{stats}->{distributedCpuFairness} ) +
+                       abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{stats}->{distributedMemoryFairness} ) ) / 2;
     Debug("Host Fairness for $h is $fairness");
     return $fairness;
 }
@@ -179,12 +179,12 @@ sub hostFairness($) {
 sub displayHost($) {
     # display ESX host together with CPU and MEM usage
     my $h = shift;
-    return $h unless ( exists( $LAB->{ESXHOSTS}->{$h}->{"quickStats"} ) );
+    return $h unless ( exists( $LAB->{ESXHOSTS}->{$h}->{stats} ) );
     return
       sprintf( "%s (%d GHz CPU, %d GB MEM used)",
-               $h,
-               $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallCpuUsage"} / 1024,
-               $LAB->{ESXHOSTS}->{$h}->{"quickStats"}->{"overallMemoryUsage"} / 1024 );
+               $LAB->{ESXHOSTS}->{$h}->{name},
+               $LAB->{ESXHOSTS}->{$h}->{stats}->{overallCpuUsage} / 1024,
+               $LAB->{ESXHOSTS}->{$h}->{stats}->{overallMemoryUsage} / 1024 );
 }
 
 # sorted list of hosts, fairest first. Fair means highest fairness (sort descending)
@@ -291,24 +291,25 @@ print thead(
                  th( { -title => "Click to sort" }, "Product" ),
              ) ) . "\n\n    <tbody>\n";
 
-foreach my $name (@hosts) {
-    my $HOST = $LAB->{ESXHOSTS}->{$name};
+foreach my $id (@hosts) {
+    my $HOST = $LAB->{ESXHOSTS}->{$id};
+    my $name = $HOST->{name};
     Debug( "Handling " . Data::Dumper->Dump( [$HOST] ) );
     print Tr(
-              { -id => $name },
-              td [
+              { -id => $id },
+              td {-title => $id }, [ 
                    $name,
                    sprintf( "%.2f / %.0f",
-                            $HOST->{"quickStats"}->{"overallCpuUsage"} / 1024,
-                            $HOST->{"hardware"}->{"cpuMhz"} * $HOST->{"hardware"}->{"numCpuCores"} / 1024 ),
+                            $HOST->{stats}->{overallCpuUsage} / 1024,
+                            $HOST->{hardware}->{totalCpuMhz}  / 1024 ),
                    sprintf( "%.2f / %.0f",
-                            $HOST->{"quickStats"}->{"overallMemoryUsage"} / 1024,
-                            $HOST->{"hardware"}->{"memorySize"} / 1024 / 1024 / 1024 ),
-                   hostFairness($name),
+                            $HOST->{stats}->{overallMemoryUsage} / 1024,
+                            $HOST->{hardware}->{memorySize} / 1024 / 1024 / 1024 ),
+                   hostFairness($id),
                    span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"networks"} } ) ),
                    span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"datastores"} } ) ),
-                   $HOST->{"hardware"}->{"vendor"} . " " . $HOST->{"hardware"}->{"model"},
-                   $HOST->{"product"}->{"fullName"},
+                   $HOST->{hardware}->{vendor} . " " . $HOST->{hardware}->{model},
+                   $HOST->{product}->{fullName},
               ] ) . "\n\n";
 }
 print <<EOF;

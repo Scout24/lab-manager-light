@@ -183,7 +183,8 @@ sub retrieve_vm_details ($) {
 ##
 ##
 ##
-my $connection=undef;
+my $connection = undef;
+
 sub get_vi_connection() {
     # connection setup needs to happen only once
     return $connection if ($connection);
@@ -378,46 +379,47 @@ sub get_hosts {
         %HOSTS   = ();
         %HOSTIDS = ();
         my $entityViews = Vim::find_entity_views(
-                                                  view_type    => "HostSystem",
-                                                  begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => [ "name", "config.product", "summary.quickStats", "summary.hardware" ] );
+                     view_type    => "HostSystem",
+                     begin_entity => Vim::get_service_content()->rootFolder,
+                     properties =>
+                       [ "name", "config.product", "summary.quickStats", "summary.hardware", "network", "datastore", "vm" ]
+        );
         foreach my $e ( @{$entityViews} ) {
-            #Debug( Data::Dumper->Dump( [ $e ], [ "host" ] ) );
+            #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
             $HOSTIDS{ $e->{mo_ref}->value } = $e->{name};
             Debug( "Reading ESX Host " . $e->{name} );
-            $HOSTS{ $e->{name} } = {
-                                     "id"         => $e->{mo_ref}->value,
-                                     "name"       => $e->{name},
-                                     "product"    => { %{ $e->get_property("config.product") } },
-                                     "quickStats" => { %{ $e->get_property("summary.quickStats") } },
-                                     "hardware"   => { %{ $e->get_property("summary.hardware") } },
-                                     "networks"   => [],
-                                     "datastores" => [],
+            my $product    = $e->get_property("config.product");
+            my $quickStats = $e->get_property("summary.quickStats");
+            my $hardware   = $e->get_property("summary.hardware");
+            #my $overallStatus = $e->get_property("overallStatus.val");
+            $HOSTS{ $e->{mo_ref}->value } = {
+                id      => $e->{mo_ref}->value,
+                name    => $e->{name},
+                product => { fullName => $product->{fullName}, },
+                stats   => {
+                           distributedCpuFairness    => $quickStats->{distributedCpuFairness},
+                           distributedMemoryFairness => $quickStats->{distributedMemoryFairness},
+                           overallCpuUsage           => $quickStats->{overallCpuUsage},
+                           overallMemoryUsage        => $quickStats->{overallMemoryUsage},
+                },
+                hardware => {
+                              totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
+                              memorySize  => $hardware->{memorySize},
+                              vendor      => $hardware->{vendor},
+                              model       => $hardware->{model},
+                },
+                status     => { 
+                    #overallStatus => $overallStatus->{val}, 
+                },
+                networks   => [ map             { $_->{value} } @{ $e->get_property("network") } ],
+                datastores => [ map             { $_->{value} } @{ $e->get_property("datastore") } ],
+                vms        => [ map             { $_->{value} } @{ $e->get_property("vm") } ],
             };
-            # some systems have extra info which remains blessed after the get_property
-            delete( $HOSTS{ $e->{name} }{"hardware"}{"otherIdentifyingInfo"} );
-        }
-
-        # add networks to host data
-        while ( my ( $nid, $network ) = each %NETWORKIDS ) {
-            foreach my $hid ( @{ $network->{hosts} } ) {
-                push @{ $HOSTS{ $HOSTIDS{$hid} }{"networks"} }, $network->{"name"};
-            }
-        }
-
-        # add datastores to host data
-        while ( my ( $did, $datastore ) = each %DATASTOREIDS ) {
-            foreach my $hid ( @{ $datastore->{hosts} } ) {
-                push @{ $HOSTS{ $HOSTIDS{$hid} }{"datastores"} }, $datastore->{"name"};
-            }
         }
     }
     return \%HOSTS;
 }
 
-sub HostSystemIdentificationInfo::deserialize {
-    # this is temporarily here to fix a bug
-}
 ################################ sub #################
 ##
 ## get_hosts
@@ -721,7 +723,7 @@ sub perform_destroy {
         eval { $vm_view->Destroy(); };
         # Check the success
         croak("VM destroy failed with $@") if ($@);
-        return 1; # signal success
+        return 1;                                   # signal success
     }
     return 0;
 }
@@ -753,6 +755,14 @@ sub perform_poweroff {
         Debug("Could not retrieve vm view for uuid $uuid");
         return 0;
     }
+}
+
+################ helpers
+
+sub unbless_hash {
+    # take a blessed hashref and return the hashref without blessing
+    # TODO: Recursively walk through the hash and unbless also deeper structures
+    return { %{ shift() } };
 }
 
 END {
