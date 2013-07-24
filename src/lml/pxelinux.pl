@@ -54,9 +54,6 @@ if ( param('uuid') ) {
     die("Give UUID address as query parameter 'uuid' or as command line parameter\n");
 }
 
-# connect to vSphere
-connect_vi();
-
 # read history to detect renamed VMs and to be able to update the DHCP
 my $LAB = new LML::Lab( $C->labfile );
 # find VM

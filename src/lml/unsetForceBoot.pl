@@ -15,9 +15,6 @@ use LML::VMmodify;
 # load the configuration. Is provided by %CONFIG then
 my $C = new LML::Config;
 
-# connect to vSphere
-connect_vi();
-
 # input parameter, UUID of a VM
 my $search_uuid = param('uuid') ? lc( param('uuid') ) : "";
 

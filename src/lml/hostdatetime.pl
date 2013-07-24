@@ -22,7 +22,7 @@ use JSON;
 # load the configuration. Is provided by %CONFIG then
 my $C = new LML::Config;
 # connect to vSphere
-connect_vi();
+get_vi_connection();
 
 my $filter = {};
 if ( my $matchhosts = param("matchhosts") ) {

@@ -209,7 +209,7 @@ sub create_vm {
     my @vm_devices;
 
     # connect to VMware
-    connect_vi();
+    get_vi_connection();
 
     my $host_view = Vim::find_entity_view( view_type => 'HostSystem',
                                            filter    => { 'name' => $$args{vmhost} } );
@@ -390,6 +390,7 @@ sub get_folder {
 # ===============================================
 sub set_custom_fields {
     my %args = @_;
+    get_vi_connection();
 
     # get view to service object
     my $customFieldsManager = Vim::get_view( mo_ref => Vim::get_service_content()->customFieldsManager );

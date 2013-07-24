@@ -30,8 +30,6 @@ my @hosts       = param("hosts") ? param("hosts") : ();
 if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
     # Get the lml configuration
     my $C = new LML::Config();
-    # Connect to VMware
-    connect_vi();
 
     my $LAB     = new LML::Lab( $C->labfile );
     my @errors  = ();                            # collect errors

@@ -15,7 +15,7 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(connect_vi get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+  qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -56,6 +56,7 @@ sub is_uuid {
 my %DVP_PORT_GROUP_NAMES;
 # lookup and cache port group names of DistributedVirtualSwitches
 sub dvp_to_name($) {
+    get_vi_connection();
     my $portgroupkey = shift;
     if ( !exists $DVP_PORT_GROUP_NAMES{$portgroupkey} ) {
         $DVP_PORT_GROUP_NAMES{$portgroupkey} = Vim::get_view(
@@ -178,13 +179,14 @@ sub retrieve_vm_details ($) {
 
 ############################### sub #################
 ##
-## connect_vi
+## get_vi_connection
 ##
 ##
 ##
-
-sub connect_vi() {
-
+my $connection=undef;
+sub get_vi_connection() {
+    # connection setup needs to happen only once
+    return $connection if ($connection);
     # NOTE: This will eat up all arguments that come AFTER the --arg things.
     # Placing e.g. --verbose as last argument avoids this behaviour.
     Opts::parse();
@@ -200,10 +202,10 @@ sub connect_vi() {
     #       # TODO: walk through all available VI systems, not only the first one
     #       $targets[0]->login()
     #   };
-    eval { Util::connect(); };
+    eval { $connection = Util::connect(); };
     croak("Could not connect to VI: $@") if ($@);
     Debug("Connected to vSphere");
-
+    return $connection;
 }
 
 ################################ sub #################
@@ -213,6 +215,7 @@ sub connect_vi() {
 ## returns a hash of name->id pairs of defined custom fields
 ##
 sub get_custom_fields {
+    get_vi_connection();
     unless ( scalar( keys %CUSTOMFIELDS ) ) {
         # initialize CUSTOMFIELDIDS and retrieve custom fields if they are not set
         %CUSTOMFIELDIDS = ();
@@ -245,6 +248,7 @@ sub get_custom_fields {
 ##
 
 sub get_datastores {
+    get_vi_connection();
     unless ( scalar( keys %DATASTOREIDS ) ) {
         my $datastoreEntityViews = Vim::find_entity_views(
             view_type    => "Datastore",
@@ -285,6 +289,7 @@ sub get_datastores {
 ##
 
 sub get_networks {
+    get_vi_connection();
     unless ( scalar( keys %NETWORKIDS ) ) {
         # $networkEntityViews is an array of this:
         #Network=HASH(0x51f57e0)
@@ -361,6 +366,7 @@ sub get_networks {
 ##
 sub get_hosts {
 
+    get_vi_connection();
     # initialize %NETWORKIDS
     get_networks();
 
@@ -427,6 +433,7 @@ sub get_hostids {
 # Get the uuid of an vm by a given vm name
 sub get_uuid_by_name {
     my $vm_name = shift;
+    get_vi_connection();
 
     # Try to get an view for the given vm name
     my $object = Vim::find_entity_view(
@@ -448,6 +455,7 @@ sub get_uuid_by_name {
 
 sub get_vm_data {
     my $search_vm = shift;
+    get_vi_connection();
     # search by uuid if we are given something that looks like a uuid
     my $filter = is_uuid($search_vm) ? 'config.uuid' : 'config.name';
     my $result = Vim::find_entity_view(
@@ -468,6 +476,7 @@ sub get_vm_data {
 
 sub get_all_vm_data {
     my %filter = @_;
+    get_vi_connection();
     Debug( Data::Dumper->Dump( [ \%filter ], ["filter"] ) ) if (%filter);
     my $entityViews = Vim::find_entity_views(
                                               view_type    => "VirtualMachine",
@@ -503,6 +512,7 @@ sub setVmExtraOptsU {
     my $uuid  = shift;
     my $key   = shift;
     my $value = shift;
+    get_vi_connection();
     eval {
         my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
                                              filter    => { "config.uuid" => $uuid } );
@@ -543,6 +553,7 @@ sub setVmExtraOptsM {
     my $mo_ref = shift;
     my $key    = shift;
     my $value  = shift;
+    get_vi_connection();
     eval {
         my $vm_view = Vim::get_view( mo_ref => $mo_ref );
         if ($vm_view) {
@@ -582,6 +593,7 @@ sub setVmExtraOptsM {
 ##
 sub _setVmCustomValue {
     my $vm = shift;
+    get_vi_connection();
     croak("vm argument was not a VirtualMachine object!") unless ( ref($vm) eq "VirtualMachine" );
     my $key   = shift;
     my $value = shift;
@@ -618,6 +630,7 @@ sub _setVmCustomValue {
 ##
 sub setVmCustomValue {
     my ( $search_vm, $key, $value ) = @_;
+    get_vi_connection();
 
     # search for uuid if uuid is given or assume that we got a moref
     # TODO: Check that the moref is actually a moref object
@@ -639,6 +652,7 @@ sub setVmCustomValue {
 
 sub perform_reboot {
     my ($uuid) = @_;
+    get_vi_connection();
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(
@@ -665,6 +679,7 @@ sub perform_reboot {
 
 sub perform_reset {
     my ($uuid) = @_;
+    get_vi_connection();
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(
@@ -691,6 +706,7 @@ sub perform_reset {
 
 sub perform_destroy {
     my ($uuid) = @_;
+    get_vi_connection();
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(
@@ -712,6 +728,7 @@ sub perform_destroy {
 
 sub perform_poweroff {
     my ($uuid) = @_;
+    get_vi_connection();
 
     # Get vm view
     my $vm_view = Vim::find_entity_view(

@@ -35,7 +35,7 @@ sub check_value {
 my %opts = (
     format => {
                 type     => "=s",
-                help     => "Output format for found VMs (%UUID, %PATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET). ",
+                help     => "Output format for found VMs (use %UUID, %PATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET). ",
                 required => 0,
                 default  => "%UUID%PATH"
     }
@@ -47,10 +47,6 @@ Opts::parse();
 
 # get the lml configuration
 my $C = new LML::Config();
-
-# connect to VMware
-print "Connecting to VI" . "\n";
-connect_vi();
 
 # display custom fields
 if ( my @customfields = keys %{ get_custom_fields() } ) {

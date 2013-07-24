@@ -91,9 +91,6 @@ sub maintain_labfile($$$$$) {
 unless (caller) {
     my $C = new LML::Config;
 
-    # connect to vSphere
-    connect_vi();
-
     # initialize needed variables
     my $vm_name = "";
     my @error   = ();

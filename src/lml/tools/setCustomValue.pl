@@ -18,9 +18,6 @@ use LML::DHCP;
 
 LoadConfig();
 
-# connect to vSphere
-connect_vi();
-
 # input parameter, UUID of a VM
 my $search_uuid=param('uuid')?lc(param('uuid')):lc($ARGV[0]);
 my $key=param('key')?param('key'):$ARGV[1];

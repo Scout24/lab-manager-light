@@ -3,7 +3,6 @@ package LML::VMscreenshot;
 use strict;
 use warnings;
 
-use LML::VMware;
 use LML::Common;
 use CGI ':standard :push';
 
@@ -30,14 +29,6 @@ sub new {
     };
     my $LAB = new LML::Lab( $config->labfile );
     my $VM = $LAB->get_vm($uuid);
-    if ( ref($VM) ne "LML::VM") {
-        eval { connect_vi(); };
-        if ($@) {
-            Debug("connect_vi died:\n$@");
-            return undef;
-        }
-        $VM = new LML::VM($uuid);
-    }
     if ( ref($VM) eq "LML::VM" ) {
         $self->{vm_id}    = $VM->vm_id;
         $self->{hostname} = $VM->name;
