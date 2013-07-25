@@ -24,7 +24,8 @@ sub get_gecos {
     if ( not exists $GECOS->{$userid} ) {
         if ( my $pwnam = getpwnam($userid) ) {
             $GECOS->{$userid} = $pwnam->gecos;
-        } else {
+        }
+        else {
             $GECOS->{$userid} = "Could not lookup user";
         }
         Debug "Caching $userid = " . $GECOS->{$userid};
@@ -168,27 +169,26 @@ sub hostFairness($) {
     # See https://www.vmware.com/support/developer/vc-sdk/visdk2xpubs/ReferenceGuide/vim.host.Summary.QuickStats.html
     # for an explanation of the Fairness values. As a first approximation we simply add the values here.
     my $h = shift;
-    return 0 unless ( exists( $LAB->{ESXHOSTS}->{$h}->{stats} ) );
-    my $fairness = (
-                     abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{stats}->{distributedCpuFairness} ) +
-                       abs( 1000 - $LAB->{ESXHOSTS}->{$h}->{stats}->{distributedMemoryFairness} ) ) / 2;
-    Debug("Host Fairness for $h is $fairness");
+    return 0 unless ( exists( $h->{stats} ) );
+    my $hname    = $h->{name};
+    my $fairness = ( abs( 1000 - $h->{stats}->{distributedCpuFairness} ) + abs( 1000 - $h->{stats}->{distributedMemoryFairness} ) ) / 2;
+    Debug("Host Fairness for $hname is $fairness");
     return $fairness;
 }
 
 sub displayHost($) {
     # display ESX host together with CPU and MEM usage
     my $h = shift;
-    return $h unless ( exists( $LAB->{ESXHOSTS}->{$h}->{stats} ) );
+    return $h unless ( exists( $h->{stats} ) );
     return
       sprintf( "%s (%d GHz CPU, %d GB MEM used)",
-               $LAB->{ESXHOSTS}->{$h}->{name},
-               $LAB->{ESXHOSTS}->{$h}->{stats}->{overallCpuUsage} / 1024,
-               $LAB->{ESXHOSTS}->{$h}->{stats}->{overallMemoryUsage} / 1024 );
+               $h->{name},
+               $h->{stats}->{overallCpuUsage} / 1024,
+               $h->{stats}->{overallMemoryUsage} / 1024 );
 }
 
 # sorted list of hosts, fairest first. Fair means highest fairness (sort descending)
-my @hosts = sort { hostFairness($b) <=> hostFairness($a) } keys( %{ $LAB->{ESXHOSTS} } );
+my @hosts = sort { hostFairness($b) <=> hostFairness($a) } $LAB->get_hosts;
 Debug( "Sorted host list: " . join( ",", @hosts ) );
 
 print <<EOF;
@@ -239,8 +239,10 @@ print <<EOF;
                             <select name="esx_host">
 EOF
 
+my $selected="selected";
 foreach my $host (@hosts) {
-    print "<option value='$host'>" . displayHost($host) . "</option>\n";
+    print "<option value='".$host->{name}."' $selected>" . displayHost($host) . "</option>\n";
+    $selected=""; # the first entry should be selected
 }
 
 print <<EOF;
@@ -291,25 +293,24 @@ print thead(
                  th( { -title => "Click to sort" }, "Product" ),
              ) ) . "\n\n    <tbody>\n";
 
-foreach my $id (@hosts) {
-    my $HOST = $LAB->{ESXHOSTS}->{$id};
+foreach my $HOST (@hosts) {
     my $name = $HOST->{name};
+    my $id = $HOST->{id};
     Debug( "Handling " . Data::Dumper->Dump( [$HOST] ) );
     print Tr(
-              { -id => $id },
-              td {-title => $id }, [ 
-                   $name,
-                   sprintf( "%.2f / %.0f",
-                            $HOST->{stats}->{overallCpuUsage} / 1024,
-                            $HOST->{hardware}->{totalCpuMhz}  / 1024 ),
-                   sprintf( "%.2f / %.0f",
-                            $HOST->{stats}->{overallMemoryUsage} / 1024,
-                            $HOST->{hardware}->{memorySize} / 1024 / 1024 / 1024 ),
-                   hostFairness($id),
-                   span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"networks"} } ) ),
-                   span( { style => "font-size: 60%" }, join( "<br/>", @{ $HOST->{"datastores"} } ) ),
-                   $HOST->{hardware}->{vendor} . " " . $HOST->{hardware}->{model},
-                   $HOST->{product}->{fullName},
+              { -id => $id, -class => $HOST->{status}->{overallStatus} },
+              td { -title => $id},
+              [
+                 $name,
+                 sprintf( "%.2f / %.0f", $HOST->{stats}->{overallCpuUsage} / 1024, $HOST->{hardware}->{totalCpuMhz} / 1024 ),
+                 sprintf(
+                          "%.2f / %.0f", $HOST->{stats}->{overallMemoryUsage} / 1024, $HOST->{hardware}->{memorySize} / 1024 / 1024 / 1024
+                 ),
+                 hostFairness($HOST),
+                 span( { style => "font-size: 60%" }, join( "<br/>", $LAB->get_network_names($HOST->{"networks"} )) ),
+                 span( { style => "font-size: 60%" }, join( "<br/>", $LAB->get_datastore_names($HOST->{"datastores"} )) ),
+                 $HOST->{hardware}->{vendor} . " " . $HOST->{hardware}->{model},
+                 $HOST->{product}->{fullName},
               ] ) . "\n\n";
 }
 print <<EOF;

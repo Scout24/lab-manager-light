@@ -151,6 +151,15 @@ sub get_datastores {
     return map { $_ } values( %{ $self->{DATASTORES} } );
 }
 
+# translate datastore id to name
+# handle single or multiple args
+sub get_datastore_names {
+    my ($self,@ids) = @_;
+    @ids=@{$ids[0]} if (ref($ids[0]) eq "ARRAY"); # support arrays and array refs as input
+    my @names = map { $self->get_datastore($_)->{name} } @ids;
+    return scalar(@ids) == 1 ? $names[0] : @names;
+}
+
 # return network given by reference or by name
 # NOTE: network Names are NOT unique in vSphere! If we find that we abort!
 sub get_network {
@@ -177,6 +186,15 @@ sub get_network {
 sub get_networks {
     my $self = shift;
     return map { $_ } values( %{ $self->{NETWORKS} } );
+}
+
+# translate datastore id to name
+# handle single or multiple args
+sub get_network_names {
+    my ($self,@ids) = @_;
+    @ids=@{$ids[0]} if (ref($ids[0]) eq "ARRAY"); # support arrays and array refs as input
+    my @names = map { $self->get_network($_)->{name} } @ids;
+    return scalar(@ids) == 1 ? $names[0] : @names;
 }
 
 sub remove {

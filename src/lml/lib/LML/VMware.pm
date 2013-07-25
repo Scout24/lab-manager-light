@@ -15,7 +15,7 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_hostids get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+  qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -32,7 +32,6 @@ use Carp;
 my %CUSTOMFIELDIDS;
 my %CUSTOMFIELDS;
 
-my %HOSTIDS;
 my %HOSTS;
 my %NETWORKIDS;
 my %DATASTOREIDS;
@@ -168,7 +167,7 @@ sub retrieve_vm_details ($) {
     }
 
     # store ESX host
-    $VM_DATA{HOST} = $HOSTIDS{ $vm->get_property("runtime.host")->value };
+    $VM_DATA{HOST} = $HOSTS{ $vm->get_property("runtime.host")->value }->{name};
 
     # store moref
     $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
@@ -368,37 +367,30 @@ sub get_networks {
 sub get_hosts {
 
     get_vi_connection();
-    # initialize %NETWORKIDS
-    get_networks();
-
-    # initialize %DATASTOREIDS
-    get_datastores();
 
     unless ( scalar( keys %HOSTS ) ) {
-        # initialize HOSTIDS and HOSTS if they don't contain data
+        # initialize HOSTS if they don't contain data
         %HOSTS   = ();
-        %HOSTIDS = ();
         my $entityViews = Vim::find_entity_views(
                      view_type    => "HostSystem",
                      begin_entity => Vim::get_service_content()->rootFolder,
                      properties =>
-                       [ "name", "config.product", "summary.quickStats", "summary.hardware", "network", "datastore", "vm" ]
+                       [ "name", "config.product", "summary.quickStats", "summary.hardware", "overallStatus", "network", "datastore", "vm" ]
         );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
-            $HOSTIDS{ $e->{mo_ref}->value } = $e->{name};
             Debug( "Reading ESX Host " . $e->{name} );
             my $product    = $e->get_property("config.product");
             my $quickStats = $e->get_property("summary.quickStats");
             my $hardware   = $e->get_property("summary.hardware");
-            #my $overallStatus = $e->get_property("overallStatus.val");
             $HOSTS{ $e->{mo_ref}->value } = {
                 id      => $e->{mo_ref}->value,
                 name    => $e->{name},
                 product => { fullName => $product->{fullName}, },
                 stats   => {
-                           distributedCpuFairness    => $quickStats->{distributedCpuFairness},
-                           distributedMemoryFairness => $quickStats->{distributedMemoryFairness},
+                            # the fairness values are -1 if the host is not part of a cluster. We set it to 1000 so that it will rank badly
+                           distributedCpuFairness    => $quickStats->{distributedCpuFairness} > -1 ? $quickStats->{distributedCpuFairness} : 1000,
+                           distributedMemoryFairness => $quickStats->{distributedMemoryFairness} >-1 ? $quickStats->{distributedMemoryFairness} : 1000,
                            overallCpuUsage           => $quickStats->{overallCpuUsage},
                            overallMemoryUsage        => $quickStats->{overallMemoryUsage},
                 },
@@ -409,7 +401,7 @@ sub get_hosts {
                               model       => $hardware->{model},
                 },
                 status     => { 
-                    #overallStatus => $overallStatus->{val}, 
+                    overallStatus => $e->get_property("overallStatus")->{val}, 
                 },
                 networks   => [ map             { $_->{value} } @{ $e->get_property("network") } ],
                 datastores => [ map             { $_->{value} } @{ $e->get_property("datastore") } ],
@@ -418,18 +410,6 @@ sub get_hosts {
         }
     }
     return \%HOSTS;
-}
-
-################################ sub #################
-##
-## get_hosts
-##
-## returns a hash of name->id pairs of defined custom fields
-##
-sub get_hostids {
-
-    get_hosts;
-    return \%HOSTIDS;
 }
 
 # Get the uuid of an vm by a given vm name
