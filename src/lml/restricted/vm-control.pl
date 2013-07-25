@@ -77,7 +77,8 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
           . end_html . "\n";
     }
     else {
-        print header( -status => "200 $action " . scalar(@hosts) . " target(s)" );
+        print header( -status => "200 $action " . scalar(@hosts) . " target(s)" ) . start_html( -title => "LML VM Control" ) .
+          p( "$action " . scalar(@hosts) . " target(s)" ) . end_html . "\n";
     }
 }
 else {
