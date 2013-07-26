@@ -83,7 +83,7 @@ sub _map_vm_res_on_host {
 
 sub _rank {
     my ( $self, @hosts ) = @_;
-    return sort { $self->_collect_ranks($a) <=> $self->_collect_ranks($b) } @hosts;
+    return sort { $self->_collect_ranks($b) <=> $self->_collect_ranks($a) } @hosts;
 }
 
 sub _collect_ranks {
