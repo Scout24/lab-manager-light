@@ -43,7 +43,7 @@ throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [$testfilter] )
   "dies on invalid ranker";
 {
 
-    new_ok( "LML::VMplacement" => [ $C, new LML::Lab( {} ) ] );
+    new_ok( "LML::VMplacement" => [ $C, new LML::Lab( {} ) ] ); # test builtin filter initialization
     new_ok( "LML::VMplacement" => [ $C, new LML::Lab( {} ), [$testfilter] ] );
     new_ok( "LML::VMplacement" => [ $C, new LML::Lab( {} ), [$testfilter], [$testranker] ] );
     new_ok( "LML::VMplacement" => [ $C, new LML::Lab( {} ), undef, [$testranker] ] );
@@ -64,5 +64,6 @@ throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [$testfilter] )
     );
 
 }
+
 
 done_testing();

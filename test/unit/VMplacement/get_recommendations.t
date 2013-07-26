@@ -103,7 +103,7 @@ my $simple_lab_with_three_hosts = new LML::Lab( { "ESXHOSTS" => { $test_host_1->
 
 # validate the format of the return value
 {
-    my $obj    = new LML::VMplacement($C,$simple_lab_with_one_host);
+    my $obj    = new LML::VMplacement($C,$simple_lab_with_one_host,[],[]);
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
     is_deeply(
