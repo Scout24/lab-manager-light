@@ -6,10 +6,15 @@ use Test::Warn;
 use Test::Exception;
 use LML::Lab;
 use LML::VMresources;
+use Data::Dumper;
 
 BEGIN {
     use_ok "LML::VMplacement";
 }
+
+##################################
+# test setup
+###################################
 
 my @truefilter_params;
 
@@ -29,30 +34,41 @@ my @rankerparms;
 
 sub testranker::get_rank_value {
     my ( $self, $host ) = @rankerparms = @_;
-    diag("testranker called");
     return 1;
 }
 my $testranker = bless( {}, "testranker" );
 
-my $test_host = {
-                  id         => "id-1",
-                  networks   => ["network-1"],
-                  datastores => ["datastore-1"],
+my $test_host_1 = {
+                    id         => "id-1",
+                    networks   => ["network-1"],
+                    datastores => ["datastore-1"],
 };
-my $simple_lab = new LML::Lab( { "ESXHOSTS" => { "id-1" => $test_host } } );
+
+my $test_host_2 = {
+                    id         => "id-2",
+                    networks   => ["network-2"],
+                    datastores => ["datastore-2"],
+};
+
+my $simple_lab_with_one_host = new LML::Lab( { "ESXHOSTS" => { "id-1" => $test_host_1 } } );
+my $simple_lab_with_two_hosts = new LML::Lab( { "ESXHOSTS" => { "id-1" => $test_host_1, "id-2" => $test_host_2 } } );
+
+##################################
+# test cases
+###################################
 
 {
-    my $obj = new LML::VMplacement($simple_lab);
+    my $obj = new LML::VMplacement($simple_lab_with_one_host);
     throws_ok { $obj->get_recommendations("foobar") } qr(LML::VMresources), "should die if arg is not LML::VMresources";
-
 }
 {
-    my $obj    = new LML::VMplacement($simple_lab);
+    my $obj    = new LML::VMplacement($simple_lab_with_one_host);
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
     is_deeply(
                [@rec],
-               [ {
+               [
+                  {
                      id         => "id-1",
                      datastores => [],
                   }
@@ -62,18 +78,19 @@ my $simple_lab = new LML::Lab( { "ESXHOSTS" => { "id-1" => $test_host } } );
 }
 
 {
-    my $obj    = new LML::VMplacement( $simple_lab, [$truefilter], [$testranker] );
+    my $obj    = new LML::VMplacement( $simple_lab_with_two_hosts, [$truefilter], [$testranker] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
-    is_deeply( \@truefilter_params, [ $truefilter, $test_host, $vm_res ], "test filter was called with correct parms" );
-    is_deeply( \@rankerparms, [ $testranker, $test_host], "test ranker was called with correct parms" );
+    is_deeply( \@truefilter_params, [ $truefilter, $test_host_2, $vm_res ], "test filter was called with correct parms" );  
+    is_deeply( \@rankerparms, [ $testranker, $test_host_2 ], "test ranker was called with correct parms" );
 }
 
 {
-
-    my $obj    = new LML::VMplacement( $simple_lab, [ $truefilter, $falsefilter ] );
+    my $obj    = new LML::VMplacement( $simple_lab_with_one_host, [ $truefilter, $falsefilter ] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
     is_deeply( [@rec], [], "should return no recommendation as one filter is always false" );
 }
+
+
 done_testing();

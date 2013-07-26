@@ -46,9 +46,9 @@ sub new {
 sub get_recommendations {
     my ( $self, $vm_res ) = @_;
     croak( "1st arg must be LML::VMresources in " . ( caller 0 )[3] ) unless ( ref($vm_res) eq "LML::VMresources" );
-    my @filtered_hosts = $self->_filter( $vm_res, $self->{lab}->get_hosts ) ;
-    my @ranked_hosts = $self->_rank( @filtered_hosts) ;
-    return $self->_build_recommendations( $vm_res, @ranked_hosts);
+    my @filtered_hosts = $self->_filter( $vm_res, $self->{lab}->get_hosts );
+    my @ranked_hosts = $self->_rank(@filtered_hosts);
+    return $self->_build_recommendations( $vm_res, @ranked_hosts );
 }
 
 sub _filter {
@@ -82,16 +82,14 @@ sub _map_vm_res_on_host {
 }
 
 sub _rank {
-    my ($self,@hosts) = shift;
-                print STDERR "Calling _rank on ".$hosts[0]->{id}."\n";
-    return sort { $self->_collect_ranks($_) <=> $self->_collect_ranks($_) } @hosts;
+    my ( $self, @hosts ) = @_;
+    return sort { $self->_collect_ranks($a) <=> $self->_collect_ranks($b) } @hosts;
 }
 
 sub _collect_ranks {
-    my ($self,$host) = @_;
+    my ( $self, $host ) = @_;
     my $rank = 0;
-                    print STDERR "Calling _collect_rank on ".$host->{id}."\n";
-    foreach my $ranker (@{$self->{rankers}}) {
+    foreach my $ranker ( @{ $self->{rankers} } ) {
         $rank += $ranker->get_rank_value($host);
     }
     return $rank;
