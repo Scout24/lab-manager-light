@@ -5,12 +5,14 @@ use warnings;
 use Carp;
 
 sub new {
-    my ( $class, $lab, $filters, $rankers ) = @_;
+    my ( $class, $config, $lab, $filters, $rankers ) = @_;
 
-    croak( "1st argument must be an instance of LML::Lab called at " . ( caller 0 )[3] ) unless ( ref($lab) eq "LML::Lab" );
+    croak( "1st argument must be an instance of LML::Config called at " . ( caller 0 )[3] ) unless ( ref($config) eq "LML::Config" );
+
+    croak( "2nd argument must be an instance of LML::Lab called at " . ( caller 0 )[3] ) unless ( ref($lab) eq "LML::Lab" );
 
     if ( defined($filters) ) {
-        croak( "2nd argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($filters) eq "ARRAY" );
+        croak( "3rd argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($filters) eq "ARRAY" );
         foreach (@$filters) {
             croak( "filter " . ( ref($_) ? ref($_) : $_ ) . " has no host_can_vm method called at " . ( caller 0 )[3] )
               unless ( $_->can("host_can_vm") );
@@ -22,7 +24,7 @@ sub new {
     }
 
     if ( defined($rankers) ) {
-        croak( "3rd argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($rankers) eq "ARRAY" );
+        croak( "4th argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($rankers) eq "ARRAY" );
         foreach (@$rankers) {
             croak( "ranker " . ( ref($_) ? ref($_) : $_ ) . " has no get_rank_value method called at " . ( caller 0 )[3] )
               unless ( $_->can("get_rank_value") );
@@ -34,6 +36,7 @@ sub new {
     }
 
     my $self = {
+                 config => $config,
                  lab     => $lab,
                  filters => $filters,
                  rankers => $rankers,
