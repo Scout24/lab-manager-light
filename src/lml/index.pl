@@ -144,7 +144,7 @@ while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
                              -rel     => "vmdata.pl/$uuid",
                              -class   => "tip vmhostname"
                           },
-                          $VM->{HOSTNAME} )
+                          $VM->{HOSTNAME}.(defined($VM->{DNS_DOMAIN}) ? ".".$VM->{DNS_DOMAIN} : "") )
                      . "\n"
                      . (
                          $screenshot_enabled
