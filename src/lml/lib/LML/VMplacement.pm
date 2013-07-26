@@ -4,7 +4,9 @@ use strict;
 use warnings;
 use Carp;
 use LML::VMplacement::Filters::ByOverallStatus;
+
 use LML::VMplacement::Rankers::ByOverallStatus;
+use LML::VMplacement::Rankers::ByCpuUsage;
 
 sub new {
     my ( $class, $config, $lab, $filters, $rankers ) = @_;
@@ -22,7 +24,7 @@ sub new {
     }
     else {
         # todo set default filters
-        $filters = [new LML::VMplacement::Filters::ByOverallStatus];
+        $filters = [ new LML::VMplacement::Filters::ByOverallStatus ];
     }
 
     if ( defined($rankers) ) {
@@ -34,11 +36,11 @@ sub new {
     }
     else {
         # todo set default rankers
-        $rankers = [new LML::VMplacement::Rankers::ByOverallStatus];
+        $rankers = [ new LML::VMplacement::Rankers::ByOverallStatus, new LML::VMplacement::Rankers::ByCpuUsage, ];
     }
 
     my $self = {
-                 config => $config,
+                 config  => $config,
                  lab     => $lab,
                  filters => $filters,
                  rankers => $rankers,
