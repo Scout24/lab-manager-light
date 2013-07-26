@@ -19,7 +19,7 @@ sub get_rank_value {
     if ( ! (defined( $host->{stats}->{overallCpuUsage} ) &&  defined( $host->{hardware}->{totalCpuMhz}))) {
         croak( "missing data in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "given in " . ( caller 0 )[3] );
     }
-    return 100-abs($host->{stats}->{overallCpuUsage}/$host->{hardware}->{totalCpuMhz}*100);
+    return 100-int($host->{stats}->{overallCpuUsage}/$host->{hardware}->{totalCpuMhz}*100);
 }
 
 1;

@@ -396,7 +396,7 @@ sub get_hosts {
                 },
                 hardware => {
                               totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
-                              memorySize  => $hardware->{memorySize},
+                              memorySize  => int($hardware->{memorySize}/1024/1024), # strangely the value from the API does not divide cleanly by 1024^2
                               vendor      => $hardware->{vendor},
                               model       => $hardware->{model},
                 },
