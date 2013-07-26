@@ -3,6 +3,7 @@ package LML::VMplacement;
 use strict;
 use warnings;
 use Carp;
+use LML::VMplacement::Filters::ByOverallStatus;
 
 sub new {
     my ( $class, $config, $lab, $filters, $rankers ) = @_;
@@ -20,7 +21,7 @@ sub new {
     }
     else {
         # todo set default filters
-        $filters = [];
+        $filters = [new LML::VMplacement::Filters::ByOverallStatus($config)];
     }
 
     if ( defined($rankers) ) {
