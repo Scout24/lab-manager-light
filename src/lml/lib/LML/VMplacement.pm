@@ -24,7 +24,7 @@ sub new {
     }
     else {
         # todo set default filters
-        $filters = [ new LML::VMplacement::Filters::ByOverallStatus ];
+        $filters = [ new LML::VMplacement::Filters::ByOverallStatus, new LML::VMplacement::Filters::ByOverallStatus($lab)];
     }
 
     if ( defined($rankers) ) {
