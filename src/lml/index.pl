@@ -304,7 +304,7 @@ foreach my $HOST (@hosts) {
                  $name,
                  sprintf( "%.2f / %.0f", $HOST->{stats}->{overallCpuUsage} / 1024, $HOST->{hardware}->{totalCpuMhz} / 1024 ),
                  sprintf(
-                          "%.2f / %.0f", $HOST->{stats}->{overallMemoryUsage} / 1024, $HOST->{hardware}->{memorySize} / 1024 / 1024 / 1024
+                          "%.2f / %.0f", $HOST->{stats}->{overallMemoryUsage} / 1024, $HOST->{hardware}->{memorySize} / 1024
                  ),
                  hostFairness($HOST),
                  span( { style => "font-size: 60%" }, join( "<br/>", $LAB->get_network_names($HOST->{"networks"} )) ),
