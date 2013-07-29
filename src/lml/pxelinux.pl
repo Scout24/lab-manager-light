@@ -36,7 +36,7 @@ $SIG{__DIE__} = sub {
     chomp($message);                      # remove trailing newlines
     $message =~ s/\n/; /;                 # turn message into single line
     print header( -status => '200 Fatal Error', -type => 'text/plain' );
-    my $body = $C->get( "pxelinux", "fatalerror_template" ). "\n";
+    my $body = $C->get( "pxelinux", "fatalerror_template" ) . "\n";
     $body =~ s/MESSAGE/$message/;
     print $body;
 };
@@ -46,11 +46,13 @@ if ( param('uuid') ) {
     $search_uuid = param('uuid');
 
     # or if we called via commandline
-} elsif (@ARGV) {
+}
+elsif (@ARGV) {
     $search_uuid = lc( $ARGV[0] );
 
     # else UUID is missing, quit here
-} else {
+}
+else {
     die("Give UUID address as query parameter 'uuid' or as command line parameter\n");
 }
 
@@ -65,29 +67,25 @@ my @body;    # body to return to HTTP client
 # if there are VMs and if we find the VM we are looking for:
 if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     $vm_name = $VM->name;
-    $append_domain = $C->get( "dhcp", "appenddomain" );
-
-    # set redirect paramters
-    $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name . "." . $append_domain ) );
 
     # check if we should handle this VM
-    $VM->set_networks_filter( $C->get_array("vsphere","networks") );
-    if ( $VM->get_filtered_macs ) {
-        # This VM uses our managed network
+    $VM->set_networks_filter( $C->get_array( "vsphere", "networks" ) );
 
+    # If this VM uses our managed network
+    if ( $VM->get_filtered_macs ) {
         # Set dns domain of VM from first network card
-        $VM->set_dns_domain($C->appenddomain(($VM->networks())[0]));
-        
-        my @extra_dns_check_zones = map { $C->get_array("dnscheckzones",$_) } $VM->networks;
-        
+        $VM->set_dns_domain( $C->appenddomain( ( $VM->networks() )[0] ) );
+
+        # Set redirect parameters (take the right dns_domain for appending to the hostname)
+        $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name . "." . $VM->dns_domain ) );
+
+        my @extra_dns_check_zones = map { $C->get_array( "dnscheckzones", $_ ) } $VM->networks;
+
         my $Policy = new LML::VMpolicy( $C, $VM );
 
         $Policy->handle_unmanaged();
 
-        $result->add_error( $Policy->validate_vm_name,      $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones(@extra_dns_check_zones),
-                            $Policy->validate_contact_user, $Policy->validate_expiry,            $Policy->validate_vm_dns_name($LAB),
-                            $Policy->validate_network_assignment
-        );
+        $result->add_error( $Policy->validate_vm_name, $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones(@extra_dns_check_zones), $Policy->validate_contact_user, $Policy->validate_expiry, $Policy->validate_vm_dns_name($LAB), $Policy->validate_network_assignment );
 
         $Policy->handle_forceboot($result);
 
@@ -117,7 +115,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             $result->set_status( 200, "for", $vm_name, $search_uuid );
             # build data for backgroundimage.pl QR code
             my $error_main = $C->get( "pxelinux", "error_main" );
-            my $url = $result->get_full_url("/lml/backgroundimage.pl")."?n=$vm_name;e=" .join(";e=",map { uri_escape($_) } @error);
+            my $url = $result->get_full_url("/lml/backgroundimage.pl") . "?n=$vm_name;e=" . join( ";e=", map { uri_escape($_) } @error );
             $error_main =~ s/QRIMAGE/$url/;
             push( @body, $error_main );
             push( @body, "menu title " . $C->get( "pxelinux", "error_title" ) . " " . $vm_name );
@@ -129,10 +127,10 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
                 $c++;
             }
 
-        } else {
-            # if the VM is found and all is fine then redirect to default PXE configuration
-            # here we must have a VM as otherwise we already exited before
-
+        }
+        # If the VM is found and all is fine then redirect to default PXE configuration
+        # here we must have a VM as otherwise we already exited before
+        else {
             # dump $LAB to file only if all is fine. This makes sure that LML stays with the old view
             # of the lab for some kind of hard to catch errors.
 
@@ -150,25 +148,32 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
                     $result->set_statusinfo("redirect to default_redirect from LML config");
                 }
                 $result->set_status( 302, "VM is", $vm_name );
-            } else {
+            }
+            else {
                 $result->set_status( 404, "VM is", $vm_name );
                 @body = ("VM successfully passed all tests.");
             }
         }
 
-    } else {
-        # VM does not use any of our managed networks.
+    }
+    # If the VM does not use any of our managed networks
+    else {
         if ( my $othervm_redirect = $C->get( "pxelinux", "othervm_redirect" ) ) {
+            # Set redirect parameters (not a managed vm, fqdn has to be configured in dhcpd)
+            $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => 'noname' ) );
+
             $result->set_redirect_target($othervm_redirect);
             $result->set_statusinfo("redirect to othervm_redirect from LML config");
             $result->set_status( 302, "VM is", $vm_name );
-        } else {
+        }
+        else {
             $result->set_status( 404, "VM does not match LML networks and is out of scope" );
             push( @body, "VM does not match LML networks and is out of scope" );
         }
     }
-} else {
-    # set redirect paramters
+}
+else {
+    # Set redirect parameters
     $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => 'noname' ) );
 
     # if the VM is not found then also give some error text
@@ -177,7 +182,8 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         $result->set_status( 302, $message );
         $result->set_redirect_target($unknown_redirect);
         $result->set_statusinfo("redirect to unknown_redirect from LML config");
-    } else {
+    }
+    else {
         $result->set_status( 404, $message );
         push( @body, $message );
     }
