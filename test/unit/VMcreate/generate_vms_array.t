@@ -20,7 +20,7 @@ my $C = new LML::Config(
                                         expires_european => 1,
                                         datacenter       => "some datacenter"
                            },
-                           hostrules => { pattern => '^(dev|tuv)[a-z]{3}[0-9]{2}$' },
+                           hostrules => { pattern => '^[a-z]{6}[0-9]{2}$' },
                            vm_spec   => {
                                         host_announcement => 'some_host_announcement_url',
                                         host_spec         => 'some_host_spec_url'
