@@ -11,7 +11,6 @@ $Util::script_version = "1.0";
 
 use CGI ':standard';
 use VMware::VIRuntime;
-use JSON;
 use AppUtil::XMLInputUtil;
 use AppUtil::HostUtil;
 use AppUtil::VMUtil;
@@ -19,6 +18,7 @@ use LWP::Simple qw(get);
 use Getopt::Long;
 use LML::VMware;
 use LML::VMnetworks;
+use LML::VMcreate::VMproperties;
 
 # Only for debugging
 use Data::Dumper;
@@ -27,136 +27,11 @@ use Data::Dumper;
 use LML::Config;
 my $C = new LML::Config();
 
-# default paramter
-my $linebreak = '\n';
 
-# default values will be used as default values
-my $guestid = 'rhel6_64Guest';
-my %custom_fields;
-
-# initialize custom value variables
-my $vm_name;
-my $username;
-my $expiration_date;
-my $esx_host;
-my $vm_folder;
-my $force_boot_target;
-my $force_network = undef;
-
-# are we called via webui?
-if ( exists $ENV{GATEWAY_INTERFACE} ) {
-    $vm_name           = param('name');
-    $username          = param('username');
-    $expiration_date   = param('expiration');
-    $esx_host          = param('esx_host');
-    $vm_folder         = param('folder');
-    $force_boot_target = param('force_boot_target') || "default";
-    $force_network     = param('force_network');
-
-    # or are we called via commandline
-} elsif ( @ARGV > 0 ) {
-
-    # get the long commandline options
-    GetOptions(
-                "name=s"              => \$vm_name,
-                "username=s"          => \$username,
-                "expiration=s"        => \$expiration_date,
-                "esx_host=s"          => \$esx_host,
-                "folder=s"            => \$vm_folder,
-                "force_boot_target=s" => \$force_boot_target,
-                "force_network=s"     => \$force_network,
-    );
-
-
-}
-# We have nothing, print help
-else {
-    error("no Parameters");
-}
-
-# paramters must be set and valid!
-my $check_param = check_parameter(
-    vm_name         => $vm_name,
-    username        => $username,
-    expiration_date => $expiration_date,
-    #                                   esx_host          => $esx_host,
-    #                                   force_boot_target => $force_boot_target,
-    #                                   vm_folder         => $vm_folder
-);
-
-# was the paramter check unsuccessful?
-if ($check_param) {
-    error($check_param);
-}
-
-#
-my @vms = generate_vms_array(
-                              vm_name           => $vm_name,
-                              username          => $username,
-                              expiration_date   => $expiration_date,
-                              esx_host          => $esx_host,
-                              force_boot_target => $force_boot_target,
-                              vm_folder         => $vm_folder,
-                              force_network     => $force_network,
-);
+my $vm_properties = new LML::VMcreate::VMproperties($C);
+my @vms = $vm_properties->generate_vms_array();
 
 create_vms(@vms);
-
-# generate an array of hashes, where each hash
-# represents a virtual machine to be created
-# ============================================
-sub generate_vms_array {
-    my %args = @_;
-
-    # assemble custom fields hash
-    %custom_fields = (
-                       'Contact User ID'   => $args{username},
-                       'Expires'           => $args{expiration_date},
-                       'Force Boot'        => 'ON',
-                       'Force Boot Target' => $args{force_boot_target},
-    );
-
-    # because it is possible that a machine don't exist in subversion we call
-    # the generation now (temporary disabled)
-    get sprintf $C->get( "vm_spec", "host_announcement" ), $args{vm_name};
-
-    # get now the json spec for this vm
-    my $answer = get sprintf $C->get( "vm_spec", "host_spec" ), $args{vm_name};
-    # check if we got something from web call
-    error( "Unable to get JSON description file for VM " . $args{vm_name} ) unless defined $answer;
-
-    # convert the HTML answer to pure json
-    $answer =~ s/<[^>]*>//gx;
-    $answer =~ s/&quot;/"/gx;
-    $answer =~ s/esx\.json//gx;
-    # put the json structure to a perl data structure
-    my $vm_spec = decode_json($answer);
-
-    # strip down the real hostname from given fqdn
-    $args{esx_host} =~ /(^[^\.]+).*$/x;
-    my $esx_host_name = $1;
-
-    @vms = (
-        {
-           vmname        => $args{vm_name},
-           vmhost        => $args{esx_host},
-           datacenter    => $C->get( "vsphere", "datacenter" ),
-           guestid       => $guestid,
-           datastore     => $esx_host_name . ':datastore1',
-           disksize      => $vm_spec->{virtualMachine}->{diskSize},
-           memory        => $vm_spec->{virtualMachine}->{memory},
-           num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
-           custom_fields => \%custom_fields,
-           # Temporary deactivated (we using cmd or post data for this atm)
-           #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
-           target_folder => $args{vm_folder},
-           has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend},
-           force_network => $args{force_network},
-        }
-    );
-
-    return @vms;
-}
 
 # compose error output related to the execution context
 # =====================================================
@@ -169,7 +44,7 @@ sub error {
         print $message;
     } else {
         print $message . "\n";
-        print_usage();
+        LML::VMcreate::VMproperties->print_usage(); 
     }
 
     Util::disconnect();
@@ -462,46 +337,3 @@ sub create_virtual_disk {
     return $disk_vm_dev_conf_spec;
 }
 
-# check the validity of the given paramter
-# ========================================
-sub check_parameter {
-    # expected args vm_name, username, expiration_date
-    my $result = "";
-    my %args   = @_;
-
-    # Check Expiration-Date
-    my $european = $C->get( "vsphere", "expires_european" );
-    $result = $result . "invalid expiration_date" . $/
-      if ( !$args{expiration_date} or !eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
-
-    # Check VM-Name
-    my $hostname_pattern = $C->get( "hostrules", "pattern" );
-    $result = $result . "invalid vm_name" . $/ if ( !$args{vm_name} or $args{vm_name} !~ m/($hostname_pattern)/x );
-
-    # Check User-Name
-    my $contactuserid_minuid = $C->get( "vsphere", "contactuserid_minuid" );
-    my @pwnaminfo;
-    @pwnaminfo = getpwnam $args{username} if ( $args{username} );
-    $result = $result . "invalid username" . $/ if ( !scalar @pwnaminfo or $pwnaminfo[2] < $contactuserid_minuid );
-
-    # TODO: Check force_boot_target
-
-    # TODO: Check the validity of given esx host
-
-    # TODO: Check if folder is given
-
-    # give result
-    return $result;
-}
-
-sub print_usage {
-    print "vm-create.pl <OPTIONS>\n\n";
-
-    print "   --name=value \t\t Name of the vm to be created (e.g. devxyz01)\n";
-    print "   --username=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n";
-    print "   --expiration=value \t\t Date where the vm will be expired (e.g. 01.01.2015) \n";
-    print "   --esx_host=value \t\t FQDN of the ESX host where the vm should be created\n";
-    print "   --folder=value \t\t VM folder name, where the vm should be placed\n";
-    print "   --force_network=label \t OPTIONAL: Network which the new VM should be attached\n";
-    print "   --force_boot=value \t\t Force boot value for the new vm\n\n";
-}
