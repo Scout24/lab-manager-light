@@ -11,7 +11,7 @@ BEGIN {
     use_ok "LML::VMcreate::VMproperties";
 }
 
-my $C = new LML::Config( { vsphere => { expires_european => 1 }, hostrules => { pattern => '^(dev|tuv)[a-z]{3}[0-9]{2}$' } } );
+my $C = new LML::Config( { vsphere => { expires_european => 1 }, hostrules => { pattern => '^[a-z]{6}[0-9]{2}$' } } );
 
 throws_ok { new LML::VMcreate::VMproperties() } qr(must be an instance of LML::Config), "dies on value for config is not defined";
 
@@ -19,7 +19,7 @@ throws_ok {
     new LML::VMcreate::VMproperties(
         $C,
         {
-          name       => "devxxx002",                                                                                              # invalid name pattern
+          name       => "devxxx002",    # invalid name pattern
           expiration => "31.12.2019",
           username   => "testuser",
         }
@@ -43,11 +43,47 @@ new_ok(
         "LML::VMcreate::VMproperties" => [
                                            $C,
                                            {
-                                             name       => "devxxx02",
+                                             name       => "foobar02",
                                              expiration => "31.12.2019",
                                              username   => "testuser",
                                            }
         ]
 );
 
-done_testing();
+{
+    my $vm_properties = new_ok(
+                                "LML::VMcreate::VMproperties" => [
+                                                                   $C,
+                                                                   {
+                                                                     name              => "foobar01",
+                                                                     username          => "testuser",
+                                                                     expiration        => "31.12.2019",
+                                                                     esx_host          => "esx_host.some.domain",
+                                                                     folder         => "some/folder",
+                                                                     force_boot_target => "some boot target",
+                                                                     force_network     => "some network",
+                                                                   }
+                                ]
+    );
+
+    is_deeply(
+        $vm_properties,
+
+        {
+          config            => $C,
+          linebreak         => '\n',
+          guestid           => 'rhel6_64Guest',
+          custom_fields     => {},
+          vm_name           => "foobar01",
+          username          => "testuser",
+          expiration_date   => "31.12.2019",
+          esx_host          => "esx_host.some.domain",
+          vm_folder         => "some/folder",
+          force_boot_target => "some boot target",
+          force_network     => "some network",
+        },
+        "should create vms_array with expected values"
+    );
+}
+
+done_testing;

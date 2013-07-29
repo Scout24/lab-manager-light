@@ -95,11 +95,11 @@ sub new {
         esx_host          => $esx_host,
         vm_folder         => $vm_folder,
         force_boot_target => $force_boot_target,
-        force_network     => $force_network = undef,
+        force_network     => $force_network,
 
     };
 
-    #print STDERR "DEBUG - VMproperties: " . Data::Dumper->Dump( [ %{$self} ] ) . "\n";
+   # print STDERR "DEBUG - VMproperties: " . Data::Dumper->Dump( [ %{$self} ] ) . "\n";
 
     bless( $self, $class );
     return $self;
