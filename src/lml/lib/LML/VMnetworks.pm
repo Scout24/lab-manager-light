@@ -18,11 +18,18 @@ sub new {
 # Find all networks related to this vm
 # ====================================
 
-sub find_networks {
+sub find_network_labels {
     my ( $self, $vm_name, $force_network ) = @_;
     my @network_labels = $self->_find_first_network( $vm_name, $force_network );
     push @network_labels, $self->_find_second_network( $vm_name, @network_labels );
 
+    return @network_labels;
+}
+
+sub find_networks {
+    my ( $self, $vm_name, $force_network ) = @_;
+
+    my @network_labels = $self->find_network_labels( $vm_name, $force_network );
     my @vm_nics = $self->_create_nics_by_network_labels(@network_labels);
 
     return @vm_nics;

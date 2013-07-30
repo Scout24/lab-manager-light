@@ -9,11 +9,6 @@ BEGIN {
     use_ok "LML::VMnetworks";
 }
 
-# redefine functions with vm api access
-sub LML::VMnetworks::_create_nics_by_network_labels {
-    my ( $self, @network_labels ) = @_;
-    return @network_labels;
-}
 
 my $test_config = new LML::Config(
     {
@@ -29,19 +24,19 @@ my $test_config = new LML::Config(
 my $vm_networks = new_ok( "LML::VMnetworks" => [$test_config], "should create" );
 
 
-my @network_labels = $vm_networks->find_networks("otherNoMatch01");
+my @network_labels = $vm_networks->find_network_labels("otherNoMatch01");
 is_deeply( \@network_labels, [], "should return no net" );
 
-@network_labels = $vm_networks->find_networks("devlts01");
+@network_labels = $vm_networks->find_network_labels("devlts01");
 is_deeply( \@network_labels, ["DEVNIC_STATIC"], "should return static net" );
 
-@network_labels = $vm_networks->find_networks("devxxx01");
+@network_labels = $vm_networks->find_network_labels("devxxx01");
 is_deeply( \@network_labels, ["DEVNIC_DYNAMIC"], "should return dynamic net" );
 
-@network_labels = $vm_networks->find_networks("devweb01");
+@network_labels = $vm_networks->find_network_labels("devweb01");
 is_deeply( \@network_labels, ["DEVNIC_STATIC", "DEVNIC_STATIC_FE"], "should return static and fe network" );
 
-@network_labels = $vm_networks->find_networks("devweb01");
+@network_labels = $vm_networks->find_network_labels("devweb01");
 is_deeply( \@network_labels, ["DEVNIC_STATIC", "DEVNIC_STATIC_FE"], "should return static and fe network" );
 
 

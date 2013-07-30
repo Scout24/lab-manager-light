@@ -19,6 +19,7 @@ use Getopt::Long;
 use LML::VMware;
 use LML::VMnetworks;
 use LML::VMcreate::VMproperties;
+use LML::Lab;
 
 # Only for debugging
 use Data::Dumper;
@@ -27,8 +28,8 @@ use Data::Dumper;
 use LML::Config;
 my $C = new LML::Config();
 
-
-my $vm_properties = new LML::VMcreate::VMproperties($C);
+my $lab = new LML::Lab($C->labfile);
+my $vm_properties = new LML::VMcreate::VMproperties($C, $lab);
 my @vms = $vm_properties->generate_vms_array();
 
 create_vms(@vms);
