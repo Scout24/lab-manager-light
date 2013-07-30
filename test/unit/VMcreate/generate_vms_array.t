@@ -32,7 +32,28 @@ my $C = new LML::Config(
                            }
                          }
 );
-my $lab = new LML::Lab( {} );
+my $lab = new LML::Lab(
+    {
+       "DATASTORES" => {
+           "datastore1" => {
+               "id"        => "datastore1",
+               "name"      => "esx.id1:datastore1",
+           }
+       },
+       "ESXHOSTS" => {
+           "id1" => {
+                      "id"   => "id1",
+                      "name" => "id1.some.domain"
+           },
+           "id2" => {
+                      "id"   => "id2",
+                      "name" => "id2.some.domain"
+             }
+
+         }
+
+    }
+);
 
 my $expected_diskSize   = 16384000;
 my $expected_memorySize = 2048;
@@ -149,7 +170,7 @@ $module->mock(
                            },
                            "get_recommendations should be called with expected vm_resources"
                 );
-                return ( ( { id => "id1.some.domain", datastores => ['datastore1'], }, { id => "id2.some.domain", datastores => ['datastore2'], } ) );
+                return ( ( { id => "id1", datastores => ['datastore1'], }, { id => "id2", datastores => ['datastore2'], } ) );
 
             }
         );
@@ -166,7 +187,7 @@ $module->mock(
                                               "Force Boot Target" => "default"
                          },
                          "datacenter"    => "some datacenter",
-                         "datastore"     => "id1:datastore1",
+                         "datastore"     => "esx.id1:datastore1", # must be the name resolved by Lab
                          "disksize"      => $expected_diskSize,
                          "force_network" => undef,
                          "guestid"       => "rhel6_64Guest",
@@ -174,7 +195,7 @@ $module->mock(
                          "memory"        => $expected_memorySize,
                          "num_cpus"      => $expected_number_cpu,
                          "target_folder" => "some folder",
-                         "vmhost"        => "id1.some.domain",
+                         "vmhost"        => "id1.some.domain", # must be the name resolved by Lab
                          "vmname"        => "devxxx02"
                       }
                    ],

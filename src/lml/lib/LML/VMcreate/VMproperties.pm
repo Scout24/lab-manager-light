@@ -181,8 +181,8 @@ sub print_usage {
 sub _get_esx_host_and_datastore {
     my ( $self, $resources ) = @_;
 
-    my $esx_host           = $self->{esx_host};
-    my $esx_host_datastore = 'datastore1';
+    my $esx_host = $self->{esx_host};
+    my $esx_host_datastore;
 
     if ( !defined($esx_host) || $esx_host =~ qr(^auto_placement$) ) {
 
@@ -197,39 +197,44 @@ sub _get_esx_host_and_datastore {
               disks    => [ { size => $resources->{virtualMachine}->{diskSize} } ],    # we currently support only one disk
             }
         );
-        
+
         #print STDERR "DEBUG - VMproperties->generate_vms_array->vm_resources " . Data::Dumper->Dump( [ \$vm_resources ] ) . "\n";
-        
+
         my $vm_placement = new LML::VMplacement( $self->{config}, $self->{lab} );
         my @recommendations = $vm_placement->get_recommendations($vm_resources);
 
         #print STDERR "DEBUG - VMproperties->generate_vms_array->recommendations " . Data::Dumper->Dump( [ \@recommendations ] ) . "\n";
 
         if (@recommendations) {
-            $esx_host = $recommendations[0]->{id};
+            my $recommended_esx_id           = $recommendations[0]->{id};
+            my $recommended_esx_datastore_id = $recommendations[0]->{datastores}[0];    # take the first datastore
+            $esx_host = $self->{lab}->{ESXHOSTS}{$recommended_esx_id}{name};            # find name for id
 
             if ( $recommendations[0]->{datastores} ) {
-                $esx_host_datastore =  $recommendations[0]->{datastores}[0] ;         # take the first datastore
+                $esx_host_datastore = $self->{lab}->{DATASTORES}{$recommended_esx_datastore_id}{name};
             }
             else {
                 #$esx_host_datastore = ???; TODO: this has still to be implemented to be handle by vm_create.pl
-                $self->_error( "VM creation without at least one disk is currently not supported.");
+                $self->_error("VM creation without at least one disk is currently not supported.");
             }
         }
         else {
-           $self->_error( "Recommendation for automatic placement failed.");
+            $self->_error("Recommendation for automatic placement failed.");
         }
 
     }
+    else {
+        # strip down the real hostname from given fqdn
+        $esx_host =~ /(^[^\.]+).*$/x;
+        my $esx_host_name = $1;
 
-    # strip down the real hostname from given fqdn
-    $esx_host =~ /(^[^\.]+).*$/x;
-    my $esx_host_name = $1;
+        $esx_host_datastore = $esx_host_name . ':datastore1';
+
+    }
 
     my %result = (
                    esx_host           => $esx_host,
-                   esx_host_name      => $esx_host_name,
-                   esx_host_datastore => $esx_host_name . ':' . $esx_host_datastore,
+                   esx_host_datastore => $esx_host_datastore,
     );
 
     return \%result;
