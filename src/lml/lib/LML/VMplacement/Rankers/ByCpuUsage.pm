@@ -22,4 +22,10 @@ sub get_rank_value {
     return 100-int($host->{stats}->{overallCpuUsage}/$host->{hardware}->{totalCpuMhz}*100);
 }
 
+sub get_name {
+    my ( $self) = @_;
+    return 'ByCpuUsage';
+}
+
+
 1;

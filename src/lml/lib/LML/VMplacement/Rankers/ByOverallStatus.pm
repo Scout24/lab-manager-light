@@ -30,4 +30,11 @@ sub get_rank_value {
     }
 }
 
+
+sub get_name {
+    my ( $self) = @_;
+    return 'ByOverAllStatus';
+}
+
+
 1;

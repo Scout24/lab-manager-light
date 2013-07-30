@@ -74,17 +74,30 @@ sub testranker::get_rank_value {
     }
     return 1;
 }
+
+sub testranker::get_name {
+    my ( $self) = @_;
+    return "test_ranker";
+}
 my $testranker = bless( {}, "testranker" );
 
 sub testranker_by_ram::get_rank_value {
     my ( $self, $host ) = @rankerparms = @_;
     return $host->{stats}->{overallMemoryUsage};
 }
+sub testranker_by_ram::get_name {
+    my ( $self) = @_;
+    return "testranker_by_ram";
+}
 my $testranker_by_ram = bless( {}, "testranker_by_ram" );
 
 sub testranker_by_cpu::get_rank_value {
     my ( $self, $host ) =  @_;
     return $host->{stats}->{overallCpuUsage};
+}
+sub testranker_by_cpu::get_name {
+    my ( $self) = @_;
+    return "testranker_by_cpu";
 }
 my $testranker_by_cpu = bless( {}, "testranker_by_cpu" );
 

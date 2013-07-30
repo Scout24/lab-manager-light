@@ -20,7 +20,7 @@ Requires: perl(DateTime::Format::Flexible)
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON)
 Requires: perl(GD) perl(GD::Barcode)
-BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule)
+BuildRequires: perl(Test::More) perl(Test::Warn) perl(Test::Exception) perl(Test::MockModule) perl(Text::TabularDisplay)
 BuildRequires: perl(File::Slurp) perl(Text::Diff) perl(DateTime::Format::Flexible) perl(JSON)
 BuildRequires: perl(CGI) perl(Config::IniFiles) perl(VMware::VIRuntime) perl(GD) perl(GD::Barcode)
 BuildRequires: zbar

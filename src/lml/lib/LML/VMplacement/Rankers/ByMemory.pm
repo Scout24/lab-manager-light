@@ -22,4 +22,11 @@ sub get_rank_value {
     return 100-int($host->{stats}->{overallMemoryUsage}/$host->{hardware}->{memorySize}*100);
 }
 
+
+sub get_name {
+    my ( $self) = @_;
+    return 'ByMemoryUsage';
+}
+
+
 1;

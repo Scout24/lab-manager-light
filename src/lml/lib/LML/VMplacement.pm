@@ -10,6 +10,8 @@ use LML::VMplacement::Filters::ByNetworkLabel;
 use LML::VMplacement::Rankers::ByOverallStatus;
 use LML::VMplacement::Rankers::ByCpuUsage;
 use LML::VMplacement::Rankers::ByMemory;
+use LML::Common;
+use Text::TabularDisplay;
 
 sub new {
     my ( $class, $config, $lab, $filters, $rankers ) = @_;
@@ -27,26 +29,19 @@ sub new {
     }
     else {
         # todo set default filters
-        $filters = [
-                     new LML::VMplacement::Filters::ByOverallStatus,
-                     new LML::VMplacement::Filters::ByMemory,
-                     new LML::VMplacement::Filters::ByNetworkLabel($lab) ];
+        $filters = [ new LML::VMplacement::Filters::ByOverallStatus, new LML::VMplacement::Filters::ByMemory, new LML::VMplacement::Filters::ByNetworkLabel($lab) ];
     }
 
     if ( defined($rankers) ) {
         croak( "4th argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($rankers) eq "ARRAY" );
         foreach (@$rankers) {
             croak( "ranker " . ( ref($_) ? ref($_) : $_ ) . " has no get_rank_value method called at " . ( caller 0 )[3] )
-              unless ( $_->can("get_rank_value") );
+              unless ( $_->can("get_rank_value") && $_->can("get_name") );
         }
     }
     else {
         # todo set default rankers
-        $rankers = [
-                     new LML::VMplacement::Rankers::ByOverallStatus,
-                     new LML::VMplacement::Rankers::ByCpuUsage,
-                     new LML::VMplacement::Rankers::ByMemory
-        ];
+        $rankers = [ new LML::VMplacement::Rankers::ByOverallStatus, new LML::VMplacement::Rankers::ByCpuUsage, new LML::VMplacement::Rankers::ByMemory ];
     }
 
     my $self = {
@@ -100,6 +95,11 @@ sub _map_vm_res_on_host {
 
 sub _rank {
     my ( $self, @hosts ) = @_;
+
+    if ($isDebug) {
+        $self->_pretty_print_ranking(@hosts);
+    }
+
     return sort { $self->_collect_ranks($b) <=> $self->_collect_ranks($a) } @hosts;
 }
 
@@ -110,6 +110,33 @@ sub _collect_ranks {
         $rank += $ranker->get_rank_value($host);
     }
     return $rank;
+}
+
+sub _pretty_print_ranking {
+    my ( $self, @hosts ) = @_;
+
+    my @columns = ("Host-ID");
+    foreach my $ranker ( @{ $self->{rankers} } ) {
+        push @columns, $ranker->get_name();
+    }
+    push @columns, 'Ranking';
+
+    my $t = Text::TabularDisplay->new;
+    $t->columns(@columns);
+
+    foreach my $host (@hosts) {
+        my @row = ($host->{name});
+        my $rank = 0;
+        foreach my $ranker ( @{ $self->{rankers} } ) {
+            my $current_rank_value = $ranker->get_rank_value($host);
+            push @row, $current_rank_value;
+            $rank += $current_rank_value;
+        }
+        push @row, $rank;
+        $t->add(@row);
+    }
+
+    Debug( "Ranking of suitable esx hosts (the host with the highest Ranking will be choosen):\n" . $t->render );
 }
 
 1;

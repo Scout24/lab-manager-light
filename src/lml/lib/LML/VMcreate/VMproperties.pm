@@ -161,7 +161,7 @@ sub generate_vms_array {
         }
     );
 
-    print STDERR "DEBUG - VMproperties->generate_vms_array " . Data::Dumper->Dump( [ \@vms ] ) . "\n";
+    #print STDERR "DEBUG - VMproperties->generate_vms_array " . Data::Dumper->Dump( [ \@vms ] ) . "\n";
 
     return @vms;
 }

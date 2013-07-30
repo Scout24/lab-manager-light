@@ -21,6 +21,11 @@ sub testranker::get_rank_value {
     my ( $self, $host ) = @_;
     return 1;
 }
+
+sub testranker::get_name {
+    my ( $self) = @_;
+    return "name";
+}
 my $testranker = bless( {}, "testranker" );
 
 my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
