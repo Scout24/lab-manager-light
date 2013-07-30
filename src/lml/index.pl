@@ -239,10 +239,10 @@ print <<EOF;
                             <select name="esx_host">
 EOF
 
-my $selected="selected";
+
+print "<option value='auto_placement' selected >auto placement</option>\n";
 foreach my $host (@hosts) {
-    print "<option value='".$host->{name}."' $selected>" . displayHost($host) . "</option>\n";
-    $selected=""; # the first entry should be selected
+    print "<option value='".$host->{name}."'>" . displayHost($host) . "</option>\n";
 }
 
 print <<EOF;
