@@ -29,7 +29,11 @@ sub new {
     }
     else {
         # todo set default filters
-        $filters = [ new LML::VMplacement::Filters::ByOverallStatus, new LML::VMplacement::Filters::ByMemory, new LML::VMplacement::Filters::ByNetworkLabel($lab) ];
+        $filters = [
+                     new LML::VMplacement::Filters::ByOverallStatus,       #
+                     new LML::VMplacement::Filters::ByMemory,              #
+                     new LML::VMplacement::Filters::ByNetworkLabel($lab)
+        ];
     }
 
     if ( defined($rankers) ) {
@@ -41,7 +45,11 @@ sub new {
     }
     else {
         # todo set default rankers
-        $rankers = [ new LML::VMplacement::Rankers::ByOverallStatus, new LML::VMplacement::Rankers::ByCpuUsage, new LML::VMplacement::Rankers::ByMemory ];
+        $rankers = [
+                     new LML::VMplacement::Rankers::ByOverallStatus,    #
+                     new LML::VMplacement::Rankers::ByCpuUsage,         #
+                     new LML::VMplacement::Rankers::ByMemory
+        ];
     }
 
     my $self = {
@@ -125,7 +133,7 @@ sub _pretty_print_ranking {
     $t->columns(@columns);
 
     foreach my $host (@hosts) {
-        my @row = ($host->{name});
+        my @row  = ( $host->{name} );
         my $rank = 0;
         foreach my $ranker ( @{ $self->{rankers} } ) {
             my $current_rank_value = $ranker->get_rank_value($host);

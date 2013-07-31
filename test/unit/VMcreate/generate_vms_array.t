@@ -166,7 +166,8 @@ $module->mock(
                               "cpu"   => $expected_number_cpu,
                               "disks" => [ { "size" => $expected_diskSize } ],
                               "networks" => [ "network_label_1", "network_label_2" ],
-                              "ram"      => $expected_memorySize
+                              "ram"      => $expected_memorySize,
+                              "name"     => "devxxx02"
                            },
                            "get_recommendations should be called with expected vm_resources"
                 );

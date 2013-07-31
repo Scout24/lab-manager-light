@@ -195,6 +195,7 @@ sub _get_esx_host_and_datastore {
               cpu      => $resources->{virtualMachine}->{numberOfProcessors},
               networks => \@required_network_labels,
               disks    => [ { size => $resources->{virtualMachine}->{diskSize} } ],    # we currently support only one disk
+              name     => $self->{vm_name}
             }
         );
 

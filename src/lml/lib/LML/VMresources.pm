@@ -12,6 +12,7 @@ sub new {
                  cpu      => 1,
                  networks => [],
                  disks    => [],
+                 name => undef
     };
 
     if ( defined($input) ) {

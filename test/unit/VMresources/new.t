@@ -46,8 +46,12 @@ dies_ok { new LML::VMresources( { networks => "not a list" } ) } "dies on value 
     new_ok( "LML::VMresources" => [ { networks => [ "network1", "network2" ] } ] );
     new_ok( "LML::VMresources" => [ { networks => [] } ] );
 
+    # in this test case the name is not given 
     my $vm_resource = new_ok( "LML::VMresources" => [ { ram => 1, cpu => 1, disks => [ { size => 16000 }, { size => 24000 } ], networks => [ "network1", "network2" ] } ] );
-    is_deeply( $vm_resource, { ram => 1, cpu => 1, disks => [ { size => 16000 }, { size => 24000 } ], networks => [ "network1", "network2" ] }, "given arguments must be stored in object" );
+    is_deeply( $vm_resource, { ram => 1, cpu => 1, disks => [ { size => 16000 }, { size => 24000 } ], networks => [ "network1", "network2" ], name => undef }, "given arguments must be stored in object" );
+    # in this test case the name is given
+    $vm_resource = new_ok( "LML::VMresources" => [ { ram => 1, cpu => 1, disks => [ { size => 16000 }, { size => 24000 } ], networks => [ "network1", "network2" ], name=>"foobar23"} ] );
+    is_deeply( $vm_resource, { ram => 1, cpu => 1, disks => [ { size => 16000 }, { size => 24000 } ], networks => [ "network1", "network2" ], name => "foobar23" }, "given arguments must be stored in object" );
 
 }
 
