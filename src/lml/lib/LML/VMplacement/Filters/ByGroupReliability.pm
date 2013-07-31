@@ -6,16 +6,14 @@ use Carp;
 use Data::Dumper;
 
 sub new {
-    my ( $class, $lab, $config, $hosts ) = @_;
+    my ( $class, $lab, $config ) = @_;
 
     croak( "1st argument must be an instance of LML::Lab called at " .    ( caller 0 )[3] ) unless ( ref($lab)    eq "LML::Lab" );
     croak( "2nd argument must be an instance of LML::Config called at " . ( caller 0 )[3] ) unless ( ref($config) eq "LML::Config" );
-    croak( "3rd argument must be an instance of ARRAY called at " .       ( caller 0 )[3] ) unless ( ref($hosts)  eq "ARRAY" );
-
+    
     my $self = {
                  lab    => $lab,
                  config => $config,
-                 hosts  => $hosts
     };
 
     bless( $self, $class );
@@ -36,7 +34,7 @@ sub host_can_vm {
         return 1; # do not filter if a group pattern was defined but we can not determine the group of our vm 
     }
 
-    my $number_of_vms_with_same_group_per_host = $self->_get_number_of_vms_with_same_group_per_host( $self->{hosts}, $vm_res,$group_pattern,$expected_group );
+    my $number_of_vms_with_same_group_per_host = $self->_get_number_of_vms_with_same_group_per_host( $vm_res,$group_pattern,$expected_group );
     my $minimum = $self->_get_minimum_number_of_vms_with_same_group($number_of_vms_with_same_group_per_host);
     
     # print STDERR "DEBUG: host \"$host->{id}\" owns $number_of_vms_with_same_group_per_host->{$host->{id}} vms of same group.\n";
@@ -51,12 +49,12 @@ sub host_can_vm {
 ##################################################
 
 sub _get_number_of_vms_with_same_group_per_host {
-    my ( $self, $hosts, $vm_res, $group_pattern,$expected_group ) = @_;
+    my ( $self,  $vm_res, $group_pattern,$expected_group ) = @_;
 
     my %number_of_vms_with_same_group_per_host = ();
 
     # iterate over all esx hosts        
-    foreach my $host (@$hosts) {
+    foreach my $host ($self->{lab}->get_hosts) {
 
         my $counter_same_vm_groups = 0;
         

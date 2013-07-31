@@ -86,12 +86,12 @@ my $vm_res;
 # test cases
 ###################################
 
-new_ok( "LML::VMplacement::Filters::ByGroupReliability" => [ $lab, $C, [ $test_host_1, $test_host_2 ] ] );
-throws_ok { new LML::VMplacement::Filters::ByGroupReliability( {}, $C, [ $test_host_1, $test_host_2 ] ) } qr(must be an instance of LML::Lab), "dies on value for lab is not defined";
-throws_ok { new LML::VMplacement::Filters::ByGroupReliability( $lab, {}, [] ) } qr(must be an instance of LML::Config), "dies on config is not defined";
-throws_ok { new LML::VMplacement::Filters::ByGroupReliability( $lab, $C, {} ) } qr(must be an instance of ARRAY), "dies on list for hosts is not defined";
+new_ok( "LML::VMplacement::Filters::ByGroupReliability" => [ $lab, $C] );
+throws_ok { new LML::VMplacement::Filters::ByGroupReliability( {}, $C) } qr(must be an instance of LML::Lab), "dies on value for lab is not defined";
+throws_ok { new LML::VMplacement::Filters::ByGroupReliability( $lab, {}) } qr(must be an instance of LML::Config), "dies on config is not defined";
 
-my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C, [ $test_host_1, $test_host_2 ] );
+
+my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C);
 
 # when a vm with name foobar90 should be created, the test_host_1 should get filtered, because instead of test_host_2 he owns a vm of same group 
 {
@@ -117,7 +117,7 @@ my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C, [ $tes
 # when no group pattern was defined, the filter should pass everything
 {
     my $C = new LML::Config( { hostrules => {  }, } );    # no group pattern
-    my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C, [ $test_host_1, $test_host_2 ] );
+    my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
     is( $filter->host_can_vm( $test_host_1, $vm_res ), 1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
     is( $filter->host_can_vm( $test_host_2, $vm_res ), 1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
@@ -133,7 +133,7 @@ my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C, [ $tes
 # when no group pattern was defined, the filter should pass everything
 {
     my $C = new LML::Config( { hostrules => { group_pattern => '(this is a non matching group pattern)'  }, } );    # group pattern with 3 letters (i)
-    my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C, [ $test_host_1, $test_host_2 ] );
+    my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
     is( $filter->host_can_vm( $test_host_1, $vm_res ), 1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
     is( $filter->host_can_vm( $test_host_2, $vm_res ), 1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );

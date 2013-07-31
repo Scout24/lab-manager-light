@@ -6,6 +6,7 @@ use Carp;
 use LML::VMplacement::Filters::ByOverallStatus;
 use LML::VMplacement::Filters::ByMemory;
 use LML::VMplacement::Filters::ByNetworkLabel;
+use LML::VMplacement::Filters::ByGroupReliability;
 
 use LML::VMplacement::Rankers::ByOverallStatus;
 use LML::VMplacement::Rankers::ByCpuUsage;
@@ -32,7 +33,8 @@ sub new {
         $filters = [
                      new LML::VMplacement::Filters::ByOverallStatus,       #
                      new LML::VMplacement::Filters::ByMemory,              #
-                     new LML::VMplacement::Filters::ByNetworkLabel($lab)
+                     new LML::VMplacement::Filters::ByNetworkLabel($lab),   #
+                     new LML::VMplacement::Filters::ByGroupReliability( $lab, $config) #
         ];
     }
 

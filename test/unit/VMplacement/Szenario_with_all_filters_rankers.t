@@ -55,6 +55,8 @@ my $test_host_1 = {
                   totalCpuMhz => 2000
     },
     status => { overallStatus => "yellow" },
+    vms    => ["vm-1-of-group-foo"],
+
 };
 
 my $test_host_2 = {
@@ -70,6 +72,7 @@ my $test_host_2 = {
                   totalCpuMhz => 2000
     },
     status => { overallStatus => "yellow" },
+    vms    => [],
 };
 
 my $test_host_3 = {
@@ -85,30 +88,37 @@ my $test_host_3 = {
                   totalCpuMhz => 2000
     },
     status => { overallStatus => "yellow" },
+    vms    => [],
 };
 
 # the Lab config should be consistent, that means the hosts in the NETWORKS section must be fit to the host definition
 my $simple_lab_with_three_hosts = new LML::Lab(
-                                                {
-                                                  "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 },
-                                                  "NETWORKS" => {
-                                                                  "network-1" => {
-                                                                                   "hosts" => [ $test_host_1->{id} ],
-                                                                                   "id"    => "network-1",
-                                                                                   "name"  => "NETWORK LABEL 1"
-                                                                  },
-                                                                  "network-2" => {
-                                                                                   "hosts" => [ $test_host_1->{id}, $test_host_2->{id} ],
-                                                                                   "id"    => "network-2",
-                                                                                   "name"  => "NETWORK LABEL 2"
-                                                                  },
-                                                                  "network-3" => {
-                                                                                   "hosts" => [ $test_host_1->{id}, $test_host_2->{id}, $test_host_3->{id} ],
-                                                                                   "id"    => "network-3",
-                                                                                   "name"  => "NETWORK LABEL 3"
-                                                                  },
-                                                  }
-                                                }
+    {
+       "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 },
+       "NETWORKS" => {
+                       "network-1" => {
+                                        "hosts" => [ $test_host_1->{id} ],
+                                        "id"    => "network-1",
+                                        "name"  => "NETWORK LABEL 1"
+                       },
+                       "network-2" => {
+                                        "hosts" => [ $test_host_1->{id}, $test_host_2->{id} ],
+                                        "id"    => "network-2",
+                                        "name"  => "NETWORK LABEL 2"
+                       },
+                       "network-3" => {
+                                        "hosts" => [ $test_host_1->{id}, $test_host_2->{id}, $test_host_3->{id} ],
+                                        "id"    => "network-3",
+                                        "name"  => "NETWORK LABEL 3"
+                       },
+       },
+       "HOSTS" => {
+           "1234545-2344-222-2344-9898239874" => {
+                                                   "NAME"  => "foobar23",           # TODO: decide wether to use "NAME" or "HOSTNAME"
+                                                   "VM_ID" => "vm-1-of-group-foo"
+           },
+         },
+    }
 );
 
 ##################################
@@ -125,6 +135,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           cpu      => 2000,                                                                # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],                                                 # all hosts support this network
           disks    => [ { size => 16000 } ],                                               # disk size is currently no filter criteria
+          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
         }
     );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -144,6 +155,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 2'],
           disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
         }
     );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -162,6 +174,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           cpu      => 2000,                                        # this is currently no filter criteria
           networks => [ 'NETWORK LABEL 1', 'NETWORK LABEL 2' ],    # all hosts support 'NETWORK LABEL 1'
           disks    => [ { size => 16000 } ],                       # disk size is currently no filter criteria
+          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
         }
     );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -180,6 +193,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 3'],      # all hosts support 'NETWORK LABEL 1'
           disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
         }
     );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -197,6 +211,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
           disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
         }
     );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -205,6 +220,32 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
     # the host with id-1 got filtered because of lower bound of 2048
+    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+}
+
+
+# validate the ranking and filtering for the given scenario, where some requirements (group reliability) are not fulfilled (some hosts should be filtered)
+{
+    
+    my $other_config = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
+    $other_config->{hostrules}{group_pattern} = '([a-z]{3}).*';
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] );    # test builtin filter initialization
+    
+    my $vm_res = new LML::VMresources(
+        {
+          ram      => 1000,
+          cpu      => 2000,                                                                # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],                                                 # all hosts support this network
+          disks    => [ { size => 16000 } ],                                               # disk size is currently no filter criteria
+          name     => 'foobar00'
+        }
+    );
+    my @rec = $vm_placement->get_recommendations($vm_res);
+    is( scalar(@rec), 2, "One host should be filtered" );
+    # in the current lab config we expect the following order:
+    # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
+    # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
+    # id-1 was filtered because id-1 already owns a foo group vm
     is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
 }
 
