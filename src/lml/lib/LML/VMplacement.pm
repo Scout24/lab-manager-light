@@ -93,7 +93,7 @@ sub _check_by_filters {
     my ( $self, $vm_res, $debug_infos, $host ) = @_;
     foreach my $filter ( @{ $self->{filters} } ) {
         unless ( $filter->host_can_vm( $host, $vm_res ) ) {
-            push ${$debug_infos}{ $filter->get_name() }, $host->{name};
+            push @{${$debug_infos}{ $filter->get_name() }}, $host->{name};
             return 0;
         }
     }
