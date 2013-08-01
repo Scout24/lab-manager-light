@@ -20,13 +20,12 @@ sub new {
     if (
          not(     $self->{test_host}
               and $self->{vm_name_prefix}
-              and $self->{esx_host}
               and $self->{username}
               and $self->{folder}
               and $self->{lmlhostpattern} )
       )
     {
-        croak "##teamcity[buildStatus status='FAILURE' text='Need to provide at least test_host, vm_name_prefix, esx_host, username, folder and lmlhostpattern options.']\n";
+        croak "##teamcity[buildStatus status='FAILURE' text='Need to provide at least test_host, vm_name_prefix, username, folder and lmlhostpattern options.']\n";
     }
 
     bless $self, $class;
