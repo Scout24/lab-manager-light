@@ -23,31 +23,35 @@ sub parseTestData {
     if ( -r $test_config_file ) {
         Debug("Using test config file $test_config_file");
         $cfg = Config::IniFiles->new( -file => $test_config_file, -default => "defaults" );
-    } else {
+    }
+    else {
         print STDERR "Neither lml-system-test.ini nor ~/.lml-system-test.ini could be found.\n";
         exit 1;
     }
 
     foreach my $section ( $cfg->Sections() ) {
         if ( "defaults" ne $section ) {
-            push(
-                @test_data,
-                {
-                  label             => $section,
-                  boot_timeout      => $cfg->val( $section, 'boot_timeout', 0 ),
-                  test_host         => $cfg->val( $section, 'test_host', 0 ),
-                  vm_name_prefix    => $cfg->val( $section, 'vm_name_prefix', 0 ),
-                  esx_host          => $cfg->val( $section, 'esx_host', 0 ),
-                  username          => $cfg->val( $section, 'username', 0 ),
-                  folder            => $cfg->val( $section, 'folder', 0 ),
-                  lmlhostpattern    => $cfg->val( $section, 'lmlhostpattern', 0 ),
-                  force_network     => $cfg->val( $section, 'force_network', 0 ),
-                  force_boot_target => $cfg->val( $section, 'force_boot_target', 0 ),
-                  result            => $cfg->val( $section, 'result', 0 ),
-                  expect            => [ get_array( $cfg, $section, 'expect' ) ],
-                }
-              )
+            # Generate a hash which contains our test specs
+            my %test_spec = (
+                              label             => $section,
+                              boot_timeout      => $cfg->val( $section, 'boot_timeout', 0 ),
+                              test_host         => $cfg->val( $section, 'test_host', 0 ),
+                              vm_name_prefix    => $cfg->val( $section, 'vm_name_prefix', 0 ),
+                              username          => $cfg->val( $section, 'username', 0 ),
+                              folder            => $cfg->val( $section, 'folder', 0 ),
+                              lmlhostpattern    => $cfg->val( $section, 'lmlhostpattern', 0 ),
+                              force_network     => $cfg->val( $section, 'force_network', 0 ),
+                              force_boot_target => $cfg->val( $section, 'force_boot_target', 0 ),
+                              result            => $cfg->val( $section, 'result', 0 ),
+                              expect            => [ get_array( $cfg, $section, 'expect' ) ],
+            );
 
+            # Add an esx host, if defined in configuration
+            my $esx_host = $cfg->val( $section, 'esx_host', undef );
+            $test_spec{esx_host} = $esx_host if defined $esx_host;
+
+            # Add the generated hash to our test data
+            push @test_data, \%test_spec;
         }
     }
     return @test_data;

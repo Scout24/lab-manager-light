@@ -38,7 +38,7 @@ sub create_vm {
     my $vm_create_url_data = "name=" . $self->{vm_create_options}->{vm_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target};
 
     # Add an esx host, if there is one given (0 is default value in TestDataProvider.pm)
-    if ( not $self->{vm_create_options}->{esx_host} == "0" ) {
+    if ( defined $self->{vm_create_options}->{esx_host} ) {
         $vm_create_url_data .= "&esx_host=" . $self->{vm_create_options}->{esx_host};
     }
 
