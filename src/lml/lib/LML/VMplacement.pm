@@ -80,17 +80,17 @@ sub _filter {
     foreach my $filter ( @{ $self->{filters} } ) {
         ${$debug_infos}{ $filter->get_name() } = [];
     }
-    my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $_, $debug_infos ) } @hosts;
+    my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos ,$_) } @hosts;
 
     if ($isDebug) {
-        $self->_pretty_print_filtering($debug_infos);
+        $self->_pretty_print_filtering($debug_infos,$vm_res->{name});
     }
 
     return @filtered_hosts;
 }
 
 sub _check_by_filters {
-    my ( $self, $vm_res, $host, $debug_infos ) = @_;
+    my ( $self, $vm_res, $debug_infos, $host ) = @_;
     foreach my $filter ( @{ $self->{filters} } ) {
         unless ( $filter->host_can_vm( $host, $vm_res ) ) {
             push ${$debug_infos}{ $filter->get_name() }, $host->{name};
@@ -137,7 +137,7 @@ sub _collect_ranks {
 }
 
 sub _pretty_print_filtering {
-    my ( $self, $debug_infos ) = @_;
+    my ( $self, $debug_infos, $vm_name ) = @_;
 
     my @columns = ();
     foreach my $filter ( @{ $self->{filters} } ) {
@@ -162,7 +162,7 @@ sub _pretty_print_filtering {
         }
         $t->add(@row) if $has_something_to_debug;
     }
-    Debug( "Filtering of suitable esx hosts (the filter order is like the column order):\n" . $t->render );
+    Debug( "Apply auto placement for vm $vm_name:\nFiltering of suitable esx hosts (the filter order is like the column order):\n" . $t->render );
 }
 
 sub _pretty_print_ranking {
