@@ -63,7 +63,7 @@ sub _get_number_of_vms_with_same_group_per_host {
         foreach my $vm_id ( @{ $self->{lab}->{ESXHOSTS}{ $host->{id} }->{vms} } ) {
     
             # now the bad thing: iterate over all vms (independent from host) and try to find vm with same id, because we do not know the name of the vm
-            foreach my $vm ( %{keys $self->{lab}->{HOSTS}} ) {
+            foreach my $vm ( keys %{$self->{lab}->{HOSTS}} ) {
                 # is this the vm with a matching id
                 if ( $vm_id eq $self->{lab}->{HOSTS}->{$vm}->{VM_ID} ) {
                     # resolve group of matching vm
