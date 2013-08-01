@@ -77,12 +77,9 @@ sub _filter {
     my ( $self, $vm_res, @hosts ) = @_;
     my $debug_infos = {};
 
-    if ($isDebug) {
-        foreach my $filter ( @{ $self->{filters} } ) {
-            ${$debug_infos}{ $filter->get_name() } = [];
-        }
+    foreach my $filter ( @{ $self->{filters} } ) {
+        ${$debug_infos}{ $filter->get_name() } = [];
     }
-
     my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $_, $debug_infos ) } @hosts;
 
     if ($isDebug) {
@@ -153,17 +150,15 @@ sub _pretty_print_filtering {
     my $has_something_to_debug = 1;
 
     while ($has_something_to_debug) {
-        
+
         $has_something_to_debug = 0;
-        my @row  = ();
-        
+        my @row = ();
+
         foreach my $filter ( @{ $self->{filters} } ) {
-            Debug( "Filter : " . $filter->get_name() . "\n" );
-            
-            my $filtered_host = shift( @{ $debug_infos->{ $filter->get_name() } } ); 
-            
+            my $filtered_host = shift( @{ $debug_infos->{ $filter->get_name() } } );
+
             push @row, defined($filtered_host) ? $filtered_host : '';
-            $has_something_to_debug = 1 if defined($filtered_host);            
+            $has_something_to_debug = 1 if defined($filtered_host);
         }
         $t->add(@row) if $has_something_to_debug;
     }
