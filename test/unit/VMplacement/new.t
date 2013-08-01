@@ -15,7 +15,18 @@ sub testfilter::host_can_vm {
     my ( $self, $host, $vm ) = @_;
     return 1;
 }
+
+sub testfilter::get_name {
+    return "filter name";
+}
 my $testfilter = bless( {}, "testfilter" );
+
+# no get_name method defined
+sub failing_testfilter::host_can_vm {
+    my ( $self, $host, $vm ) = @_;
+    return 1;
+}
+my $failing_testfilter = bless( {}, "failing_testfilter" );
 
 sub testranker::get_rank_value {
     my ( $self, $host ) = @_;
@@ -23,7 +34,6 @@ sub testranker::get_rank_value {
 }
 
 sub testranker::get_name {
-    my ( $self) = @_;
     return "name";
 }
 my $testranker = bless( {}, "testranker" );
@@ -40,11 +50,13 @@ throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), { foo => 1 } ) } qr(3r
 throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, { foo => 1 } ) } qr(4th argument must be an Array),
   "dies on value for rankers is not defined";
 
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), [ $testfilter, "foo" ] ) } qr(filter foo has no host_can_vm method),
+throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), [ $failing_testfilter, ] ) } qr(filter failing_testfilter has no host_can_vm or get_name method),
   "dies on invalid filter";
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [ $testranker, "foo" ] ) } qr(ranker foo has no get_rank_value method),
+throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), [ $testfilter, "foo" ] ) } qr(filter foo has no host_can_vm or get_name method ),
+  "dies on invalid filter";
+throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [ $testranker, "foo" ] ) } qr(ranker foo has no get_rank_value or get_name method),
   "dies on invalid ranker";
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [$testfilter] ) } qr(ranker testfilter has no get_rank_value method),
+throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [$testfilter] ) } qr(ranker testfilter has no get_rank_value or get_name method),
   "dies on invalid ranker";
 {
 

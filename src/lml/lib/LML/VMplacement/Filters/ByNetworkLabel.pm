@@ -29,6 +29,10 @@ sub host_can_vm {
     return 1;
 }
 
+sub get_name {
+    return 'ByNetworks';
+}
+
 sub _host_provides_network{
     my ($self, $network_label, @provided_network_labels) = @_;
     return 1 if ( grep { /^$network_label/}  @provided_network_labels  ) ;

@@ -57,11 +57,17 @@ sub truefilter::host_can_vm {
     }
     return 1;
 }
+sub truefilter::get_name {
+    return "truefilter";
+}
 my $truefilter = bless( {}, "truefilter" );
 
 sub falsefilter::host_can_vm {
     my ( $self, $host, $vm ) = @_;
     return 0;
+}
+sub falsefilter::get_name {
+    return "falsefilter";
 }
 my $falsefilter = bless( {}, "falsefilter" );
 
@@ -76,7 +82,6 @@ sub testranker::get_rank_value {
 }
 
 sub testranker::get_name {
-    my ( $self) = @_;
     return "test_ranker";
 }
 my $testranker = bless( {}, "testranker" );
@@ -86,7 +91,6 @@ sub testranker_by_ram::get_rank_value {
     return $host->{stats}->{overallMemoryUsage};
 }
 sub testranker_by_ram::get_name {
-    my ( $self) = @_;
     return "testranker_by_ram";
 }
 my $testranker_by_ram = bless( {}, "testranker_by_ram" );
@@ -96,7 +100,6 @@ sub testranker_by_cpu::get_rank_value {
     return $host->{stats}->{overallCpuUsage};
 }
 sub testranker_by_cpu::get_name {
-    my ( $self) = @_;
     return "testranker_by_cpu";
 }
 my $testranker_by_cpu = bless( {}, "testranker_by_cpu" );

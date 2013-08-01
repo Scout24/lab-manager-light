@@ -22,4 +22,7 @@ sub host_can_vm {
     return $vm_res->{ram} < ( $host->{hardware}->{memorySize} - $host->{stats}->{overallMemoryUsage}) ? 1 : 0;
 }
 
+sub get_name {
+    return 'ByMemory';
+}
 1;

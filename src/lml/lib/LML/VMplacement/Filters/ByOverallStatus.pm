@@ -23,4 +23,8 @@ sub host_can_vm {
       || $host->{status}->{overallStatus} eq "yellow" ? 1 : 0;
 }
 
+sub get_name {
+    return 'ByOverallStatus';
+}
+
 1;

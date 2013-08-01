@@ -24,24 +24,24 @@ sub new {
     if ( defined($filters) ) {
         croak( "3rd argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($filters) eq "ARRAY" );
         foreach (@$filters) {
-            croak( "filter " . ( ref($_) ? ref($_) : $_ ) . " has no host_can_vm method called at " . ( caller 0 )[3] )
-              unless ( $_->can("host_can_vm") );
+            croak( "filter " . ( ref($_) ? ref($_) : $_ ) . " has no host_can_vm or get_name method called at " . ( caller 0 )[3] )
+              unless ( $_->can("host_can_vm") && $_->can("get_name") );
         }
     }
     else {
         # todo set default filters
         $filters = [
-                     new LML::VMplacement::Filters::ByOverallStatus,       #
-                     new LML::VMplacement::Filters::ByMemory,              #
-                     new LML::VMplacement::Filters::ByNetworkLabel($lab),   #
-                     new LML::VMplacement::Filters::ByGroupReliability( $lab, $config) #
+            new LML::VMplacement::Filters::ByOverallStatus,         #
+            new LML::VMplacement::Filters::ByMemory,                #
+            new LML::VMplacement::Filters::ByNetworkLabel($lab),    #
+            new LML::VMplacement::Filters::ByGroupReliability( $lab, $config )    #
         ];
     }
 
     if ( defined($rankers) ) {
         croak( "4th argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($rankers) eq "ARRAY" );
         foreach (@$rankers) {
-            croak( "ranker " . ( ref($_) ? ref($_) : $_ ) . " has no get_rank_value method called at " . ( caller 0 )[3] )
+            croak( "ranker " . ( ref($_) ? ref($_) : $_ ) . " has no get_rank_value or get_name method called at " . ( caller 0 )[3] )
               unless ( $_->can("get_rank_value") && $_->can("get_name") );
         }
     }
@@ -75,13 +75,30 @@ sub get_recommendations {
 
 sub _filter {
     my ( $self, $vm_res, @hosts ) = @_;
-    return grep { $self->_check_by_filters( $vm_res, $_ ) } @hosts;
+    my $debug_infos = {};
+
+    if ($isDebug) {
+        foreach my $filter ( @{ $self->{filters} } ) {
+            ${$debug_infos}{ $filter->get_name() } = [];
+        }
+    }
+
+    my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $_, $debug_infos ) } @hosts;
+
+    if ($isDebug) {
+        $self->_pretty_print_filtering($debug_infos);
+    }
+
+    return @filtered_hosts;
 }
 
 sub _check_by_filters {
-    my ( $self, $vm_res, $host ) = @_;
+    my ( $self, $vm_res, $host, $debug_infos ) = @_;
     foreach my $filter ( @{ $self->{filters} } ) {
-        return 0 unless ( $filter->host_can_vm( $host, $vm_res ) );
+        unless ( $filter->host_can_vm( $host, $vm_res ) ) {
+            push ${$debug_infos}{ $filter->get_name() }, $host->{name};
+            return 0;
+        }
     }
     return 1;
 }
@@ -120,6 +137,37 @@ sub _collect_ranks {
         $rank += $ranker->get_rank_value($host);
     }
     return $rank;
+}
+
+sub _pretty_print_filtering {
+    my ( $self, $debug_infos ) = @_;
+
+    my @columns = ();
+    foreach my $filter ( @{ $self->{filters} } ) {
+        push @columns, $filter->get_name();
+    }
+
+    my $t = Text::TabularDisplay->new;
+    $t->columns(@columns);
+
+    my $has_something_to_debug = 1;
+
+    while ($has_something_to_debug) {
+        
+        $has_something_to_debug = 0;
+        my @row  = ();
+        
+        foreach my $filter ( @{ $self->{filters} } ) {
+            Debug( "Filter : " . $filter->get_name() . "\n" );
+            
+            my $filtered_host = shift( @{ $debug_infos->{ $filter->get_name() } } ); 
+            
+            push @row, defined($filtered_host) ? $filtered_host : '';
+            $has_something_to_debug = 1 if defined($filtered_host);            
+        }
+        $t->add(@row) if $has_something_to_debug;
+    }
+    Debug( "Filtering of suitable esx hosts (the filter order is like the column order):\n" . $t->render );
 }
 
 sub _pretty_print_ranking {

@@ -44,6 +44,10 @@ sub host_can_vm {
     return 1;
 }
 
+sub get_name {
+    return 'ByGroupReliability';
+}
+
 ##################################################
 # private methods
 ##################################################
