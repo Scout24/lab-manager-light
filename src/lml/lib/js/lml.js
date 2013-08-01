@@ -20,7 +20,7 @@ if (typeof String.prototype.startsWith != 'function') {
 }
 
 $(document).ready(function() {
-    $("#overview").append("<div id='waiting'><img src='lib/images/wait.gif' /></div>");
+    $("#vm_overview").append("<div id='waiting'><img src='lib/images/wait.gif' /></div>");
 
     $('a.tip').cluetip({
         attribute : 'href',

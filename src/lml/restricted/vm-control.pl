@@ -70,15 +70,14 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
     }
     if (@errors) {
         my $msg = "ERRORS: " . join( ", ", @errors );
-        print header( -status => "500 $msg" )
-          . start_html( -title => "LML VM Control" )
-          . p("The following ERRORS occured:")
-          . ul( li( \@errors ) )
-          . end_html . "\n";
+        print header( -status => "500 $msg" ) . start_html( -title => "LML VM Control" ) . p("The following ERRORS occured:") . ul( li( \@errors ) ) . end_html . "\n";
     }
     else {
-        print header( -status => "200 $action " . scalar(@hosts) . " target(s)" ) . start_html( -title => "LML VM Control" ) .
-          p( "$action " . scalar(@hosts) . " target(s)" ) . end_html . "\n";
+        # Print HTML success header
+        print header( -status => "200 $action " . scalar(@hosts) . " target(s)" );
+
+        # Print out json formatted array
+        print encode_json( \@hosts ) . "\n";
     }
 }
 else {
