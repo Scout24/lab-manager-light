@@ -56,6 +56,7 @@ my $test_host_1 = {
     },
     status => { overallStatus => "yellow" },
     vms    => ["vm-1-of-group-foo"],
+    name => 'host_id-1',
 
 };
 
@@ -73,6 +74,7 @@ my $test_host_2 = {
     },
     status => { overallStatus => "yellow" },
     vms    => [],
+    name => 'host_id-2',
 };
 
 my $test_host_3 = {
@@ -89,6 +91,7 @@ my $test_host_3 = {
     },
     status => { overallStatus => "yellow" },
     vms    => [],
+    name => 'host_id-3',
 };
 
 # the Lab config should be consistent, that means the hosts in the NETWORKS section must be fit to the host definition
@@ -247,6 +250,34 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
     # id-1 was filtered because id-1 already owns a foo group vm
     is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+}
+
+
+# validate the ranking and filtering for the given scenario, where some requirements (group reliability) are not fulfilled (some hosts should be filtered)
+{
+    
+    my $other_config = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
+    $other_config->{hostrules}{vm_host_assignment} = ['foo'];
+    $other_config->{hostrules}{'foo.vm_pattern'} = ['foobar[\d]{2}'];
+    $other_config->{hostrules}{'foo.host_pattern'} = ['host_id-[1-2]']; # host with name "host_id-3" will be filtered
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] );    # test builtin filter initialization
+    
+    my $vm_res = new LML::VMresources(
+        {
+          ram      => 1000,
+          cpu      => 2000,                                                                # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],                                                 # all hosts support this network
+          disks    => [ { size => 16000 } ],                                               # disk size is currently no filter criteria
+          name     => 'foobar00'
+        }
+    );
+    my @rec = $vm_placement->get_recommendations($vm_res);
+    is( scalar(@rec), 2, "One host should be filtered" );
+    # in the current lab config we expect the following order:
+    # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
+    # 2nd placement is host with id-3, because it has a rank value of 70 (10 for free ram and 60 for free cpu)
+    # id-3 was filtered because the name of id-3 does not match the foo.host_pattern
+    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-1", datastores => ['datastore-1'], } ], "should return hosts in descending order by cpu+ram " );
 }
 
 done_testing();

@@ -7,6 +7,7 @@ use LML::VMplacement::Filters::ByOverallStatus;
 use LML::VMplacement::Filters::ByMemory;
 use LML::VMplacement::Filters::ByNetworkLabel;
 use LML::VMplacement::Filters::ByGroupReliability;
+use LML::VMplacement::Filters::ByAssignableHost;
 
 use LML::VMplacement::Rankers::ByOverallStatus;
 use LML::VMplacement::Rankers::ByCpuUsage;
@@ -31,9 +32,10 @@ sub new {
     else {
         # todo set default filters
         $filters = [
-            new LML::VMplacement::Filters::ByOverallStatus,         #
-            new LML::VMplacement::Filters::ByMemory,                #
-            new LML::VMplacement::Filters::ByNetworkLabel($lab),    #
+            new LML::VMplacement::Filters::ByAssignableHost($config),    #
+            new LML::VMplacement::Filters::ByOverallStatus,              #
+            new LML::VMplacement::Filters::ByMemory,                     #
+            new LML::VMplacement::Filters::ByNetworkLabel($lab),         #
             new LML::VMplacement::Filters::ByGroupReliability( $lab, $config )    #
         ];
     }
@@ -80,10 +82,10 @@ sub _filter {
     foreach my $filter ( @{ $self->{filters} } ) {
         ${$debug_infos}{ $filter->get_name() } = [];
     }
-    my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos ,$_) } @hosts;
+    my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos, $_ ) } @hosts;
 
     if ($isDebug) {
-        $self->_pretty_print_filtering($debug_infos,$vm_res->{name});
+        $self->_pretty_print_filtering( $debug_infos, $vm_res->{name} );
     }
 
     return @filtered_hosts;
@@ -93,7 +95,7 @@ sub _check_by_filters {
     my ( $self, $vm_res, $debug_infos, $host ) = @_;
     foreach my $filter ( @{ $self->{filters} } ) {
         unless ( $filter->host_can_vm( $host, $vm_res ) ) {
-            push @{${$debug_infos}{ $filter->get_name() }}, $host->{name};
+            push @{ ${$debug_infos}{ $filter->get_name() } }, $host->{name};
             return 0;
         }
     }
