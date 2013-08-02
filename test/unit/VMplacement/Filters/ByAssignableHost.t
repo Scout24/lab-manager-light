@@ -27,14 +27,6 @@ my $C = new LML::Config(
     }
 );
 
-my $test_host_1 = {
-    id       => "id-1",
-    networks => [ "network-1", "network-2" ],
-    # other attributes are unimportant
-};
-
-my $vm_res;
-
 ##################################
 # test cases
 ###################################
