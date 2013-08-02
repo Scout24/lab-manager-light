@@ -70,8 +70,12 @@ sub assert_uuid {
 
 # assert the host
 sub assert_host {
-    print "##teamcity[progressMessage 'Validating vm host']\n";
     my ($self)        = @_;
+    # verify esx host only, if it was explicit given in the create options (no auto placement)
+    unless (defined $self->{vm_create_options}->{esx_host}){
+        return;
+    }
+    print "##teamcity[progressMessage 'Validating vm host']\n";
     my $host          = $self->{vm_created_json}->{"HOST"};
     my $expected_host = $self->{vm_create_options}->{esx_host};
     $self->_fail_team_city_build("actual host $host does not match host $expected_host from create options") unless ( $expected_host eq $host );
