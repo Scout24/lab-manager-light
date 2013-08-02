@@ -112,7 +112,7 @@ throws_ok { new LML::VMplacement::Filters::ByAssignableHost( {} ) } qr(must be a
 
     my $filter = new_ok( "LML::VMplacement::Filters::ByAssignableHost" => [$config_with_empty_vm_host_assignment] );
     
-    my $vm_res = new LML::VMresources( { name => 'veryDifferent01' } );
+    my $vm_res = new LML::VMresources( { name => 'barfoo00' } );
     my $host = {name => "host_for_foos.some.domain",};
     is($filter->host_can_vm($host, $vm_res), 1, 'the host should not be filtered, because the corresponding host_pattern matches the host name');
 }
