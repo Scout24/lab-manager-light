@@ -35,7 +35,7 @@ sub check_value {
 my %opts = (
     format => {
                 type     => "=s",
-                help     => "Output format for found VMs (use %UUID, %PATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET). ",
+                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET). ",
                 required => 0,
                 default  => "%UUID%PATH"
     }
@@ -56,8 +56,13 @@ if ( my @customfields = keys %{ get_custom_fields() } ) {
 }
 
 # display hosts
-if ( my @hosts = keys %{ get_hosts() } ) {
-    print "ESX Hosts:\n\t" . join( "\n\t", @hosts ) . "\n";
+my $HOSTS = get_hosts();
+if (keys %$HOSTS ) {
+    printf "\nESX Hosts:\n%-40s%-40s\n","UUID","PATH";
+    foreach my $host (values %$HOSTS ) {
+        printf "%-40s%-40s\n",$host->{uuid},$host->{path};
+    }
+    print "\n";
 } else {
     print "No ESX Hosts found - You will not have much fun using LML without them.\n";
 }
@@ -110,8 +115,12 @@ foreach my $uuid ( keys %{$VM} ) {
         elsif ( $_ eq "FORCEBOOT_TARGET" ) {
             push @output, check_value( $VM->{$uuid}{CUSTOMFIELDS}->{'Force Boot Target'} );
         }
-        # Use the display regex for vm paths if there is one
+                # Raw path
         elsif ( $_ eq "PATH" ) {
+            push @output, $VM->{$uuid}{PATH};
+        }
+        # Use the display regex for vm paths if there is one
+        elsif ( $_ eq "DISPLAPATH" ) {
             my $display_vm_path = $VM->{$uuid}{PATH};
             if ($display_filter_vm_path) {
                 $display_vm_path =~ s/$display_filter_vm_path/$1/x;

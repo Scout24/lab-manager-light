@@ -91,9 +91,11 @@ sub retrieve_vm_details ($) {
     return %VM_DATA
       unless ( $vm->get_property("config.template") eq "false" or $vm->get_property("config.template") eq "0" );
 
-    $VM_DATA{"UUID"} = $vm->get_property("config.uuid");
-    $VM_DATA{"NAME"} = $vm->get_property("name");
-    $VM_DATA{"PATH"} = Util::get_inventory_path( $vm, $vm->{vim} );
+    $VM_DATA{UUID} = $vm->get_property("config.uuid");
+    $VM_DATA{NAME} = $vm->get_property("name");
+    $VM_DATA{PATH} = Util::get_inventory_path( $vm, $vm->{vim} );
+    # store moref
+    $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
     my @vm_macs = ();
     Debug( "Reading VM " . $VM_DATA{"UUID"} . " (" . $VM_DATA{"NAME"} . "): " . $VM_DATA{"PATH"} );
     foreach my $vm_dev ( @{ $vm->get_property("config.hardware.device") } ) {
@@ -105,7 +107,7 @@ sub retrieve_vm_details ($) {
                 # no distributed vSwitch
                 $net = $vm_dev->backing->deviceName;
             }
-            else {
+            elsif ($vm_dev->backing->can("port") and $vm_dev->backing->port->can("portgroupKey") and my $portgroupkey = $vm_dev->backing->port->portgroupKey) {
 
                 # this is probably a distributed vSwitch, need to retrieve infos by following the vSwitch UUID
 
@@ -136,9 +138,11 @@ sub retrieve_vm_details ($) {
 
 
 =cut
-
-                my $portgroupkey = $vm_dev->backing->port->portgroupKey;
                 $net = dvp_to_name($portgroupkey);
+            } else {
+                Debug("VM ".$VM_DATA{"NAME"}." (".$VM_DATA{VM_ID}.") mac $mac has no network connected");
+                # dump vm_dev to network label for debugging
+                $net = "";
             }
 
             $VM_DATA{"MAC"}{$mac} = $net;
@@ -169,8 +173,6 @@ sub retrieve_vm_details ($) {
     # store ESX host
     $VM_DATA{HOST} = $HOSTS{ $vm->get_property("runtime.host")->value }->{name};
 
-    # store moref
-    $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
     return \%VM_DATA;
 }
 
@@ -203,7 +205,7 @@ sub get_vi_connection() {
     #       $targets[0]->login()
     #   };
     eval { $connection = Util::connect(); };
-    croak("Could not connect to VI: $@") if ($@);
+    croak("Could not connect to vSphere, SDK error message:\n$@") if ($@);
     Debug("Connected to vSphere");
     return $connection;
 }
@@ -370,12 +372,12 @@ sub get_hosts {
 
     unless ( scalar( keys %HOSTS ) ) {
         # initialize HOSTS if they don't contain data
-        %HOSTS   = ();
+        %HOSTS = ();
         my $entityViews = Vim::find_entity_views(
                      view_type    => "HostSystem",
                      begin_entity => Vim::get_service_content()->rootFolder,
                      properties =>
-                       [ "name", "config.product", "summary.quickStats", "summary.hardware", "overallStatus", "network", "datastore", "vm" ]
+                       [ "hardware.systemInfo.uuid", "name", "config.product", "summary.quickStats", "summary.hardware", "overallStatus", "network", "datastore", "vm" ]
         );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
@@ -385,27 +387,30 @@ sub get_hosts {
             my $hardware   = $e->get_property("summary.hardware");
             $HOSTS{ $e->{mo_ref}->value } = {
                 id      => $e->{mo_ref}->value,
+                uuid    => $e->get_property("hardware.systemInfo.uuid"),
                 name    => $e->{name},
                 product => { fullName => $product->{fullName}, },
                 stats   => {
-                            # the fairness values are -1 if the host is not part of a cluster. We set it to 1000 so that it will rank badly
-                           distributedCpuFairness    => $quickStats->{distributedCpuFairness} > -1 ? $quickStats->{distributedCpuFairness} : 1000,
-                           distributedMemoryFairness => $quickStats->{distributedMemoryFairness} >-1 ? $quickStats->{distributedMemoryFairness} : 1000,
-                           overallCpuUsage           => $quickStats->{overallCpuUsage},
-                           overallMemoryUsage        => $quickStats->{overallMemoryUsage},
+                    # the fairness values are -1 if the host is not part of a cluster. We set it to 1000 so that it will rank badly
+                    distributedCpuFairness => $quickStats->{distributedCpuFairness} > -1 ? $quickStats->{distributedCpuFairness} : 1000,
+                    distributedMemoryFairness => $quickStats->{distributedMemoryFairness} > -1
+                    ? $quickStats->{distributedMemoryFairness}
+                    : 1000,
+                    overallCpuUsage    => $quickStats->{overallCpuUsage},
+                    overallMemoryUsage => $quickStats->{overallMemoryUsage},
                 },
                 hardware => {
-                              totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
-                              memorySize  => int($hardware->{memorySize}/1024/1024), # strangely the value from the API does not divide cleanly by 1024^2
-                              vendor      => $hardware->{vendor},
-                              model       => $hardware->{model},
+                    totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
+                    memorySize  => int( $hardware->{memorySize} / 1024 / 1024 )
+                    ,    # strangely the value from the API does not divide cleanly by 1024^2
+                    vendor => $hardware->{vendor},
+                    model  => $hardware->{model},
                 },
-                status     => { 
-                    overallStatus => $e->get_property("overallStatus")->{val}, 
-                },
-                networks   => [ map             { $_->{value} } @{ $e->get_property("network") } ],
-                datastores => [ map             { $_->{value} } @{ $e->get_property("datastore") } ],
-                vms        => [ map             { $_->{value} } @{ $e->get_property("vm") } ],
+                status     => { overallStatus => $e->get_property("overallStatus")->{val}, },
+                networks   => [ map           { $_->{value} } @{ $e->get_property("network") || [] } ], # use empty array if host has no networks
+                datastores => [ map           { $_->{value} } @{ $e->get_property("datastore") || [] } ], # use empty array if host has no datastores
+                vms        => [ map           { $_->{value} } @{ $e->get_property("vm") || [] } ], # use empty array if host has no VMs
+                path => Util::get_inventory_path( $e, $e->{vim} ),
             };
         }
     }

@@ -283,7 +283,7 @@ print thead(
              { -id => "hostlist" },
              Tr(
                  { -valign => "top" },
-                 th( { -title => "Click to sort" }, 'Name' ),
+                 th( { -title => "Click to sort" }, 'Name' ),               
                  th( { -title => "Click to sort" }, "CPU (GHz)" ),
                  th( { -title => "Click to sort" }, "MEM (GB)" ),
                  th( { -title => "Click to sort" }, "Fairness" ),
@@ -299,7 +299,7 @@ foreach my $HOST (@hosts) {
     Debug( "Handling " . Data::Dumper->Dump( [$HOST] ) );
     print Tr(
               { -id => $id, -class => $HOST->{status}->{overallStatus} },
-              td { -title => $id},
+              td { -title => $id."\n".$HOST->{path}},
               [
                  $name,
                  sprintf( "%.2f / %.0f", $HOST->{stats}->{overallCpuUsage} / 1024, $HOST->{hardware}->{totalCpuMhz} / 1024 ),
@@ -309,7 +309,7 @@ foreach my $HOST (@hosts) {
                  hostFairness($HOST),
                  span( { style => "font-size: 60%" }, join( "<br/>", $LAB->get_network_names($HOST->{"networks"} )) ),
                  span( { style => "font-size: 60%" }, join( "<br/>", $LAB->get_datastore_names($HOST->{"datastores"} )) ),
-                 $HOST->{hardware}->{vendor} . " " . $HOST->{hardware}->{model},
+                 $HOST->{hardware}->{vendor} . " " . $HOST->{hardware}->{model} . "<br/>". $HOST->{uuid},
                  $HOST->{product}->{fullName},
               ] ) . "\n\n";
 }
