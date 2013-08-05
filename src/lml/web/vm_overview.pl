@@ -89,7 +89,7 @@ sub fill_vm_overview_json {
         $vm_info{expires}          = $expires;
         $vm_info{esxhost}          = $esxhost;
 
-        push $vm_overview, \%vm_info;
+        push @{$vm_overview}, \%vm_info;
 
     }
     return $vm_overview;
