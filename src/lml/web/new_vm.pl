@@ -61,7 +61,7 @@ sub fill_hosts_json {
         my $host_info = {};
         $host_info->{value} = $host->{name};
         $host_info->{label} = displayHost($host);
-        push @{$vm_overview}->{hosts}, $host_info;
+        push @{$vm_overview->{hosts}}, $host_info;
     }
 
     return $vm_overview;
