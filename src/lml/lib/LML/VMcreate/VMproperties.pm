@@ -243,7 +243,7 @@ sub _get_esx_host_and_datastore_via_auto_placement {
         }
     }
     else {
-        $self->_error("Recommendation for automatic placement failed (no hosts after filtering left). Set LML_DEBUG to 1 to see more debug infos.");
+        $self->_error("Recommendation for automatic placement failed (no hosts after filtering left).");
     }
     
     return {esx_host => $esx_host, esx_host_datastore => $esx_host_datastore};

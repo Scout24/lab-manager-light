@@ -54,17 +54,17 @@ Debug( "Sorted host list: " . join( ",", @hosts ) );
 
 
 sub fill_hosts_json {
-    my %vm_overview   = ( hosts => [{value=>'auto_placement', label=>'auto_placement'}]);
+    my $vm_overview   = { hosts => [{value=>'auto_placement', label=>'auto_placement'}]};
         
         
     foreach my $host (@hosts) {
-        my %host_info = ();
-        $host_info{value} = $host->{name};
-        $host_info{label} = displayHost($host);
-        push $vm_overview{hosts}, \%host_info;
+        my $host_info = {};
+        $host_info->{value} = $host->{name};
+        $host_info->{label} = displayHost($host);
+        push $vm_overview->{hosts}, $host_info;
     }
 
-    return \%vm_overview;
+    return $vm_overview;
 }
 
 
