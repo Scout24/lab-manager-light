@@ -13,9 +13,8 @@ use vars qw(
   @EXPORT
 );
 
-our @ISA = qw(Exporter);
-our @EXPORT =
-  qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+our @ISA    = qw(Exporter);
+our @EXPORT = qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -38,10 +37,7 @@ my %DATASTOREIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
-my $VM_PROPERTIES = [
-                      "name",            "config.name",            "config.uuid", "config.extraConfig",
-                      "config.template", "config.hardware.device", "customValue", "runtime.host",
-];
+my $VM_PROPERTIES = [ "name", "config.name", "config.uuid", "config.extraConfig", "config.template", "config.hardware.device", "customValue", "runtime.host", ];
 
 # return if arg looks like a UUID
 sub is_uuid {
@@ -52,23 +48,6 @@ sub is_uuid {
     return $text =~ qr(^$hex{8}-$hex{4}-$hex{4}-$hex{4}-$hex{12}$);
 }
 
-my %DVP_PORT_GROUP_NAMES;
-# lookup and cache port group names of DistributedVirtualSwitches
-sub dvp_to_name($) {
-    get_vi_connection();
-    my $portgroupkey = shift;
-    if ( !exists $DVP_PORT_GROUP_NAMES{$portgroupkey} ) {
-        $DVP_PORT_GROUP_NAMES{$portgroupkey} = Vim::get_view(
-                                                              mo_ref =>
-                                                                new ManagedObjectReference(
-                                                                                            type  => "DistributedVirtualPortgroup",
-                                                                                            value => $portgroupkey
-                                                                ),
-                                                              properties => ["config.name"] )->get_property("config.name");
-        Debug("Cached $portgroupkey = $DVP_PORT_GROUP_NAMES{$portgroupkey}");
-    }
-    return $DVP_PORT_GROUP_NAMES{$portgroupkey};
-}
 ################################ sub #################
 ##
 ## retrieve_vm_details (<vm>)
@@ -85,6 +64,7 @@ sub retrieve_vm_details ($) {
     # initialize lookup tables
     get_hosts();
     get_custom_fields();
+    get_networks();
     # filter out anything that is not a VM
     return %VM_DATA unless ( ref($vm) eq "VirtualMachine" );
     # filter out templates
@@ -107,7 +87,7 @@ sub retrieve_vm_details ($) {
                 # no distributed vSwitch
                 $net = $vm_dev->backing->deviceName;
             }
-            elsif ($vm_dev->backing->can("port") and $vm_dev->backing->port->can("portgroupKey") and my $portgroupkey = $vm_dev->backing->port->portgroupKey) {
+            elsif ( $vm_dev->backing->can("port") and $vm_dev->backing->port->can("portgroupKey") and my $portgroupkey = $vm_dev->backing->port->portgroupKey ) {
 
                 # this is probably a distributed vSwitch, need to retrieve infos by following the vSwitch UUID
 
@@ -138,9 +118,17 @@ sub retrieve_vm_details ($) {
 
 
 =cut
-                $net = dvp_to_name($portgroupkey);
-            } else {
-                Debug("VM ".$VM_DATA{"NAME"}." (".$VM_DATA{VM_ID}.") mac $mac has no network connected");
+
+                if ( defined $NETWORKIDS{$portgroupkey} ) {
+                    $net = $NETWORKIDS{$portgroupkey}->{name};
+                    Debug( "VM " . $VM_DATA{"NAME"} . " (" . $VM_DATA{VM_ID} . ") mac $mac has unresolvable network '$portgroupkey' connected" );
+                }
+                else {
+                    $net = "";
+                }
+            }
+            else {
+                Debug( "VM " . $VM_DATA{"NAME"} . " (" . $VM_DATA{VM_ID} . ") mac $mac has no network connected" );
                 # dump vm_dev to network label for debugging
                 $net = "";
             }
@@ -306,7 +294,8 @@ sub get_networks {
         my $networkEntityViews = Vim::find_entity_views(
                                                          view_type    => "Network",
                                                          begin_entity => Vim::get_service_content()->rootFolder,
-                                                         properties   => [ "name", "host" ] );
+                                                         properties   => [ "name", "host" ]
+        );
         foreach my $e ( @{$networkEntityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "Network" ] ) );
             my $id = $e->{mo_ref}->value;
@@ -344,11 +333,15 @@ sub get_networks {
         my $dvPortGroupEntityViews = Vim::find_entity_views(
                                                              view_type    => "DistributedVirtualPortgroup",
                                                              begin_entity => Vim::get_service_content()->rootFolder,
-                                                             properties   => [ "name", "host" ] );
+                                                             properties   => [ "name", "host", "key" ]
+        );
 
         foreach my $e ( @{$dvPortGroupEntityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["DistributedVirtualPortgroup"] ) );
-            my $id = $e->{mo_ref}->value;
+            # DVPortgroups are mapped by key and NOT by moref, we found this out when we migrated ESX servers to a new vCenter server.
+            # Here we mask this internal behaviour and use the key as and id. Let's hope that the keys are unique.
+            # TODO: Notice that keys are not unique and do something about it.
+            my $id = $e->get_property("key");
             $NETWORKIDS{$id} = {
                                  "id"    => $id,
                                  "name"  => $e->{name},
@@ -374,10 +367,9 @@ sub get_hosts {
         # initialize HOSTS if they don't contain data
         %HOSTS = ();
         my $entityViews = Vim::find_entity_views(
-                     view_type    => "HostSystem",
-                     begin_entity => Vim::get_service_content()->rootFolder,
-                     properties =>
-                       [ "hardware.systemInfo.uuid", "name", "config.product", "summary.quickStats", "summary.hardware", "overallStatus", "network", "datastore", "vm" ]
+                                                  view_type    => "HostSystem",
+                                                  begin_entity => Vim::get_service_content()->rootFolder,
+                                                  properties   => [ "hardware.systemInfo.uuid", "name", "config.product", "summary.quickStats", "summary.hardware", "overallStatus", "network", "datastore", "vm" ]
         );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
@@ -400,16 +392,15 @@ sub get_hosts {
                     overallMemoryUsage => $quickStats->{overallMemoryUsage},
                 },
                 hardware => {
-                    totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
-                    memorySize  => int( $hardware->{memorySize} / 1024 / 1024 )
-                    ,    # strangely the value from the API does not divide cleanly by 1024^2
-                    vendor => $hardware->{vendor},
-                    model  => $hardware->{model},
+                              totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
+                              memorySize  => int( $hardware->{memorySize} / 1024 / 1024 ),     # strangely the value from the API does not divide cleanly by 1024^2
+                              vendor      => $hardware->{vendor},
+                              model       => $hardware->{model},
                 },
-                status     => { overallStatus => $e->get_property("overallStatus")->{val}, },
-                networks   => [ map           { $_->{value} } @{ $e->get_property("network") || [] } ], # use empty array if host has no networks
-                datastores => [ map           { $_->{value} } @{ $e->get_property("datastore") || [] } ], # use empty array if host has no datastores
-                vms        => [ map           { $_->{value} } @{ $e->get_property("vm") || [] } ], # use empty array if host has no VMs
+                status => { overallStatus => $e->get_property("overallStatus")->{val}, },
+                networks   => [ map { $_->{value} } @{ $e->get_property("network")   || [] } ],    # use empty array if host has no networks
+                datastores => [ map { $_->{value} } @{ $e->get_property("datastore") || [] } ],    # use empty array if host has no datastores
+                vms        => [ map { $_->{value} } @{ $e->get_property("vm")        || [] } ],    # use empty array if host has no VMs
                 path => Util::get_inventory_path( $e, $e->{vim} ),
             };
         }
