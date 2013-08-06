@@ -1,0 +1,38 @@
+
+<div class="main_content" id="host_overview" data-ng-controller="HostOverviewController" ng-disabled="isServerRequestRunning">
+  <table id="hostlist_table" border="1" cellpadding="3" cellspacing="0">
+    <thead id="hostlist">
+     <tr valign ="top">
+       <th title="Click to sort">Name</th>
+       <th title ="Click to sort">CPU (GHz)</th>
+       <th title ="Click to sort">MEM (GB)</th>
+       <th title ="Click to sort">Fairness</th>
+       <th title ="Click to sort">Networks</th>
+       <th title ="Click to sort">Datastores</th>
+       <th title ="Click to sort">Hardware</th>
+       <th title ="Click to sort">Product</th>
+     </tr>
+   </thead>
+   <tbody>
+    <tr data-ng-repeat="host in hosts" id="{{host.id}}" class="{{host.overallStatus}}">
+      <td title="{{host.id}}">{{host.name}}</td>
+      <td title="{{host.id}}">{{host.cpuUsage}}</td>
+      <td title="{{host.id}}">{{host.memoryUsage}}</td>
+      <td title="{{host.id}}">{{host.fairness}}</td>
+      <td title="{{host.id}}">
+        <div style="font-size: 60%"  data-ng-repeat="network in host.networks">
+          {{network}}
+        </div>
+      </td>
+      <td title="{{host.id}}">
+        <div style="font-size: 60%"  data-ng-repeat="datastore in host.datastores">
+          {{datastore}}
+        </div>
+      </td>
+      <td title="{{host.id}}">{{host.hardware}}</td>
+      <td title="{{host.id}}">{{host.product}}</td>
+    </tr>
+
+  </tbody>
+</table>
+</div>

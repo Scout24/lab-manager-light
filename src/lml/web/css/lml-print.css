@@ -1,0 +1,52 @@
+body {
+	font-size: 12pt;
+}
+
+#logoframe {
+	height: 100px;
+	position: absolute;
+	right: 10px;
+}
+
+#footer {
+	position: absolute;
+	left: 10px;
+	top: 10px;
+	border: 0px;
+	width: 50%;
+}
+
+#footer a:link:after,#footer a:visited:after {
+	content: " (" attr(href) ") ";
+	font-size: 90%;
+	text-decoration: none;
+}
+
+#footer a:link,#footer a:visited {
+	text-decoration: none;
+	color: black;
+}
+
+.main_content,.tabsLite-panel {
+	overflow: visible;
+	height: auto;
+}
+
+.tabsLite-mainDiv {
+	margin-top: 80px;
+}
+
+.tabsLite-tab {
+	display: none;
+}
+
+.tabsLite-tab-selected {
+	display: block;
+	border: 0px;
+	font-size: 300%;
+	font-weight: bold;
+}
+
+.tabsLite-panel {
+	border-top: solid 2px black;
+}
