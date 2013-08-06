@@ -113,7 +113,18 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   return false;
 };
 
-
+// TODO: do this in angular style
+$('a.tip').cluetip({
+        attribute : 'href',
+        activation : 'click',
+        sticky : true,
+        closePosition : 'title',
+        arrows : true,
+        width : 500,
+        cluetipClass : 'rounded',
+        ajaxCache : false,
+        waitImage : true
+    });
 
 // TODO: do this in angular style
 $("a.confirm").click(function(link) {

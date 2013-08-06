@@ -1,7 +1,7 @@
 /*global namespace:false*/
   window.lml = window.lml || {};
 
-  window.lml.AjaxCallService = function AjaxCallService($http) {
+  window.lml.AjaxCallService = function AjaxCallService($http,$log) {
   "use strict";
 
   function sendAjaxCall(path, userQuery, successHandler, failureHandler) {

@@ -25,12 +25,12 @@
         <a href="#"><img src="lib/images/LabManagerLightlogo-small.png"/></a><br/>
     </div>
  
-    <ul class="nav nav-tabs" >
-        <li ng-class="{active: globals.activeTab == 'vm_overview'}"><a href="#/vm-overview">VM Overview</a></li>
-        <li ng-class="{active: globals.activeTab == 'new_vm'}"><a href="#/new-vm">New VM</a></li>
-        <li ng-class="{active: globals.activeTab == 'host_overview'}"><a href="#/host-overview">Host Overview</a></li>
-        <li ng-class="{active: globals.activeTab == 'tools'}"><a href="#/tools">Tools</a></li>
-        <li ng-class="{active: globals.activeTab == 'configuration'}"><a href="#/configuration">Configuration</a></li>
+    <ul class="nav nav-tabs">
+        <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'vm_overview'}"><a href="#/vm-overview">VM Overview</a></li>
+        <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'new_vm'}"><a href="#/new-vm">New VM</a></li>
+        <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'host_overview'}"><a href="#/host-overview">Host Overview</a></li>
+        <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'tools'}"><a href="#/tools">Tools</a></li>
+        <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'configuration'}"><a href="#/configuration">Configuration</a></li>
     </ul>
 
     <div id='waiting' data-ng-show="isServerRequestRunning"><img src='lib/images/wait.gif'/></div>
