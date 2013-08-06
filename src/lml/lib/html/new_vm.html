@@ -28,8 +28,9 @@
         <tr>
             <td><p>ESX-Host</p></td>
             <td>
-                <select name="esx_host" ng-model="host" ng-options="h.value as h.label for h in hosts">
+                <select ng-model="host" ng-options="h.value as h.label for h in hosts">
                 </select>
+                <input type="hidden" name="esx_host" value="{{host}}" />
             </td>
         </tr>
         <tr>
