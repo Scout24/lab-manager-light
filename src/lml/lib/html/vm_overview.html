@@ -1,0 +1,45 @@
+<div class="main_content" id="vm_overview" data-ng-controller="VmOverviewController">
+    <div id="dialog"></div>
+    <div class="error message" id="vm_action_error">
+        <h3>Problems while performing action</h3>
+        <p>The following error occured: <b id="vm_action_error_message"></b></p>
+    </div>
+    <form id="vm_action_form">
+     <table id="vmlist_table" cellpadding="3" cellspacing="0">
+
+        <!-- TODO VM_OVERVIEW-->
+        <thead id="vmlist">
+           <tr valign ="top">
+
+               <th title="Click to sort">Hostname</th>,
+               <th title ="Click to sort">VM Path</th>
+               <th title ="Click to sort">Contact User ID</th>
+               <th title ="Click to sort">Expires</th>
+               <th title ="Click to sort">ESX Host</th>
+
+           </tr>
+       </thead>
+       <tbody>
+           <tr id="{{vm.id}}" data-ng-repeat="vm in vms">
+            <td>
+                <input type="checkbox" name="hosts" label="" value="{{vm.id}}">
+
+                <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">{{vm.fullname}}</a>
+
+                <a  data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip"><img src ="lib/images/console_icon.png"/></a>
+
+            </td>,
+            <td>{{vm.vm_path}}</td>
+            <td><span title="{{vm.contact_fullname}}">{{vm.contact_id}}</span></td>
+            <td>{{vm.expires}}</td>
+            <td>{{vm.esxhost}}</td>
+        </tr>
+
+
+    </tbody></table>
+    <div class="vm_action_panel">
+        <a id="detonate_button" class="button" href="#" title="Reinstall selected machines"><img src="lib/images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
+        <a id="destroy_button" class="button confirm" href="#" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="lib/images/delete.png" class="button_image"/>&nbsp;Delete</a>
+    </div>
+</form>
+</div>

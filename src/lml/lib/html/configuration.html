@@ -1,0 +1,8 @@
+<div class="main_content" id="config" data-ng-controller="ConfigurationController">
+    <p>The config files are</p> 
+        <ol><li data-ng-repeat="file in files"><code>{{file}}
+        </code></li></ol>
+        <p>and this is the <strong>merged</strong> result of all config files:</p>
+    <pre>{{data}}
+    </pre>
+</div>
