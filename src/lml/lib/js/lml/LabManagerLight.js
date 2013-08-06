@@ -10,6 +10,7 @@
   .controller('HostOverviewController', lml.HostOverviewController)
   .controller('ConfigurationController', lml.ConfigurationController)
   .controller('ToolsController', lml.ToolsController)
+  .controller('MainController', lml.MainController)
   .service('AjaxCallService',  lml.AjaxCallService )
   .config(function($routeProvider) {
     $routeProvider.
@@ -20,9 +21,8 @@
     when('/configuration', {templateUrl:'/lml/lib/html/configuration.html'}).
     otherwise({redirectTo:'/vm_overview'});
   })
-  .run(function run($rootScope){
+  .run(function run(){
 
-  $rootScope.globals = {activeTab : "vm_overview"};
 
 
     // TODO: Do it in angular style
@@ -50,7 +50,7 @@
 
     // TODO: Do it in angular style
     $(document).ready(function() {
-      $("#vm_overview").append("<div id='waiting'><img src='lib/images/wait.gif' /></div>");
+     // $("#vm_overview").append("<div id='waiting'><img src='lib/images/wait.gif' /></div>");
 
       $('a.tip').cluetip({
         attribute : 'href',

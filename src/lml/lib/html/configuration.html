@@ -1,4 +1,4 @@
-<div class="main_content" id="config" data-ng-controller="ConfigurationController">
+<div class="main_content" id="config" data-ng-controller="ConfigurationController" ng-disabled="isServerRequestRunning">
     <p>The config files are</p> 
         <ol><li data-ng-repeat="file in files"><code>{{file}}
         </code></li></ol>

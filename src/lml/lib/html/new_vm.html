@@ -1,4 +1,4 @@
-   <div class="main_content" id="new">
+   <div class="main_content" id="new"  ng-disabled="isServerRequestRunning">
     <fieldset>
         <legend>Create new VM(s)</legend>
         <div class="info message" id="vm_create_info">
@@ -19,7 +19,7 @@
     <h3>Problems while VM(s) provisioning</h3>
     <p>The following error occured: <b id="error_message"></b></p>
 </div>
-<form id="create_vm_form" method="post" data-ng-controller="NewVmController">
+<form id="create_vm_form" method="post" data-ng-controller="NewVmController" ng-disabled="isServerRequestRunning">
     <table>
         <tr>
             <td><p>Name</p></td>

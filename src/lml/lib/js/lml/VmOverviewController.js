@@ -6,8 +6,8 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
-
-  var result_promise = AjaxCallService.sendAjaxCall('/lml/web/vm_overview.pl',{}, function successCallback(data){
+  $scope.setServerRequestRunning(true);
+  AjaxCallService.sendAjaxCall('/lml/web/vm_overview.pl',{}, function successCallback(data){
     $log.info("Received vm overview data: ",data);
     $scope.vms = data.vm_overview;
 
@@ -27,6 +27,9 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
           }
         });
     },10);
+    $scope.setServerRequestRunning(false);
+  }, function errorCallback(){
+    $scope.setServerRequestRunning(false);
   });
 
 
