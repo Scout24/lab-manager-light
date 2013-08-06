@@ -2,13 +2,15 @@
 window.lml = window.lml || {};
 
 
-window.lml.ConfigurationController = function ConfigurationController($q,$scope, $log, AjaxCallService) {
+window.lml.ConfigurationController = function ConfigurationController($scope, $log, AjaxCallService) {
 
   $scope.data = "";
   $scope.files = [];
+  $scope.globals.activeTab = 'configuration';
+
 
   AjaxCallService.sendAjaxCall('/lml/web/configuration.pl',{}, function successCallback(data){
-    $log.info("Received configuration data: ",data);
+    //$log.info("Received configuration data: ",data);
     $scope.data = data;
   });
 

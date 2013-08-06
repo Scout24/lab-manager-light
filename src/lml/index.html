@@ -1,188 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>v2 $vsphere_server Lab Manager Light</title>
-    <link rel="shortcut icon" type="image/png" href="lib/images/favicon.png"/>
-    <link rel="stylesheet" type="text/css" href="lib/css/jquery.cluetip.css" />
-    <link rel="stylesheet" type="text/css" href="lib/css/jquery.dataTables.css" />
-    <link rel="stylesheet" type="text/css" href="lib/css/TableTools.css" />
-    <link rel="stylesheet" type="text/css" href="lib/css/lml.css" />
-    <link rel="stylesheet" type="text/css" href="lib/css/jquery-ui-1.10.3.custom.css" />
-    <link rel="stylesheet" type="text/css" href="lib/css/lml-print.css" media="print"/>
-    <script src="lib/js/angular.min.js" type="text/javascript"></script>
-    <script src="lib/js/jquery-1.8.3.min.js" type="text/javascript"></script>
-    <script src="lib/js/jquery.cluetip.min.js" type="text/javascript"></script>
-    <script src="lib/js/jquery.tabsLite.js" type="text/javascript"></script>
-    <script src="lib/js/jquery.dataTables.min.js" type="text/javascript"></script>
-    <script src="lib/js/TableTools.min.js" type="text/javascript"></script>
-    <script src="lib/js/jquery-ui-1.10.3.custom.min.js" type="text/javascript"></script>
-    <script src="lib/js/lml/lml_old.js" type="text/javascript"></script>
+   <title>v2 $vsphere_server Lab Manager Light</title>
+   <link rel="shortcut icon" type="image/png" href="lib/images/favicon.png"/>
+   <link rel="stylesheet" type="text/css" href="lib/css/jquery.cluetip.css" />
+   <link rel="stylesheet" type="text/css" href="lib/css/jquery.dataTables.css" />
+   <link rel="stylesheet" type="text/css" href="lib/css/TableTools.css" />
+   <link rel="stylesheet" type="text/css" href="lib/css/bootstrap.min.css" />
+   <link rel="stylesheet" type="text/css" href="lib/css/lml.css" />
+   <link rel="stylesheet" type="text/css" href="lib/css/jquery-ui-1.10.3.custom.css" />
+   <link rel="stylesheet" type="text/css" href="lib/css/lml-print.css" media="print"/>
+   <script src="lib/js/angular.min.js" type="text/javascript"></script>
+   <script src="lib/js/jquery-1.8.3.min.js" type="text/javascript"></script>
+   <script src="lib/js/jquery.cluetip.min.js" type="text/javascript"></script>
+   <script src="lib/js/jquery.tabsLite.js" type="text/javascript"></script>
+   <script src="lib/js/jquery.dataTables.min.js" type="text/javascript"></script>
+   <script src="lib/js/TableTools.min.js" type="text/javascript"></script>
+   <script src="lib/js/jquery-ui-1.10.3.custom.min.js" type="text/javascript"></script>
 
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 </head>
 <body data-ng-app="lml-app">
     <div id="logoframe">
         <a href="#"><img src="lib/images/LabManagerLightlogo-small.png"/></a><br/>
     </div>
-    <div id="tabs">
-        <ul>
-            <li><a href="#vm_overview">VM Overview</a></li>
-            <li><a href="#new">New VM</a></li>
-            <li><a href="#host_overview">Host Overview</a></li>
-            <li><a href="#tools">Tools</a></li>
-            <li><a href="#config">Configuration</a></li>
-        </ul>
+ 
+    <ul class="nav nav-tabs" >
+        <li ng-class="{active: globals.activeTab == 'vm_overview'}"><a href="#/vm-overview">VM Overview</a></li>
+        <li ng-class="{active: globals.activeTab == 'new_vm'}"><a href="#/new-vm">New VM</a></li>
+        <li ng-class="{active: globals.activeTab == 'host_overview'}"><a href="#/host-overview">Host Overview</a></li>
+        <li ng-class="{active: globals.activeTab == 'tools'}"><a href="#/tools">Tools</a></li>
+        <li ng-class="{active: globals.activeTab == 'configuration'}"><a href="#/configuration">Configuration</a></li>
+    </ul>
 
-        <div class="main_content" id="vm_overview" data-ng-controller="VmOverviewController">
-            {{bar}}
-            <div id="dialog"></div>
-            <div class="error message" id="vm_action_error">
-                <h3>Problems while performing action</h3>
-                <p>The following error occured: <b id="vm_action_error_message"></b></p>
-            </div>
-            <form id="vm_action_form">
-               <table id="vmlist_table" cellpadding="3" cellspacing="0">
-
-                <!-- TODO VM_OVERVIEW-->
-                <thead id="vmlist">
-                 <tr valign ="top">
-
-                     <th title="Click to sort">Hostname</th>,
-                     <th title ="Click to sort">VM Path</th>
-                     <th title ="Click to sort">Contact User ID</th>
-                     <th title ="Click to sort">Expires</th>
-                     <th title ="Click to sort">ESX Host</th>
-
-                 </tr>
-             </thead>
-             <tbody>
-                 <tr id="{{vm.id}}" data-ng-repeat="vm in vms">
-                    <td>
-                        <input type="checkbox" name="hosts" label="" value="{{vm.id}}">
-
-                        <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">{{vm.fullname}}</a>
-
-                        <a  data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip"><img src ="lib/images/console_icon.png"/></a>
-
-                    </td>,
-                    <td>{{vm.vm_path}}</td>
-                    <td><span title="{{vm.contact_fullname}}">{{vm.contact_id}}</span></td>
-                    <td>{{vm.expires}}</td>
-                    <td>{{vm.esxhost}}</td>
-                </tr>
-
-
-
-
-            </tbody></table>
-            <div class="vm_action_panel">
-                <a id="detonate_button" class="button" href="#" title="Reinstall selected machines"><img src="lib/images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
-                <a id="destroy_button" class="button confirm" href="#" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="lib/images/delete.png" class="button_image"/>&nbsp;Delete</a>
-            </div>
-        </form>
+    <div tab-pane="tab-content">
+      <div data-ng-view></div>
+    </div>
+    <div id="footer">
+        <a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
+        Version $LML_VERSION
     </div>
 
-
-    <div class="main_content" id="new">
-        <fieldset>
-            <legend>Create new VM(s)</legend>
-            <div class="info message" id="vm_create_info">
-              <table>
-                <tr>
-                  <td style="width: 100%;">
-                    <h2 id="new_vm_progress_title">VM provisioning in progress <img src="lib/images/wait.gif"/></h2>
-                    <h2 id="new_vm_success_title">VM was successfully created</h2>
-                    <p id="info_message"></p>
-                </td>
-                <td>
-                    <img id="new_vm_screenshot" src="lib/images/placeholder.png" height="256" style="border: 1px solid #a0a0a0; opacity: 0.9;"/>
-                </td>
-            </tr>
-        </table>
-    </div>
-    <div class="error message" id="vm_create_error">
-        <h3>Problems while VM(s) provisioning</h3>
-        <p>The following error occured: <b id="error_message"></b></p>
-    </div>
-    <form id="create_vm_form" method="post" data-ng-controller="NewVmController">
-        <table>
-            <tr>
-                <td><p>Name</p></td>
-                <td><input type="text" name="name"/></td>
-            </tr>
-            <tr>
-                <td><p>ESX-Host</p></td>
-                <td>
-                    <select name="esx_host" ng-model="host" ng-options="h.value as h.label for h in hosts">
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td><p>Username</p></td>
-                <td><input type="text" name="username"/></td>
-            </tr>
-            <tr>
-                <td><p>Expiration date</p></td>
-                <td><input type="text" name="expiration"/></td>
-            </tr>
-            <tr>
-                <td><p>Target folder</p></td>
-                <td><input type="text" name="folder"/></td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <input type="submit" value="Create"/>
-                </td>
-            </tr>
-        </table>
-    </form>
-</fieldset>
-</div>
-
-
-
-
-
-<div class="main_content" id="host_overview">
-    <table id="hostlist_table" border="1" cellpadding="3" cellspacing="0">
-        <tbody>
-        </tbody></table>
-    </div>
-    
-    
-
-    <div class="main_content" id="tools">
-     <p>
-        <span id="clear_button" class="button" title="Clear tool output">Clear</span>
-        <a id="hostdatetime_button" class="button" href="hostdatetime.pl" title="vSphere Time Sync Check">vSphere Time Sync Check</a>
-        <a id="license_button" class="button" href="LICENSE.TXT" title="Software License">Software License</a>
-    </p>
-    <fieldset id="tools_frame"><legend id="tools_title"></legend>
-        <div id="tools_content">
-        </div>
-    </fieldset>
-</div>
-
-<div class="main_content" id="config" data-ng-controller="ConfigurationController">
-    <p>The config files are</p> 
-        <ol><li data-ng-repeat="file in files"><code>{{file}}
-        </code></li></ol>
-        <p>and this is the <strong>merged</strong> result of all config files:</p>
-    <pre>{{data}}
-    </pre>
-</div>
-</div><!-- tabs -->
-
-<div id="footer">
-    <a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
-    Version $LML_VERSION
-</div>
-
-<script src="lib/js/lml/VmOverviewController.js" type="text/javascript"></script>
-<script src="lib/js/lml/NewVmController.js" type="text/javascript"></script>
-<script src="lib/js/lml/ConfigurationController.js" type="text/javascript"></script>
-<script src="lib/js/lml/AjaxCallService.js" type="text/javascript"></script>
-<script src="lib/js/lml/LabManagerLight.js" type="text/javascript"></script>
+    <script src="lib/js/lml/VmOverviewController.js" type="text/javascript"></script>
+    <script src="lib/js/lml/NewVmController.js" type="text/javascript"></script>
+    <script src="lib/js/lml/HostOverviewController.js" type="text/javascript"></script>
+    <script src="lib/js/lml/ConfigurationController.js" type="text/javascript"></script>
+    <script src="lib/js/lml/ToolsController.js" type="text/javascript"></script>
+    <script src="lib/js/lml/AjaxCallService.js" type="text/javascript"></script>
+    <!-- The angular module have to loaded last. -->
+    <script src="lib/js/lml/LabManagerLight.js" type="text/javascript"></script>
 
 
 

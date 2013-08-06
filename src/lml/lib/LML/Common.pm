@@ -78,7 +78,7 @@ sub LoadConfig {
         ) or die "Could not read '$f'\n";
         if ($isDebug) {
             Debug("Read from $f:");
-            $conf->OutputConfigToFileHandle( *STDERR, 1 );
+            $conf->OutputConfigToFileHandle( *STDERR, 1 ) if ($isDebug);
         }
     }
 

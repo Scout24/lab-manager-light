@@ -1,3 +1,12 @@
+.nav-tabs {
+	margin-top: 20px;
+}
+
+
+div.main_content {
+	margin-left: 20px;
+}
+
 #logoframe {
 	position: absolute;
 	top: 0px;
@@ -201,6 +210,5 @@ div.DTTT_container {
 .green {
 	background-color: greenyellow;
 }
-}
-}
+
 }
