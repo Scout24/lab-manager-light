@@ -149,7 +149,7 @@ div.DTTT_container {
 }
 
 #waiting {
-    display: none;
+    display: block;
     border-radius: 10px;
     -webkit-border-radius: 10px;
     -moz-border-radius: 10px;
