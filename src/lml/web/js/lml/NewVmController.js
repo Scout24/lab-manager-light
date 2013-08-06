@@ -44,7 +44,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
 				$('#vm_create_info').removeClass("info");
 				$('#vm_create_info').addClass("success");
 				setTimeout(function(){
-					$('#new_vm_screenshot').attr('src', 'vmscreenshot.pl?stream=1;uuid=' + data );
+					$('#new_vm_screenshot').attr('src', '/lml/vmscreenshot.pl?stream=1;uuid=' + data );
 				}, 13000);
 			},
 			error: function(request, status, error) {
