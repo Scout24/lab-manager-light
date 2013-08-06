@@ -19,7 +19,7 @@
     when('/host-overview', {templateUrl:'/lml/lib/html/host_overview.html'}).
     when('/tools', {templateUrl:'/lml/lib/html/tools.html'}).
     when('/configuration', {templateUrl:'/lml/lib/html/configuration.html'}).
-    otherwise({redirectTo:'/vm_overview'});
+    otherwise({redirectTo:'/vm-overview'});
   })
   .run(function run(){
 
