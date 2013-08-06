@@ -52,7 +52,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
 				$("#error_message").text(request.responseText);
 				$('#vm_create_error').show();
 			},
-			url: "restricted/vm-create.pl",
+			url: "/lml/restricted/vm-create.pl",
 			data: formData
 		});
   return false;

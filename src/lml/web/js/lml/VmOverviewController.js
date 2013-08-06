@@ -80,7 +80,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
         $('#vm_action_form *').removeAttr("disabled");
         $('#waiting').hide();
       },
-      url: "restricted/vm-control.pl?action=detonate",
+      url: "/lml/restricted/vm-control.pl?action=detonate",
       data: form_data
     });
   return false;
@@ -120,7 +120,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
         $('#vm_action_form *').removeAttr("disabled");
         $('#waiting').hide();
       },
-      url: "restricted/vm-control.pl?action=destroy",
+      url: "/lml/restricted/vm-control.pl?action=destroy",
       data: form_data
     });
   return false;
