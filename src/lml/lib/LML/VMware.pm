@@ -13,8 +13,9 @@ use vars qw(
   @EXPORT
 );
 
-our @ISA    = qw(Exporter);
-our @EXPORT = qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+our @ISA = qw(Exporter);
+our @EXPORT =
+  qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -37,7 +38,10 @@ my %DATASTOREIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
-my $VM_PROPERTIES = [ "name", "config.name", "config.uuid", "config.extraConfig", "config.template", "config.hardware.device", "customValue", "runtime.host", ];
+my $VM_PROPERTIES = [
+                      "name",            "config.name",            "config.uuid", "config.extraConfig",
+                      "config.template", "config.hardware.device", "customValue", "runtime.host",
+];
 
 # return if arg looks like a UUID
 sub is_uuid {
@@ -87,7 +91,10 @@ sub retrieve_vm_details ($) {
                 # no distributed vSwitch
                 $net = $vm_dev->backing->deviceName;
             }
-            elsif ( $vm_dev->backing->can("port") and $vm_dev->backing->port->can("portgroupKey") and my $portgroupkey = $vm_dev->backing->port->portgroupKey ) {
+            elsif (     $vm_dev->backing->can("port")
+                    and $vm_dev->backing->port->can("portgroupKey")
+                    and my $portgroupkey = $vm_dev->backing->port->portgroupKey )
+            {
 
                 # this is probably a distributed vSwitch, need to retrieve infos by following the vSwitch UUID
 
@@ -121,7 +128,10 @@ sub retrieve_vm_details ($) {
 
                 if ( defined $NETWORKIDS{$portgroupkey} ) {
                     $net = $NETWORKIDS{$portgroupkey}->{name};
-                    Debug( "VM " . $VM_DATA{"NAME"} . " (" . $VM_DATA{VM_ID} . ") mac $mac has unresolvable network '$portgroupkey' connected" );
+                    Debug(   "VM "
+                           . $VM_DATA{"NAME"} . " ("
+                           . $VM_DATA{VM_ID}
+                           . ") mac $mac has unresolvable network '$portgroupkey' connected" );
                 }
                 else {
                     $net = "";
@@ -294,8 +304,7 @@ sub get_networks {
         my $networkEntityViews = Vim::find_entity_views(
                                                          view_type    => "Network",
                                                          begin_entity => Vim::get_service_content()->rootFolder,
-                                                         properties   => [ "name", "host" ]
-        );
+                                                         properties   => [ "name", "host" ] );
         foreach my $e ( @{$networkEntityViews} ) {
             #Debug( Data::Dumper->Dump( [ $e ], [ "Network" ] ) );
             my $id = $e->{mo_ref}->value;
@@ -333,8 +342,7 @@ sub get_networks {
         my $dvPortGroupEntityViews = Vim::find_entity_views(
                                                              view_type    => "DistributedVirtualPortgroup",
                                                              begin_entity => Vim::get_service_content()->rootFolder,
-                                                             properties   => [ "name", "host", "key" ]
-        );
+                                                             properties   => [ "name", "host", "key" ] );
 
         foreach my $e ( @{$dvPortGroupEntityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["DistributedVirtualPortgroup"] ) );
@@ -369,8 +377,13 @@ sub get_hosts {
         my $entityViews = Vim::find_entity_views(
                                                   view_type    => "HostSystem",
                                                   begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => [ "hardware.systemInfo.uuid", "name", "config.product", "summary.quickStats", "summary.hardware", "overallStatus", "network", "datastore", "vm" ]
-        );
+                                                  properties   => [
+                                                                  "runtime.inMaintenanceMode", "hardware.systemInfo.uuid",
+                                                                  "name",                      "config.product",
+                                                                  "summary.quickStats",        "summary.hardware",
+                                                                  "overallStatus",             "network",
+                                                                  "datastore",                 "vm"
+                                                  ] );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
             Debug( "Reading ESX Host " . $e->{name} );
@@ -392,15 +405,21 @@ sub get_hosts {
                     overallMemoryUsage => $quickStats->{overallMemoryUsage},
                 },
                 hardware => {
-                              totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
-                              memorySize  => int( $hardware->{memorySize} / 1024 / 1024 ),     # strangely the value from the API does not divide cleanly by 1024^2
-                              vendor      => $hardware->{vendor},
-                              model       => $hardware->{model},
+                    totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
+                    memorySize  => int( $hardware->{memorySize} / 1024 / 1024 )
+                    ,    # strangely the value from the API does not divide cleanly by 1024^2
+                    vendor => $hardware->{vendor},
+                    model  => $hardware->{model},
                 },
-                status => { overallStatus => $e->get_property("overallStatus")->{val}, },
-                networks   => [ map { $_->{value} } @{ $e->get_property("network")   || [] } ],    # use empty array if host has no networks
-                datastores => [ map { $_->{value} } @{ $e->get_property("datastore") || [] } ],    # use empty array if host has no datastores
-                vms        => [ map { $_->{value} } @{ $e->get_property("vm")        || [] } ],    # use empty array if host has no VMs
+                status => {
+                            overallStatus => $e->get_property("overallStatus")->{val},
+                            # active means that the host can accept new VMs
+                            # host must not be in maintenance mode
+                            active        => $e->get_property("runtime.inMaintenanceMode") eq "false" ? 1 : 0,
+                },
+                networks   => [ map { $_->{value} } @{ $e->get_property("network")   || [] } ],  # use empty array if host has no networks
+                datastores => [ map { $_->{value} } @{ $e->get_property("datastore") || [] } ],  # use empty array if host has no datastores
+                vms        => [ map { $_->{value} } @{ $e->get_property("vm")        || [] } ],  # use empty array if host has no VMs
                 path => Util::get_inventory_path( $e, $e->{vim} ),
             };
         }

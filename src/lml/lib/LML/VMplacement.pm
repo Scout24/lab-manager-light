@@ -3,6 +3,7 @@ package LML::VMplacement;
 use strict;
 use warnings;
 use Carp;
+use LML::VMplacement::Filters::ByActive;
 use LML::VMplacement::Filters::ByOverallStatus;
 use LML::VMplacement::Filters::ByMemory;
 use LML::VMplacement::Filters::ByNetworkLabel;
@@ -33,6 +34,7 @@ sub new {
         # todo set default filters
         $filters = [
             new LML::VMplacement::Filters::ByAssignableHost($config),    #
+            new LML::VMplacement::Filters::ByActive,                     #
             new LML::VMplacement::Filters::ByOverallStatus,              #
             new LML::VMplacement::Filters::ByMemory,                     #
             new LML::VMplacement::Filters::ByNetworkLabel($lab),         #

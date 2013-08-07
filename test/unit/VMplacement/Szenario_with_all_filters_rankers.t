@@ -21,6 +21,7 @@ BEGIN {
 # Filters can be chained -> the order of the applied filter should not matter.
 #
 # The filter ByMemory uses  $host->{hardware}->{memorySize} - $host->{stats}->{overallMemoryUsage}) as a lower bound.
+# The filter ByActive uses  $host->{status} => { active => "1" } as a lower bound.
 # The filter ByOverallStatus uses  $host->{status} => { overallStatus => "yellow|green" } as a lower bound.
 # The filter ByNetworkLabel uses the $host->{networks} where all required networks must be supported by this host as a lower bound.
 #
@@ -47,15 +48,19 @@ my $test_host_1 = {
     networks   => ["network-1"],
     datastores => ["datastore-1"],
     stats      => {
-               "overallCpuUsage"    => 800,     # this means 60% free cpu (at least 1600 cpu still available) - this is currently no filter criteria only for ranking
-               "overallMemoryUsage" => 18000    # this means 10% free ram (at least 2000 MB still available)
+        "overallCpuUsage" =>
+          800,    # this means 60% free cpu (at least 1600 cpu still available) - this is currently no filter criteria only for ranking
+        "overallMemoryUsage" => 18000    # this means 10% free ram (at least 2000 MB still available)
     },
     hardware => {
                   memorySize  => 20000,
                   totalCpuMhz => 2000
     },
-    status => { overallStatus => "yellow" },
-    vms    => ["vm-1-of-group-foo"],
+    status => {
+                overallStatus => "yellow",
+                active        => "1",
+    },
+    vms  => ["vm-1-of-group-foo"],
     name => 'host_id-1',
 
 };
@@ -65,15 +70,19 @@ my $test_host_2 = {
     networks   => [ "network-1", "network-2" ],
     datastores => ["datastore-2"],
     stats      => {
-               "overallCpuUsage"    => 1000,    # this means 50% free cpu (at least 1000 cpu still available) - this is currently no filter criteria only for ranking
-               "overallMemoryUsage" => 14000    # this means 30% free ram (at least 6000 MB still available)
+        "overallCpuUsage" =>
+          1000,    # this means 50% free cpu (at least 1000 cpu still available) - this is currently no filter criteria only for ranking
+        "overallMemoryUsage" => 14000    # this means 30% free ram (at least 6000 MB still available)
     },
     hardware => {
                   memorySize  => 20000,
                   totalCpuMhz => 2000
     },
-    status => { overallStatus => "yellow" },
-    vms    => [],
+    status => {
+                overallStatus => "yellow",
+                active        => "1"
+    },
+    vms  => [],
     name => 'host_id-2',
 };
 
@@ -82,21 +91,24 @@ my $test_host_3 = {
     networks   => [ "network-1", "network-2", "network-3" ],
     datastores => ["datastore-3"],
     stats      => {
-               "overallCpuUsage"    => 1800,    # this means 10% free cpu (at least 200 cpu still available) - this is currently no filter criteria only for ranking
-               "overallMemoryUsage" => 10000    # this means 50% free ram (at least 10000 MB still available)
+        "overallCpuUsage" =>
+          1800,    # this means 10% free cpu (at least 200 cpu still available) - this is currently no filter criteria only for ranking
+        "overallMemoryUsage" => 10000    # this means 50% free ram (at least 10000 MB still available)
     },
     hardware => {
                   memorySize  => 20000,
                   totalCpuMhz => 2000
     },
-    status => { overallStatus => "yellow" },
-    vms    => [],
+    status => {
+                overallStatus => "yellow",
+                active        => "1"
+    },
+    vms  => [],
     name => 'host_id-3',
 };
 
 # the Lab config should be consistent, that means the hosts in the NETWORKS section must be fit to the host definition
-my $simple_lab_with_three_hosts = new LML::Lab(
-    {
+my $simple_lab_with_three_hosts = new LML::Lab( {
        "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 },
        "NETWORKS" => {
                        "network-1" => {
@@ -120,9 +132,8 @@ my $simple_lab_with_three_hosts = new LML::Lab(
                                                    "NAME"  => "foobar23",           # TODO: decide wether to use "NAME" or "HOSTNAME"
                                                    "VM_ID" => "vm-1-of-group-foo"
            },
-         },
-    }
-);
+       },
+    } );
 
 ##################################
 # scenario test cases
@@ -132,73 +143,77 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
 
 # validate the ranking and filtering for the given scenario, where the requirements are all fulfilled (no hosts should be filtered)
 {
-    my $vm_res = new LML::VMresources(
-        {
+    my $vm_res = new LML::VMresources( {
           ram      => 1000,
-          cpu      => 2000,                                                                # this is currently no filter criteria
-          networks => ['NETWORK LABEL 1'],                                                 # all hosts support this network
-          disks    => [ { size => 16000 } ],                                               # disk size is currently no filter criteria
+          cpu      => 2000,                     # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],      # all hosts support this network
+          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
-        }
-    );
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 3, "No hosts should be filtered" );
     # in the current lab config we expect the following order:
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-1, because it has a rank value of 70 (10 for free ram and 60 for free cpu)
     # 3rd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
-    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-1", datastores => ['datastore-1'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply(
+               [@rec],
+               [
+                  { id => "id-2", datastores => ['datastore-2'], },
+                  { id => "id-1", datastores => ['datastore-1'], },
+                  { id => "id-3", datastores => ['datastore-3'], }
+               ],
+               "should return hosts in descending order by cpu+ram "
+    );
 }
 
 # validate the ranking and filtering for the given scenario, where some requirements (network labels) are not fulfilled (some hosts should be filtered)
 {
-    my $vm_res = new LML::VMresources(
-        {
+    my $vm_res = new LML::VMresources( {
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 2'],
           disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
-        }
-    );
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 2, "One hosts should be filtered" );
     # in the current lab config we expect the following order:
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
-    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply( [@rec],
+               [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ],
+               "should return hosts in descending order by cpu+ram " );
 }
 
 # validate the ranking and filtering for the given scenario, where some requirements (network labels) are not fulfilled (some hosts should be filtered)
 {
-    my $vm_res = new LML::VMresources(
-        {
-          ram      => 1000,
-          cpu      => 2000,                                        # this is currently no filter criteria
-          networks => [ 'NETWORK LABEL 1', 'NETWORK LABEL 2' ],    # all hosts support 'NETWORK LABEL 1'
-          disks    => [ { size => 16000 } ],                       # disk size is currently no filter criteria
-          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
-        }
-    );
+    my $vm_res = new LML::VMresources( {
+           ram      => 1000,
+           cpu      => 2000,                                        # this is currently no filter criteria
+           networks => [ 'NETWORK LABEL 1', 'NETWORK LABEL 2' ],    # all hosts support 'NETWORK LABEL 1'
+           disks    => [ { size => 16000 } ],                       # disk size is currently no filter criteria
+           name => 'foobar00'    # the config defines no group_pattern, so this will be not a filter criteria
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 2, "One hosts should be filtered" );
     # in the current lab config we expect the following order:
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
-    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply( [@rec],
+               [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ],
+               "should return hosts in descending order by cpu+ram " );
 }
 
 # validate the ranking and filtering for the given scenario, where some requirements (network labels) are not fulfilled (some hosts should be filtered)
 {
-    my $vm_res = new LML::VMresources(
-        {
+    my $vm_res = new LML::VMresources( {
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 3'],      # all hosts support 'NETWORK LABEL 1'
           disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
-        }
-    );
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 1, "Two hosts should be filtered" );
     # in the current lab config we expect the following order:
@@ -208,76 +223,74 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
 
 # validate the ranking and filtering for the given scenario, where some requirements (ram) are not fulfilled (some hosts should be filtered)
 {
-    my $vm_res = new LML::VMresources(
-        {
+    my $vm_res = new LML::VMresources( {
           ram      => 2048,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
           disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
-        }
-    );
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 2, "One host should be filtered" );
     # in the current lab config we expect the following order:
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
     # the host with id-1 got filtered because of lower bound of 2048
-    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply( [@rec],
+               [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ],
+               "should return hosts in descending order by cpu+ram " );
 }
-
 
 # validate the ranking and filtering for the given scenario, where some requirements (group reliability) are not fulfilled (some hosts should be filtered)
 {
-    
+
     my $other_config = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
     $other_config->{hostrules}{group_pattern} = '([a-z]{3}).*';
-    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] );    # test builtin filter initialization
-    
-    my $vm_res = new LML::VMresources(
-        {
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] ); # test builtin filter initialization
+
+    my $vm_res = new LML::VMresources( {
           ram      => 1000,
-          cpu      => 2000,                                                                # this is currently no filter criteria
-          networks => ['NETWORK LABEL 1'],                                                 # all hosts support this network
-          disks    => [ { size => 16000 } ],                                               # disk size is currently no filter criteria
+          cpu      => 2000,                     # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],      # all hosts support this network
+          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
           name     => 'foobar00'
-        }
-    );
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 2, "One host should be filtered" );
     # in the current lab config we expect the following order:
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
     # id-1 was filtered because id-1 already owns a foo group vm
-    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply( [@rec],
+               [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ],
+               "should return hosts in descending order by cpu+ram " );
 }
-
 
 # validate the ranking and filtering for the given scenario, where some requirements (group reliability) are not fulfilled (some hosts should be filtered)
 {
-    
+
     my $other_config = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
     $other_config->{hostrules}{vm_host_assignment} = ['foo'];
-    $other_config->{hostrules}{'foo.vm_pattern'} = ['foobar[\d]{2}'];
-    $other_config->{hostrules}{'foo.host_pattern'} = ['host_id-[1-2]']; # host with name "host_id-3" will be filtered
-    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] );    # test builtin filter initialization
-    
-    my $vm_res = new LML::VMresources(
-        {
+    $other_config->{hostrules}{'foo.vm_pattern'}   = ['foobar[\d]{2}'];
+    $other_config->{hostrules}{'foo.host_pattern'} = ['host_id-[1-2]'];    # host with name "host_id-3" will be filtered
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] ); # test builtin filter initialization
+
+    my $vm_res = new LML::VMresources( {
           ram      => 1000,
-          cpu      => 2000,                                                                # this is currently no filter criteria
-          networks => ['NETWORK LABEL 1'],                                                 # all hosts support this network
-          disks    => [ { size => 16000 } ],                                               # disk size is currently no filter criteria
+          cpu      => 2000,                     # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],      # all hosts support this network
+          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
           name     => 'foobar00'
-        }
-    );
+    } );
     my @rec = $vm_placement->get_recommendations($vm_res);
     is( scalar(@rec), 2, "One host should be filtered" );
     # in the current lab config we expect the following order:
     # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
     # 2nd placement is host with id-3, because it has a rank value of 70 (10 for free ram and 60 for free cpu)
     # id-3 was filtered because the name of id-3 does not match the foo.host_pattern
-    is_deeply( [@rec], [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-1", datastores => ['datastore-1'], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply( [@rec],
+               [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-1", datastores => ['datastore-1'], } ],
+               "should return hosts in descending order by cpu+ram " );
 }
 
 done_testing();
