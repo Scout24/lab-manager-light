@@ -1,5 +1,10 @@
 #!/usr/bin/perl
 
+# all URL parameters are tokens that will be replaced
+# token format in file is %%%token%%%, case-insensitive
+#
+# TODO: use token replacement library and harden script against exploits
+#
 use strict;
 use warnings;
 
