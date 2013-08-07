@@ -28,7 +28,20 @@ div.main_content {
 	margin-top: 10px;
 	padding-top: 10px;
 	padding-left: 10px;
+	margin-bottom: -10px;
 	font-style: italic;
+	float: left;
+	width: 100%;
+}
+
+.right {
+	border-top: 1px solid black;
+	right: 0px;
+	position: absolute;
+	padding-right: 10px;
+	margin-top: 10px;
+	padding-top: 10px;
+	width: auto;%
 }
 
 .vmhostname {
