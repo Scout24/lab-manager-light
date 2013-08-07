@@ -24,6 +24,11 @@
         <a href="#"><img src="images/LabManagerLightlogo-small.png"/></a><br/>
     </div>
  
+    <div id="aussenwrapper">
+
+    <div id="innenwrapper">
+
+    <div id="header">
     <ul class="nav nav-tabs">
         <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'vm_overview'}"><a href="#/vm-overview">VM Overview</a></li>
         <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'new_vm'}"><a href="#/new-vm">New VM</a></li>
@@ -31,17 +36,20 @@
         <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'tools'}"><a href="#/tools">Tools</a></li>
         <li ng-disabled="isServerRequestRunning" ng-class="{active: globals.activeTab == 'configuration'}"><a href="#/configuration">Configuration</a></li>
     </ul>
-
+  </div>
     <div id='waiting' data-ng-show="isServerRequestRunning"><img src='images/wait.gif'/></div>
 
-    <div class="tab-content" tab-pane="tab-content">
+    <div id="content" class="tab-content" tab-pane="tab-content">
       <div data-ng-view></div>
     </div>
+
+    </div><!--Ende innenwrapper-->
 
     <div id="footer">
         <a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
         Version {{version}}
     </div>
+    </div><!--Ende aussenwrapper-->
 
     <script src="js/lml/VmOverviewController.js" type="text/javascript"></script>
     <script src="js/lml/NewVmController.js" type="text/javascript"></script>
