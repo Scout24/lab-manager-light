@@ -8,7 +8,7 @@ window.lml.HostOverviewController = function HostOverviewController($scope, $log
   $scope.globals.activeTab = 'host_overview';
 
   $scope.setServerRequestRunning(true);
-  var result_promise = AjaxCallService.sendAjaxCall('/lml/web/api/host_overview.pl',{}, function successCallback(data){
+  var result_promise = AjaxCallService.sendAjaxCall('api/host_overview.pl',{}, function successCallback(data){
     $log.info("Received hosts data for overview: ",data);
     $scope.hosts = data.host_overview_json.hosts;
     $scope.setServerRequestRunning(false);

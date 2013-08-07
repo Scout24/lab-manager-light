@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <title>Lab Manager Light - Rest API</title>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+</head>
+<body>
+   <h1>Lab Manager Light - Rest API</h1>
+   <div>
+      <p>The Lab Manager Light provides a rest api for managing vm, host and config resources.</p>
+      <p><strong>The rest api is still under developement and currently not usable.</strong></p>
+
+      <h3>VM Resources</h3>
+      <p>A GET request to api/vm will return a list of all known vms.</p>
+      <p>A GET request to api/vm/:uuid will return detailed infos to a vm given by an uuid.</p>
+      <p>A POST request to api/vm will create a vm with the given properties.</p>
+      <p>A DELETE request to api/vm/:uuid will delete a vm given by an uuid.</p>
+
+      <h3>Host Resources</h3>
+      <p>A GET request to api/host will return a list of all known hosts.</p>
+
+      <h3>Config Resources</h3>
+      <p>A GET request to api/configuration will return the current configuration.</p>
+   </div>
+
+</body>

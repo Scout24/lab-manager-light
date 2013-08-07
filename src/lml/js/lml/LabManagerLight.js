@@ -14,11 +14,11 @@
   .service('AjaxCallService',  lml.AjaxCallService )
   .config(function($routeProvider) {
     $routeProvider.
-    when('/vm-overview', {templateUrl:'/lml/web/html/vm_overview.html'}).
-    when('/new-vm', {templateUrl:'/lml/web/html/new_vm.html'}).
-    when('/host-overview', {templateUrl:'/lml/web/html/host_overview.html'}).
-    when('/tools', {templateUrl:'/lml/web/html/tools.html'}).
-    when('/configuration', {templateUrl:'/lml/web/html/configuration.html'}).
+    when('/vm-overview', {templateUrl:'html/vm_overview.html'}).
+    when('/new-vm', {templateUrl:'html/new_vm.html'}).
+    when('/host-overview', {templateUrl:'html/host_overview.html'}).
+    when('/tools', {templateUrl:'html/tools.html'}).
+    when('/configuration', {templateUrl:'html/configuration.html'}).
     otherwise({redirectTo:'/vm-overview'});
   })
   .run(function run(){

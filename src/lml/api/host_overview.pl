@@ -6,14 +6,14 @@ my $LICENSE = "Licensed under the GNU General Public License, see http://www.gnu
 
 # place DLLs and PMs with the required subdirectory structure into lib/ next to this script
 use FindBin;
-use lib "$FindBin::RealBin/../../lib";
+use lib "$FindBin::RealBin/../lib";
 
 use CGI ':standard';
 use LML::Common;
 use LML::Config;
 use LML::Lab;
 use JSON;
-
+use Data::Dumper;
 use User::pwent;
 
 my $GECOS = {};    # cache for gecos lookups
@@ -53,14 +53,27 @@ my @hosts = sort { hostFairness($b) <=> hostFairness($a) } $LAB->get_hosts;
 Debug( "Sorted host list: " . join( ",", @hosts ) );
 
 
-sub fill_hosts_json {
-    my $vm_overview   = { hosts => [{value=>'auto_placement', label=>'auto_placement'}]};
+
+sub fill_host_overview_json {
+    my $vm_overview   = { hosts => []};
         
         
     foreach my $host (@hosts) {
         my $host_info = {};
-        $host_info->{value} = $host->{name};
-        $host_info->{label} = displayHost($host);
+        my @networks = $LAB->get_network_names($host->{"networks"});
+        my @datastores = $LAB->get_datastore_names($host->{"datastores"});
+        $host_info->{name} =  $host->{name};
+        $host_info->{id} =  $host->{id};
+        $host_info->{overallStatus} =  $host->{status}->{overallStatus};
+        $host_info->{cpuUsage} =  sprintf( "%.2f / %.0f", $host->{stats}->{overallCpuUsage} / 1024, $host->{hardware}->{totalCpuMhz} / 1024 );
+        $host_info->{memoryUsage} =  sprintf("%.2f / %.0f", $host->{stats}->{overallMemoryUsage} / 1024, $host->{hardware}->{memorySize} / 1024);
+        $host_info->{fairness} = hostFairness($host);
+        $host_info->{networks} =  \@networks;
+        $host_info->{datastores} =  \@datastores ;
+        $host_info->{hardware} = $host->{hardware}->{vendor} . " " . $host->{hardware}->{model};
+        $host_info->{product} =  $host->{product}->{fullName};
+            
+      
         push @{$vm_overview->{hosts}}, $host_info;
     }
 
@@ -69,8 +82,8 @@ sub fill_hosts_json {
 
 
 
-$result{create_new_vm} = fill_hosts_json();
-
+$result{host_overview_json} = fill_host_overview_json();
+   
 print header('application/json');
 print encode_json( \%result );
 1;

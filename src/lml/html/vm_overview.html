@@ -24,9 +24,9 @@
         <td>
           <input type="checkbox" name="hosts" label="" value="{{vm.id}}">
 
-          <a href="/lml/vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="/lml/vmdata.pl/{{vm.uuid}}" class="tip vmhostname">{{vm.fullname}}</a>
+          <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">{{vm.fullname}}</a>
 
-          <a  data-ng-show="vm.screenshot_enabled" href="/lml/{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="/lml/{{vm.screenshot_url}}" class="tip"><img src ="images/console_icon.png"/></a>
+          <a  data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip"><img src ="images/console_icon.png"/></a>
 
         </td>
         <td>{{vm.vm_path}}</td>

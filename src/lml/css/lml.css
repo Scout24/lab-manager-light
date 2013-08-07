@@ -162,6 +162,7 @@ div.DTTT_container {
     top: 50%;
     margin-left: -50px; 
     margin-top: -50px; 
+    z-index: 100; /* always on top */
 }
 
 /* button */
