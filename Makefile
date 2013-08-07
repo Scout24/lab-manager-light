@@ -2,8 +2,8 @@ TOPLEVEL = test doc src lab-manager-light.spec LICENSE.TXT
 
 GITREV := HEAD
 
-VERSION := $(shell cat VERSION 2>/dev/null)
 REVISION := "$(shell git rev-list $(GITREV) -- $(TOPLEVEL) 2>/dev/null| wc -l)$(EXTRAREV)"
+VERSION := $(shell cat VERSION 2>/dev/null).$(REVISION)
 PV = lab-manager-light-$(VERSION)
 
 .PHONY: all test deb srpm clean rpm info debinfo rpminfo
@@ -24,8 +24,8 @@ deb: clean test
 	cp -r src/lml build/deb/usr/lib/
 	rm build/deb/usr/lib/lml/.gitignore
 	install -m 0644 src/DEBIAN/* build/deb/DEBIAN
-	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
-	sed -i -e s/VERSION/$(VERSION).$(REVISION)/ build/deb/DEBIAN/control
+	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION)/ build/deb/usr/lib/lml/lib/LML/Common.pm
+	sed -i -e s/VERSION/$(VERSION)/ build/deb/DEBIAN/control
 	mkdir -p build/deb/usr/share/doc/ build/deb/usr/share/lintian/overrides
 	cp -r doc build/deb/usr/share/doc/lab-manager-light
 	find build/deb/usr/share/doc/lab-manager-light -type f | xargs chmod 0644
@@ -43,8 +43,8 @@ srpm: clean
 	mkdir -p dist build/$(PV) build/BUILD test/temp
 	cp -r $(TOPLEVEL) test/* .proverc Makefile build/$(PV)
 	mv build/$(PV)/*.spec build/
-	sed -i -e s/VERSION/$(VERSION)/ -e /^Release/s/$$/.$(REVISION)/ build/*.spec
-	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION).$(REVISION)/ build/$(PV)/src/lml/lib/LML/Common.pm
+	sed -i -e s/VERSION/$(VERSION)/ build/*.spec
+	sed -i -e s/DEVELOPMENT_LML_VERSION/$(VERSION)/ build/$(PV)/src/lml/lib/LML/Common.pm
 	tar -czf build/$(PV).tar.gz -C build $(PV)
 	rpmbuild --define="_topdir $(CURDIR)/build" --define="_sourcedir $(CURDIR)/build" --define="_srcrpmdir $(CURDIR)/dist" --nodeps -bs build/*.spec
 
