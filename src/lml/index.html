@@ -34,14 +34,14 @@
 
     <div id='waiting' data-ng-show="isServerRequestRunning"><img src='images/wait.gif'/></div>
 
-    <div class="tab-content" tab-pane="tab-content">
+    <div id="content" class="tab-content" tab-pane="tab-content">
       <div data-ng-view></div>
     </div>
 
+ 
     <div id="footer">
         <a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
         Version {{version}}
-
     </div>
     <div class="right"><a href="api/index.html">REST API</a> | <a href="index.pl">Old GUI</a></div>
 
