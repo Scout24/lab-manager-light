@@ -9,12 +9,12 @@ window.lml.ConfigurationController = function ConfigurationController($scope, $l
   $scope.globals.activeTab = 'configuration';
 
   $scope.setServerRequestRunning(true);
-  AjaxCallService.sendAjaxCall('/lml/web/api/configuration.pl',{}, function successCallback(data){
+  AjaxCallService.sendAjaxCall('api/configuration.pl',{}, function successCallback(data){
     //$log.info("Received configuration data: ",data);
     $scope.data = data;
   });
 
-  AjaxCallService.sendAjaxCall('/lml/web/api/configuration_files.pl',{}, function successCallback(data){
+  AjaxCallService.sendAjaxCall('api/configuration_files.pl',{}, function successCallback(data){
     $log.info("Received configuration_files data: ",data);
     $scope.files = data;
    $scope.setServerRequestRunning(false); 

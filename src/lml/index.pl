@@ -319,7 +319,7 @@ print <<EOF;
     
     
 
-	<div class="main_content" id="tools">
+    <div class="main_content" id="tools">
        <p>
             <span id="clear_button" class="button" title="Clear tool output">Clear</span>
             <a id="hostdatetime_button" class="button" href="hostdatetime.pl" title="vSphere Time Sync Check">vSphere Time Sync Check</a>
@@ -334,11 +334,11 @@ EOF
 
 my $conffiles = "<ol>\n\t<li><code>" . join( "</code></li>\n\t<li><code>", @CONFIGFILES ) . "</code></li>\n</ol>\n";
 print <<EOF;
-	<div class="main_content" id="config">
-		<p>The config files are</p> 
-		$conffiles
-		<p>and this is the <strong>merged</strong> result of all config files:</p>
-		<pre>
+    <div class="main_content" id="config">
+        <p>The config files are</p> 
+        $conffiles
+        <p>and this is the <strong>merged</strong> result of all config files:</p>
+        <pre>
 EOF
 # mask password in config dump
 $C->set( "vsphere", "password", "***** hidden *****" ) if ( $C->get( "vsphere", "password" ) );
@@ -349,13 +349,13 @@ close(*CONFDUMP);
 print escapeHTML($confdump);
 
 print <<EOF;
-		</pre>
-	</div>
+        </pre>
+    </div>
 </div><!-- tabs -->
 
 <div id="footer">
-	<a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
-	Version $LML_VERSION
+    <a href="https://github.com/ImmobilienScout24/lab-manager-light" target="_blank">Lab Manager Light</a> is licensed under the <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU General Public License</a>.
+    Version $LML_VERSION
 </div>
 </body></html>
 EOF
