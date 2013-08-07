@@ -22,8 +22,7 @@ my $C = new LML::Config();
 
 my $LAB = new LML::Lab( $C->labfile );
 
-my %result = (
-);
+my %result = ();
 
 # get a list of available host systems
 sub hostFairness($) {
@@ -52,38 +51,35 @@ sub displayHost($) {
 my @hosts = sort { hostFairness($b) <=> hostFairness($a) } $LAB->get_hosts;
 Debug( "Sorted host list: " . join( ",", @hosts ) );
 
-
-
 sub fill_host_overview_json {
-    my $vm_overview   = { hosts => []};
-        
-        
+    my $vm_overview = { hosts => [] };
+
     foreach my $host (@hosts) {
-        my $host_info = {};
-        my @networks = $LAB->get_network_names($host->{"networks"});
-        my @datastores = $LAB->get_datastore_names($host->{"datastores"});
-        $host_info->{name} =  $host->{name};
-        $host_info->{id} =  $host->{id};
-        $host_info->{overallStatus} =  $host->{status}->{overallStatus};
-        $host_info->{cpuUsage} =  sprintf( "%.2f / %.0f", $host->{stats}->{overallCpuUsage} / 1024, $host->{hardware}->{totalCpuMhz} / 1024 );
-        $host_info->{memoryUsage} =  sprintf("%.2f / %.0f", $host->{stats}->{overallMemoryUsage} / 1024, $host->{hardware}->{memorySize} / 1024);
-        $host_info->{fairness} = hostFairness($host);
-        $host_info->{networks} =  \@networks;
-        $host_info->{datastores} =  \@datastores ;
-        $host_info->{hardware} = $host->{hardware}->{vendor} . " " . $host->{hardware}->{model};
-        $host_info->{product} =  $host->{product}->{fullName};
-            
-      
-        push @{$vm_overview->{hosts}}, $host_info;
+        my @networks   = $LAB->get_network_names( $host->{"networks"} );
+        my @datastores = $LAB->get_datastore_names( $host->{"datastores"} );
+        my $host_info = {
+               name          => $host->{name},
+               id            => $host->{id},
+               path          => $host->{path},
+               active        => $host->{status}->{active},
+               overallStatus => $host->{status}->{overallStatus},
+               cpuUsage      => sprintf( "%.2f / %.0f", $host->{stats}->{overallCpuUsage} / 1024, $host->{hardware}->{totalCpuMhz} / 1024 ),
+               memoryUsage => sprintf( "%.2f / %.0f", $host->{stats}->{overallMemoryUsage} / 1024, $host->{hardware}->{memorySize} / 1024 ),
+               fairness    => hostFairness($host),
+               networks    => \@networks,
+               datastores  => \@datastores,
+               hardware    => $host->{hardware}->{vendor} . " " . $host->{hardware}->{model},
+               product     => $host->{product}->{fullName},
+          };
+
+          push @{ $vm_overview->{hosts} }, $host_info;
     }
 
     return $vm_overview;
 }
 
-
-
 $result{host_overview_json} = fill_host_overview_json();
-   
+
 print header('application/json');
 print encode_json( \%result );
 1;

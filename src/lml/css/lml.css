@@ -222,7 +222,9 @@ div.DTTT_container {
 }
 
 .green {
-	background-color: greenyellow;
+	background-color: limegreen;
 }
 
+.inactive {
+	display: none;
 }
