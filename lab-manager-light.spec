@@ -1,6 +1,6 @@
 Name: lab-manager-light
 Version: VERSION
-Release: 9
+Release: 10
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
 License: GPL
@@ -15,6 +15,7 @@ Autoreq: 0
 # perl stuff
 Requires: /usr/bin/perl
 Requires: perl(CGI)
+Requires: perl(File::Slurp)
 Requires: perl(Config::IniFiles) >= 2.72
 Requires: perl(DateTime::Format::Flexible)
 Requires: perl(VMware::VIRuntime)

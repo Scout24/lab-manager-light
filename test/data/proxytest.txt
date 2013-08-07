@@ -1,0 +1,8 @@
+test %%%token%%% is %%%TOKen%%% and not %%%othertoken1%%%,
+but %%%otherTOKEN1%%% might still be %%%token%%%, but can't be %%%invalid_token%%%
+
+config blah.pxelinux or blub.pxelinux
+
+menu junk
+
+config foo.pxelinux
