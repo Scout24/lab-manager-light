@@ -1,6 +1,6 @@
 Name: lab-manager-light
 Version: VERSION
-Release: 10
+Release: 11
 Summary: Lab Manager Light Self-service Virtualization
 Group: Applications/System
 License: GPL
@@ -44,10 +44,10 @@ Users can provision and manage their own virtual machines, LML will:
 * manage IP addresses through a DHCP server
 * manage DNS names through a DNS server
 * control PXE boot environment for automated installation of VMs
-* manage host-based entries in a SVN repository for automated systems
-  integration
 * LML communicates with the end-user through the existing GUIs of the
   virtualization farm and the virtual machines.
+* LML has a simple GUI for VM/Host overview and new VM creation.
+* LML can automatically place a VM on a suitable host.
 
 %check
 make test
@@ -69,7 +69,6 @@ chmod -R g-w $RPM_BUILD_ROOT
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-
 %files
 %defattr(-,root,root,-)
 %doc LICENSE.TXT doc
@@ -80,3 +79,9 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/lab-manager-light/schema/*
 %defattr(-,apache,apache,-)
 %dir /var/lib/lml
+
+%post
+# restart httpd if it was running because we added/changed configuration
+if service httpd status ; then
+    service httpd restart
+fi

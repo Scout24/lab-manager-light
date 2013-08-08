@@ -1,0 +1,4 @@
+#!/bin/bash -e
+if [[ "$1" = configure ]] ; then
+    service apache2 restart
+fi
