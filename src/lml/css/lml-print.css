@@ -2,8 +2,12 @@ body {
 	font-size: 12pt;
 }
 
+* {
+	overflow: hidden;
+}
+
 #logoframe {
-	height: 100px;
+	height: 50px;
 	position: absolute;
 	right: 10px;
 }
@@ -13,7 +17,19 @@ body {
 	left: 10px;
 	top: 10px;
 	border: 0px;
-	width: 50%;
+	width: 75%;
+}
+
+#footer .left {
+	font-size: 10pt;
+}
+
+#footer .left span {
+	display: block;
+}
+
+#footer .right {
+	display: none;
 }
 
 #footer a:link:after,#footer a:visited:after {
@@ -36,6 +52,27 @@ body {
 	margin-top: 80px;
 }
 
+.nav-tabs {
+	margin-top: 110px;
+	margin-left: 20px;
+}
+
+.nav-tabs>.active>a {
+	border-top:0;
+	border-left:0;
+	border-right:0;
+	font-size: 14pt;
+	font-weight: bold;
+}
+
+.nav-tabs li {
+	display: none;
+}
+
+.nav-tabs li.active {
+	display: block;
+}
+
 .tabsLite-tab {
 	display: none;
 }
@@ -49,4 +86,23 @@ body {
 
 .tabsLite-panel {
 	border-top: solid 2px black;
+}
+
+.DTTT_container,
+#vmlist_table_filter,
+#vmlist_table_info,
+.vm_action_panel,
+.button {
+	display: none;
+}
+
+pre {
+	background: #fff;
+	border:0;
+}
+
+#tools_title {
+	border: 0;
+	background: #fff;
+	text-align: center;
 }
