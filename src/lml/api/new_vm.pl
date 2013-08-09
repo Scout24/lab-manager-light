@@ -70,17 +70,13 @@ sub fill_hosts_json {
         push @{ $json->{hosts} }, $host_info;
     }
 
-    # take only vm folders and strip leading DATACENTER/vm part
-    # TODO: modify create_vm.pl to accept full qualified paths, then label and value will be different
+    # take only vm folders
+    # TODO: modify create_vm.pl to accept full qualified paths and use display_filter_vm_path only to show it nicely
     foreach my $path ( $LAB->get_folder_paths(qr(\w+/vm.*)) ) {
         my $value = $path;
         $value =~ s/$display_filter_vm_path/$1/;
         $value = "/" unless ($value);                              # default is / and not ""
         push @{ $json->{paths} },$value;
-#          {
-#            value => $value,
-#            label => $value,
-#          };
     }
 
     return $json;
