@@ -113,7 +113,7 @@ sub assert_regex {
     print "##teamcity[progressMessage 'Validating qr text for matching pattern \"$regex\"']\n";
 
     my $text = $self->{vm_created};
-    $self->_fail_team_city_build("the following text does not match the pattern $regex: \"$text\"") unless ($text =~ qr(^$regex$)m );
+    $self->_fail_team_city_build("the following text does not match the pattern $regex: \"$text\"") unless ($text =~ qr(^$regex$)ms );
 }
 
 #####################################################################
