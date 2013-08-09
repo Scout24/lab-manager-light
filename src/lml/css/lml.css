@@ -43,7 +43,7 @@ div.main_content {
 .right {
 	float: right;
 	position: relative;
-	right: 0px;
+	right: 30px;
 }
 
 .vmhostname {
