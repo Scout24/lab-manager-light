@@ -15,7 +15,7 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(get_vi_connection get_all_vm_data get_vm_data get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+  qw(get_vi_connection get_all_vm_data get_vm_data get_folders get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -35,12 +35,13 @@ my %CUSTOMFIELDS;
 my %HOSTS;
 my %NETWORKIDS;
 my %DATASTOREIDS;
+my %FOLDERIDS;
 
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
 my $VM_PROPERTIES = [
                       "name",            "config.name",            "config.uuid", "config.extraConfig",
-                      "config.template", "config.hardware.device", "customValue", "runtime.host",
+                      "config.template", "config.hardware.device", "customValue", "runtime.host", "parent",
 ];
 
 # return if arg looks like a UUID
@@ -69,6 +70,7 @@ sub retrieve_vm_details ($) {
     get_hosts();
     get_custom_fields();
     get_networks();
+    get_folders();
     # filter out anything that is not a VM
     return %VM_DATA unless ( ref($vm) eq "VirtualMachine" );
     # filter out templates
@@ -77,7 +79,7 @@ sub retrieve_vm_details ($) {
 
     $VM_DATA{UUID} = $vm->get_property("config.uuid");
     $VM_DATA{NAME} = $vm->get_property("name");
-    $VM_DATA{PATH} = Util::get_inventory_path( $vm, $vm->{vim} );
+    $VM_DATA{PATH} = _get_folder($vm);
     # store moref
     $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
     my @vm_macs = ();
@@ -215,8 +217,9 @@ sub get_vi_connection() {
 ## returns a hash of name->id pairs of defined custom fields
 ##
 sub get_custom_fields {
-    get_vi_connection();
+
     unless ( scalar( keys %CUSTOMFIELDS ) ) {
+        get_vi_connection();
         # initialize CUSTOMFIELDIDS and retrieve custom fields if they are not set
         %CUSTOMFIELDIDS = ();
         %CUSTOMFIELDS   = ();
@@ -248,8 +251,9 @@ sub get_custom_fields {
 ##
 
 sub get_datastores {
-    get_vi_connection();
+
     unless ( scalar( keys %DATASTOREIDS ) ) {
+        get_vi_connection();
         my $datastoreEntityViews = Vim::find_entity_views(
             view_type    => "Datastore",
             begin_entity => Vim::get_service_content()->rootFolder,
@@ -289,8 +293,8 @@ sub get_datastores {
 ##
 
 sub get_networks {
-    get_vi_connection();
     unless ( scalar( keys %NETWORKIDS ) ) {
+        get_vi_connection();
         # $networkEntityViews is an array of this:
         #Network=HASH(0x51f57e0)
         #      'host' => ARRAY(0x5207ad0)
@@ -363,6 +367,126 @@ sub get_networks {
 
 ################################ sub #################
 ##
+## get_folders
+##
+## returns id->data hashref for folders
+##
+
+sub get_folders {
+    unless ( scalar keys %FOLDERIDS ) {
+        get_vi_connection();
+        # collect all object types that could be part of a folder hierarchy
+        my $folderViews     = Vim::find_entity_views( view_type => "Folder",     properties => [ "name", "parent" ] );
+        my $datacenterViews = Vim::find_entity_views( view_type => "Datacenter", properties => [ "name", "parent" ] );
+        my $computeResourceViews = Vim::find_entity_views( view_type => "ComputeResource", properties => [ "name", "parent" ] );
+        %FOLDERIDS = (
+            map {
+                $_->{mo_ref}->{value} => {
+                    name   => $_->{name},
+                    type   => $_->{mo_ref}->{type},
+                    parent => $_->{parent}->{value},
+                    id     => $_->{mo_ref}->{value},
+                    # the following is used only temporarily to debug errors in our get_full_path routine.
+                    #vim_path => Util::get_inventory_path( $_, $_->{vim} )
+                  }
+              } @$folderViews,
+            @$datacenterViews,
+            @$computeResourceViews,
+        );
+
+        # since we retrieved all the information about the folders we can calculate the
+        # path much faster than Util::get_inventory_path which uses online calls.
+        sub get_full_path {
+            my ( $f, $folderids ) = @_;
+            if ( defined $f->{parent} ) {
+                if ( defined $folderids->{ $f->{parent} } ) {
+                    #print STDERR "Calling for ".$f->{parent}.", parent of ".$f->{name}."\n";
+                    #return get_full_path($folderids->{$f->{parent}},$folderids)."/".$f->{name};
+                    my $parentpath = get_full_path( $folderids->{ $f->{parent} }, $folderids );
+                    $parentpath .= "/" if ($parentpath);    # add path separator only if parentpath given,
+                                                            # get_inventory_path also returns paths withouth leading /
+                    return $parentpath . $f->{name};
+                }
+                else {
+                    croak "Cannot find folder data for " . $f->{parent} . ", parent of " . $f->{name} . "\n";
+                }
+            }
+            else {
+                return "";
+            }
+        }
+
+        foreach my $f ( values %FOLDERIDS ) {
+            $f->{path} = get_full_path( $f, \%FOLDERIDS );
+        }
+
+        #  FOLDERIDS is now a hash like this:
+        #  "datacenter-21" => {
+        #                       "name" => "Berlin",
+        #                       "parent" => "group-d1",
+        #                       "path" => "Berlin",
+        #                       "type" => "Datacenter"
+        #                     },
+        #  "group-d1" => {
+        #                  "name" => "Datencenter",
+        #                  "parent" => undef,
+        #                  "path" => "",
+        #                  "type" => "Folder"
+        #                },
+        #  "group-h23" => {ComputeResource
+        #                   "name" => "host",
+        #                   "parent" => "datacenter-21",
+        #                   "path" => "Berlin/host",
+        #                   "type" => "Folder"
+        #                 },
+        #  "group-n25" => {
+        #                   "name" => "network",
+        #                   "parent" => "datacenter-21",
+        #                   "path" => "Berlin/network",
+        #                   "type" => "Folder"
+        #                 },
+        #  "group-s24" => {
+        #                   "name" => "datastore",
+        #                   "parent" => "datacenter-21",
+        #                   "path" => "Berlin/datastore",
+        #                   "type" => "Folder"
+        #                 },
+        #  "group-v1003" => {
+        #                     "name" => "webservers",
+        #                     "parent" => "group-v294",
+        #                     "path" => "Berlin/vm/test-systems/webservers",
+        #                     "type" => "Folder"
+        #                   },
+        #  "group-v1004" => {
+        #                     "name" => "appservers",
+        #                     "parent" => "group-v294",
+        #                     "path" => "Berlin/vm/test-systems/appservers",
+        #                     "type" => "Folder"
+        #                   },
+        #  parent == undef means root object
+
+    }
+    return \%FOLDERIDS;
+}
+
+sub _get_folder ($) {
+    # get folder of vm
+    my ($obj) = @_;
+    get_folders;
+    if ( defined $obj->{parent}->{value} ) {
+        if ( defined $FOLDERIDS{ $obj->{parent}->{value} } ) {
+            return $FOLDERIDS{ $obj->{parent}->{value} }->{path};
+        }
+        else {
+            return "NO FOLDER DATA FOUND FOR " . $obj->{parent}->{value};
+        }
+    }
+    else {
+        return "OBJECT HAS NO parent ATTRIBUTE";
+    }
+}
+################################ sub #################
+##
 ## get_hosts
 ##
 ## returns a hash of name->data blocks for ESX host info
@@ -382,7 +506,8 @@ sub get_hosts {
                                                                   "name",                      "config.product",
                                                                   "summary.quickStats",        "summary.hardware",
                                                                   "overallStatus",             "network",
-                                                                  "datastore",                 "vm"
+                                                                  "datastore",                 "vm",
+                                                                  "parent",
                                                   ] );
         foreach my $e ( @{$entityViews} ) {
             #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
@@ -412,15 +537,15 @@ sub get_hosts {
                     model  => $hardware->{model},
                 },
                 status => {
-                            overallStatus => $e->get_property("overallStatus")->{val},
-                            # active means that the host can accept new VMs
-                            # host must not be in maintenance mode
-                            active        => $e->get_property("runtime.inMaintenanceMode") eq "false" ? 1 : 0,
+                    overallStatus => $e->get_property("overallStatus")->{val},
+                    # active means that the host can accept new VMs
+                    # host must not be in maintenance mode
+                    active => $e->get_property("runtime.inMaintenanceMode") eq "false" ? 1 : 0,
                 },
                 networks   => [ map { $_->{value} } @{ $e->get_property("network")   || [] } ],  # use empty array if host has no networks
                 datastores => [ map { $_->{value} } @{ $e->get_property("datastore") || [] } ],  # use empty array if host has no datastores
                 vms        => [ map { $_->{value} } @{ $e->get_property("vm")        || [] } ],  # use empty array if host has no VMs
-                path => Util::get_inventory_path( $e, $e->{vim} ),
+                path => _get_folder( $e ),
             };
         }
     }

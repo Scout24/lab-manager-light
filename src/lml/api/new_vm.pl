@@ -22,8 +22,7 @@ my $C = new LML::Config();
 
 my $LAB = new LML::Lab( $C->labfile );
 
-my %result = (
-);
+my %result = ();
 
 # get a list of available host systems
 sub hostFairness($) {
@@ -52,22 +51,40 @@ sub displayHost($) {
 my @hosts = sort { hostFairness($b) <=> hostFairness($a) } $LAB->get_hosts;
 Debug( "Sorted host list: " . join( ",", @hosts ) );
 
-
 sub fill_hosts_json {
-    my $vm_overview   = { hosts => [{value=>'auto_placement', label=>'auto_placement'}]};
-        
-        
+    my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
+    my $json = {
+        hosts => [ {
+                     value => 'auto_placement',
+                     label => 'auto_placement'
+                   }
+        ],
+        paths => [],
+        ,
+    };
+
     foreach my $host (@hosts) {
         my $host_info = {};
         $host_info->{value} = $host->{name};
         $host_info->{label} = displayHost($host);
-        push @{$vm_overview->{hosts}}, $host_info;
+        push @{ $json->{hosts} }, $host_info;
     }
 
-    return $vm_overview;
+    # take only vm folders and strip leading DATACENTER/vm part
+    # TODO: modify create_vm.pl to accept full qualified paths, then label and value will be different
+    foreach my $path ( $LAB->get_folder_paths(qr(\w+/vm.*)) ) {
+        my $value = $path;
+        $value =~ s/$display_filter_vm_path/$1/;
+        $value = "/" unless ($value);                              # default is / and not ""
+        push @{ $json->{paths} },
+          {
+            value => $value,
+            label => $value,
+          };
+    }
+
+    return $json;
 }
-
-
 
 $result{create_new_vm} = fill_hosts_json();
 

@@ -138,6 +138,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
             $LAB->update_hosts(get_hosts);
             $LAB->update_networks(get_networks);
             $LAB->update_datastores(get_datastores);
+            $LAB->update_folders(get_folders);
             if ( not $LAB->write_file( "for " . $vm_name . " (" . $search_uuid . ")" ) ) {
                 die "Strangely writing LAB produced a 0-byte file.\n";
             }

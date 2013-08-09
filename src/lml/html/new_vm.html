@@ -43,7 +43,11 @@
         </tr>
         <tr>
             <td><p>Target folder</p></td>
-            <td><input type="text" name="folder"/></td>
+            <td>
+                <select ng-model="folder" ng-options="p.value as p.label for p in paths">
+                </select>
+                <input type="hidden" name="folder" value="{{folder}}"/>
+            </td>
         </tr>
         <tr>
             <td colspan="2">
