@@ -3,7 +3,7 @@
 
   window.lml = window.lml || {};
 
-  angular.module('lml-app', [])
+  angular.module('lml-app', ['ui.bootstrap'])
   .controller('LmlController', lml.LmlController)
   .controller('VmOverviewController', lml.VmOverviewController)
   .controller('NewVmController', lml.NewVmController)

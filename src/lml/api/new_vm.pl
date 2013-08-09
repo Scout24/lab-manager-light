@@ -76,11 +76,11 @@ sub fill_hosts_json {
         my $value = $path;
         $value =~ s/$display_filter_vm_path/$1/;
         $value = "/" unless ($value);                              # default is / and not ""
-        push @{ $json->{paths} },
-          {
-            value => $value,
-            label => $value,
-          };
+        push @{ $json->{paths} },$value;
+#          {
+#            value => $value,
+#            label => $value,
+#          };
     }
 
     return $json;

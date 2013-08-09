@@ -44,9 +44,7 @@
         <tr>
             <td><p>Target folder</p></td>
             <td>
-                <select ng-model="folder" ng-options="p.value as p.label for p in paths">
-                </select>
-                <input type="hidden" name="folder" value="{{folder}}"/>
+                <input type="text" name="folder" ng-model="selected" typeahead="path for path in paths | filter:$viewValue | limitTo:8"/>
             </td>
         </tr>
         <tr>
