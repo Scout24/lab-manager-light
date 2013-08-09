@@ -37,7 +37,7 @@ my %opts = (
                 type     => "=s",
                 help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET). ",
                 required => 0,
-                default  => "%UUID%PATH"
+                default  => "%UUID%NAME%PATH"
     }
 );
 
@@ -58,9 +58,9 @@ if ( my @customfields = keys %{ get_custom_fields() } ) {
 # display hosts
 my $HOSTS = get_hosts();
 if (keys %$HOSTS ) {
-    printf "\nESX Hosts:\n%-40s%-40s\n","UUID","PATH";
+    printf "\nESX Hosts:\n%-40s%-40s%-40s\n","UUID","NAME","PATH";
     foreach my $host (values %$HOSTS ) {
-        printf "%-40s%-40s\n",$host->{uuid},$host->{path};
+        printf "%-40s%-40s%-40s\n",$host->{uuid},$host->{name},$host->{path};
     }
     print "\n";
 } else {

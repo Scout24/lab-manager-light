@@ -45,9 +45,8 @@ sub assert_vm_path {
     my ($self)  = @_;
     my $path    = $self->{vm_created_json}->{"PATH"};
     my $folder  = $self->{vm_create_options}->{folder};
-    my $vm_host = $self->{vm_create_options}->{vm_host};
 
-    $self->_fail_team_city_build("expected path: $folder/$vm_host, actual $path") if ( $path !~ /$folder\/$vm_host/ );
+    $self->_fail_team_city_build("expected path: $folder, actual $path") if ( $path !~ /$folder/ );
 }
 
 # assert the lml host
