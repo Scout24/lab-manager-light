@@ -1,0 +1,2 @@
+#!/bin/bash
+exec perl -I src/lml/lib -mLML::Config -MLML::VMware -MData::Dumper -e "new LML::Config(); print Data::Dumper->Dump([$@])"
