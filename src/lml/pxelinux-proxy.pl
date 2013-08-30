@@ -10,18 +10,12 @@ use warnings;
 use File::Slurp;
 
 use CGI ':standard';
+use LML::Common;
 
 sub get_parameters {
     # define the paramter hash to be filled
     my %parameters = map { lc($_) => param($_) } param();
     return \%parameters;
-}
-
-sub get_token_replacement {
-    my ( $match, $tokens ) = @_;    # match is %%%token%%%, $tokens is hashref to tokens
-    my $token = lc( substr( $match, 3, -3 ) );
-    return defined $tokens->{$token} ? $tokens->{$token} : "!!!NO_TOKEN_$token!!!";
-
 }
 
 # create an hash of the submitted params

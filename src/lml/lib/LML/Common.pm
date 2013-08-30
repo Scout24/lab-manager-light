@@ -8,7 +8,7 @@ use vars qw(
   @EXPORT
 );
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config $isDebug Debug $LML_VERSION);
+our @EXPORT = qw(%CONFIG @CONFIGFILES LoadConfig Config $isDebug Debug $LML_VERSION get_token_replacement);
 
 use FindBin;
 
@@ -117,4 +117,10 @@ sub Config($$) {
     }
 }
 
+sub get_token_replacement {
+    my ( $match, $tokens ) = @_;    # match is %%%token%%%, $tokens is hashref to tokens
+    my $token = lc( substr( $match, 3, -3 ) );
+    return defined $tokens->{$token} ? $tokens->{$token} : "!!!NO_TOKEN_$token!!!";
+
+}
 1;

@@ -17,6 +17,7 @@ use JSON;
 use Getopt::Long;
 
 use LML::Config;
+use LML::Common;
 use LML::VM;
 use LML::VMware;
 use LML::Lab;
@@ -54,6 +55,22 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
                 $VM->destroy();
                 $LAB->remove( $VM->uuid );       # remove VM from lab data
                 $removed++;
+                
+                my $triggercommand = $C->get( "lml", "delete_triggercommand" );
+                if ($triggercommand) {
+                    $triggercommand =~ s(
+                                            %%%\w+%%%
+                                        )(
+                                            get_token_replacement($&,$VM)
+                                        )xeig;
+                    my $result = qx($triggercommand 2>&1);
+                    Debug("delete triggercommand '$triggercommand' said:\n$result") if ($isDebug);
+                    if ( $? > 0 ) {
+                        warn "delete trigger command '$triggercommand' failed:\n$result";
+                        push( @errors, "Could not run delete triggercommand, please call for help" );
+                    }
+
+                }
             }
         }
         else {
@@ -70,7 +87,11 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
     }
     if (@errors) {
         my $msg = "ERRORS: " . join( ", ", @errors );
-        print header( -status => "500 $msg" ) . start_html( -title => "LML VM Control" ) . p("The following ERRORS occured:") . ul( li( \@errors ) ) . end_html . "\n";
+        print header( -status => "500 $msg" )
+          . start_html( -title => "LML VM Control" )
+          . p("The following ERRORS occured:")
+          . ul( li( \@errors ) )
+          . end_html . "\n";
     }
     else {
         # Print HTML success header
