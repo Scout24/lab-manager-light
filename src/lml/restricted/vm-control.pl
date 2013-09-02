@@ -17,6 +17,7 @@ use JSON;
 use Getopt::Long;
 
 use LML::Config;
+use LML::TokenReplacer;
 use LML::Common;
 use LML::VM;
 use LML::VMware;
@@ -55,22 +56,18 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
                 $VM->destroy();
                 $LAB->remove( $VM->uuid );       # remove VM from lab data
                 $removed++;
-                
-                my $triggercommand = $C->get( "lml", "delete_triggercommand" );
-                if ($triggercommand) {
-                    $triggercommand =~ s(
-                                            %%%\w+%%%
-                                        )(
-                                            get_token_replacement($&,$VM)
-                                        )xeig;
-                    my $result = qx($triggercommand 2>&1);
-                    Debug("delete triggercommand '$triggercommand' said:\n$result") if ($isDebug);
-                    if ( $? > 0 ) {
-                        warn "delete trigger command '$triggercommand' failed:\n$result";
-                        push( @errors, "Could not run delete triggercommand, please call for help" );
-                    }
-
+            }
+            my $triggercommand = $C->get( "triggers", "vm".$action );
+            if ($triggercommand) {
+                my $tr = new LML::TokenReplacer($C->get_proxy_parameter,$VM);
+                $triggercommand = $tr->replace($triggercommand);
+                my $result = qx($triggercommand 2>&1);
+                Debug("delete triggercommand '$triggercommand' said:\n$result") if ($isDebug);
+                if ( $? > 0 ) {
+                    warn "delete trigger command '$triggercommand' failed:\n$result";
+                    push( @errors, "Could not run delete triggercommand, please call for help" );
                 }
+
             }
         }
         else {

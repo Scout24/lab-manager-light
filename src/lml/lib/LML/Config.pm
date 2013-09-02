@@ -59,8 +59,8 @@ sub get_proxy_parameter {
     my %parameters;
     # get a copy of the sub hash from "proxy_variables" configuration
     %parameters = %{ $self->{proxy_variables} } if exists $self->{proxy_variables};
-    # append the hostname parameter
-    $parameters{hostname} = $args{hostname};
+    # append the variables given as argument
+    $parameters{hostname} = $args{hostname} if (defined $args{hostname});
     # return the hash reference
     return \%parameters;
 }

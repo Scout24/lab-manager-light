@@ -10,7 +10,7 @@ use warnings;
 use File::Slurp;
 
 use CGI ':standard';
-use LML::Common;
+use LML::TokenReplacer;
 
 sub get_parameters {
     # define the paramter hash to be filled
@@ -32,15 +32,11 @@ if ( defined $parameters->{'filename'} ) {
         delete $parameters->{filename};    # remove filename from parameter list
         Delete("filename");                # remove filename from CGI query params
         my $query_string = query_string(); # keep query string without filename to append to some stuff.
+        my $tr = new LML::TokenReplacer($parameters);
         if ( -f $filename ) {
             # print out the header with OK status
             print header( -status => '200 Proxy mode' );
-            my $data = read_file($filename);
-            $data =~ s(
-                %%%\w+%%%
-            )(
-                get_token_replacement($&,$parameters)
-            )xeig;
+            my $data = $tr->replace(scalar read_file($filename));
             $data =~ s(
                 \s+             # separator to start
                 .+?\.pxelinux   # non-greedy something that ends on .pxelinux
