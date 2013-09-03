@@ -90,6 +90,6 @@ if ( !$number_of_tests ) {
         $counter++;
     }
 
-    printf "##teamcity[buildStatus status='%s' text='%d System Tests succeeded']\n", ( $number_of_tests == $good_tests ? "SUCCESS" : "FAILURE" ),
-      $good_tests;
+    printf "##teamcity[buildStatus status='%s' text='Tests passed:%d failed:%d']\n", ( $number_of_tests == $good_tests ? "SUCCESS" : "FAILURE" ),
+      $good_tests, $number_of_tests - $good_tests;
 }

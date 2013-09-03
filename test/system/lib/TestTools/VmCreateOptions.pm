@@ -11,10 +11,9 @@ sub new {
     my ( $class, $self ) = @_;
     croak("Arg must be hashref of vm options") unless ( ref($self) eq "HASH" );
     # extend test data with builtins
-    $self->{expiration_date} = DateTime->today()->add( days => 1 )->dmy(".");
+    $self->{expiration} = DateTime->today()->add( days => 1 )->dmy(".");
     $self->{force_boot_target} = 'qrdata' unless ($self->{force_boot_target});
-    # TODO: rename vm_host to vm_name to avoid confusion with ESX server
-    $self->{vm_host} = sprintf "%s%02d", $self->{vm_name_prefix}, (localtime)[1] + 1;
+    $self->{name} = sprintf "%s%02d", $self->{vm_name_prefix}, (localtime)[1] + 1; # current minute plus 1 yields VMs starting frmo 01
 
     # make sure that everything is set
     if (

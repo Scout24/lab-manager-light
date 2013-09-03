@@ -37,7 +37,7 @@ sub load_qrdata {
     }
 
     if ($vm_spec) {
-        link $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png";
+        link $file, "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid} . ".png";
     } else {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
@@ -61,7 +61,7 @@ sub match_ocr {
     }
 
     if ($test_passed) {
-        link $file, "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . ".png";
+        link $file, "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid} . ".png";
     } else {
         $self->_fail_team_city_build( "No OCR match after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
@@ -78,8 +78,8 @@ sub match_ocr {
 # downloads VM screenshot and saves it in a file and return file name
 sub _download_vm_screenshot {
     my ( $self, $uuid, $screenshot_count ) = @_;
-    my $file = "test/temp/" . $self->{vm_create_options}->{vm_host} . "_" . $self->{uuid} . "_" . $screenshot_count . ".png";
-    my $url  = "http://" . $self->{vm_create_options}->{test_host} . "/lml/vmscreenshot.pl?image=1&uuid=" . $self->{uuid};
+    my $file = sprintf("test/temp/%s_%s_%03d.png",$self->{vm_create_options}->{name},$self->{uuid},$screenshot_count);
+    my $url  = sprintf("http://%s/lml/vmscreenshot.pl?image=1&uuid=%s",$self->{vm_create_options}->{test_host},$self->{uuid});
 
     print "##teamcity[progressMessage 'Downloading VM Screenshot from $url to $file']\n";
     my $png = $self->_do_http_get_request($url);

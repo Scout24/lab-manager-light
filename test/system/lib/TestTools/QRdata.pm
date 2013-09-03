@@ -85,7 +85,7 @@ sub assert_hostname {
     print "##teamcity[progressMessage 'Validating vm hostname']\n";
     my ($self)            = @_;
     my $hostname          = $self->{vm_created_json}->{"HOSTNAME"};
-    my $expected_hostname = $self->{vm_create_options}->{vm_host};
+    my $expected_hostname = $self->{vm_create_options}->{name};
     $self->_fail_team_city_build("actual host $hostname does not match hostname $expected_hostname from create options") unless ( $expected_hostname eq $hostname );
 }
 
@@ -103,15 +103,13 @@ sub assert_expiration_date {
     print "##teamcity[progressMessage 'Validating vm expiration date']\n";
     my ($self)                   = @_;
     my $expiration_date          = $self->{vm_created_json}->{"CUSTOMFIELDS"}->{"Expires"};
-    my $expected_expiration_date = $self->{vm_create_options}->{expiration_date};
+    my $expected_expiration_date = $self->{vm_create_options}->{expiration};
     $self->_fail_team_city_build("actual expiration date $expiration_date does not match expiration date $expected_expiration_date from create options") unless ( $expected_expiration_date eq $expiration_date );
 }
 
 # assert the expiration date
 sub assert_regex {
     my ($self, $regex) = @_;
-    print "##teamcity[progressMessage 'Validating qr text for matching pattern \"$regex\"']\n";
-
     my $text = $self->{vm_created};
     $self->_fail_team_city_build("the following text does not match the pattern $regex: \"$text\"") unless ($text =~ qr(^$regex$)ms );
 }

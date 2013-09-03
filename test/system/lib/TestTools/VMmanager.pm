@@ -34,17 +34,11 @@ sub create_vm {
         exit 1;
     }
 
-    $self->_report_progress( "Creating " . $self->{vm_create_options}->{vm_host} );
-    my $vm_create_url_data = "name=" . $self->{vm_create_options}->{vm_host} . "&username=" . $self->{vm_create_options}->{username} . "&expiration=" . $self->{vm_create_options}->{expiration_date} . "&folder=" . $self->{vm_create_options}->{folder} . "&force_boot_target=" . $self->{vm_create_options}->{force_boot_target};
-
-    # Add an esx host, if there is one given (0 is default value in TestDataProvider.pm)
-    if ( defined $self->{vm_create_options}->{esx_host} ) {
-        $vm_create_url_data .= "&esx_host=" . $self->{vm_create_options}->{esx_host};
-    }
-
-    if ( $self->{vm_create_options}->{force_network} ) {
-        $vm_create_url_data = $vm_create_url_data . "&force_network=" . $self->{vm_create_options}->{force_network};
-    }
+    my %create_options = %{$self->{vm_create_options}};
+    # take only keys that have a non-default (0) value and that can be send to vmcreate.pl
+    my @send_options = grep { $create_options{$_} } ("name","username","expiration","folder","force_boot_target","esx_host","force_network");
+    my $vm_create_url_data = join("&",map { "$_=$create_options{$_}" } @send_options); # build url option=option_value for send_options
+    $self->_report_progress( "Creating " . $self->{vm_create_options}->{name} . " ($vm_create_url_data)");
 
     my $uuid = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", $vm_create_url_data );
 
@@ -63,8 +57,8 @@ sub delete_vm {
         return;
     }
     else {
-        $self->_report_progress( "Deleting " . $self->{vm_create_options}->{vm_host} );
-        my $res = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-control.pl", "action=destroy&hosts=" . $self->{vm_create_options}->{vm_host} );
+        $self->_report_progress( "Deleting " . $self->{vm_create_options}->{name} );
+        my $res = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-control.pl", "action=destroy&hosts=" . $self->{vm_create_options}->{name} );
         if ( $res =~ /ERROR/ ) {
             print "##teamcity[buildStatus status='FAILURE' text='Could not delete " . $res . "']\n";
             die "An error occured while deleting a vm";
@@ -91,7 +85,7 @@ sub _do_http_post_request {
     my ( $self, $url, $data ) = @_;
 
     my $ua = LWP::UserAgent->new;
-    $ua->agent("TeamCity/0.1 ");
+    $ua->agent("lml-system-test ");
 
     my $req = HTTP::Request->new( POST => "$url" );
     $req->content_type("application/x-www-form-urlencoded");
