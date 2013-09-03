@@ -81,11 +81,12 @@ my $number_of_tests = scalar(@test_spec);
 if ( !$number_of_tests ) {
     print "##teamcity[buildStatus status='FAILURE' text='No System Tests configured!']\n";
 } else {
-
     foreach my $test_case (@test_spec) {
         print "##teamcity[buildStatus status='Running test ($counter/$number_of_tests) \"$test_case->{label}\"']\n";
-        $good_tests++ if ( excute_test_case($test_case) );
-        print "##teamcity[buildStatus text='Integration Test \"$test_case->{label}\" OK']\n";
+        if ( excute_test_case($test_case) ) {
+            print "##teamcity[buildStatus text='Integration Test \"$test_case->{label}\" OK']\n";
+            $good_tests++;
+        }
         $counter++;
     }
 

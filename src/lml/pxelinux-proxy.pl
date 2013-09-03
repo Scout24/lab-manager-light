@@ -12,7 +12,7 @@ use File::Slurp;
 use CGI ':standard';
 
 use FindBin;
-use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/lib";
 
 use LML::TokenReplacer;
 
