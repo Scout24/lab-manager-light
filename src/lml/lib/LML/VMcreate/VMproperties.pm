@@ -116,12 +116,12 @@ sub new {
 sub generate_vms_array {
     my ($self) = @_;
 
-    # assemble custom fields hash
+    # assemble custom fields hash, field names come from configuration
     my %custom_fields = (
-                          'Contact User ID'   => $self->{username},
-                          'Expires'           => $self->{expiration_date},
-                          'Force Boot'        => 'ON',
-                          'Force Boot Target' => $self->{force_boot_target},
+                          $self->{config}->get("vsphere","contactuserid_field")   => $self->{username},
+                          $self->{config}->get("vsphere","expires_field")           => $self->{expiration_date},
+                          $self->{config}->get("vsphere","forceboot_field")        => 'ON',
+                          $self->{config}->get("vsphere","forceboot_target_field") => $self->{force_boot_target},
     );
 
     # because it is possible that a machine don't exist in subversion we call

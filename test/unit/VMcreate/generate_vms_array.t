@@ -19,26 +19,27 @@ BEGIN {
 # test setup
 #######################
 
-my $C = new LML::Config(
-                         {
-                           vsphere => {
-                                        expires_european => 1,
-                                        datacenter       => "some datacenter"
-                           },
-                           hostrules => { pattern => '^[a-z]{6}[0-9]{2}$' },
-                           vm_spec   => {
-                                        host_announcement => 'some_host_announcement_url',
-                                        host_spec         => 'some_host_spec_url'
-                           }
-                         }
-);
-my $lab = new LML::Lab(
-    {
+my $C = new LML::Config( {
+       vsphere => {
+           expires_european       => 1,
+           datacenter             => "some datacenter",
+           contactuserid_field    => "Contact User ID",
+           expires_field          => "Expires",
+           forceboot_field        => "Force Boot",
+           forceboot_target_field => "Force Boot Target",
+
+       },
+       hostrules => { pattern => '^[a-z]{6}[0-9]{2}$' },
+       vm_spec   => {
+                    host_announcement => 'some_host_announcement_url',
+                    host_spec         => 'some_host_spec_url'
+       } } );
+my $lab = new LML::Lab( {
        "DATASTORES" => {
-           "datastore1" => {
-               "id"        => "datastore1",
-               "name"      => "esx.id1:datastore1",
-           }
+                         "datastore1" => {
+                                           "id"   => "datastore1",
+                                           "name" => "esx.id1:datastore1",
+                         }
        },
        "ESXHOSTS" => {
            "id1" => {
@@ -52,8 +53,7 @@ my $lab = new LML::Lab(
 
          }
 
-    }
-);
+    } );
 
 my $expected_diskSize   = 16384000;
 my $expected_memorySize = 2048;
@@ -74,8 +74,7 @@ $module->mock(
                 }
             }';
 
-    }
-);
+    } );
 
 #######################
 # test cases
@@ -92,15 +91,12 @@ $module->mock(
                                                                      username   => "testuser",
                                                                      esx_host   => "esx_server.some.domain",
                                                                      folder     => "some folder",
-                                                                   }
-                                ]
-    );
+                                                                   } ] );
 
     my @vms = $vm_properties->generate_vms_array();
     is_deeply(
                \@vms,
-               [
-                  {
+               [ {
                      "custom_fields" => {
                                           "Contact User ID"   => "testuser",
                                           "Expires"           => "31.12.2019",
@@ -139,9 +135,7 @@ $module->mock(
                                                                          username   => "testuser",
                                                                          folder     => "some folder",
                                                                          esx_host   => $esx_host,
-                                                                       }
-                                    ]
-        );
+                                                                       } ] );
 
         # THIS IS A UNIT TEST SO WE HAVE TO MOCK COLABORATORS -> required network labels 'network_label_1', 'network_label_2'
         my $mock_vm_networks = new Test::MockModule('LML::VMnetworks');
@@ -151,8 +145,7 @@ $module->mock(
                 my ( $self, $vm_name, $force_network ) = @_;
                 return ( 'network_label_1', 'network_label_2' ) if ( $vm_name eq 'devxxx02' && !defined($force_network) );
                 ok( 0, "find_network_labels should be called with expected configured values" );
-            }
-        );
+            } );
         # THIS IS A UNIT TEST SO WE HAVE TO MOCK COLABORATORS -> recommendations
         my $mock_vm_placement = new Test::MockModule('LML::VMplacement');
         $mock_vm_placement->mock(
@@ -173,34 +166,32 @@ $module->mock(
                 );
                 return ( ( { id => "id1", datastores => ['datastore1'], }, { id => "id2", datastores => ['datastore2'], } ) );
 
-            }
-        );
+            } );
 
         my @vms = $vm_properties->generate_vms_array();
         is_deeply(
-                   \@vms,
-                   [
-                      {
-                         "custom_fields" => {
-                                              "Contact User ID"   => "testuser",
-                                              "Expires"           => "31.12.2019",
-                                              "Force Boot"        => "ON",
-                                              "Force Boot Target" => "default"
-                         },
-                         "datacenter"    => "some datacenter",
-                         "datastore"     => "esx.id1:datastore1", # must be the name resolved by Lab
-                         "disksize"      => $expected_diskSize,
-                         "force_network" => undef,
-                         "guestid"       => "rhel6_64Guest",
-                         "has_frontend"  => 0,
-                         "memory"        => $expected_memorySize,
-                         "num_cpus"      => $expected_number_cpu,
-                         "target_folder" => "some folder",
-                         "vmhost"        => "id1.some.domain", # must be the name resolved by Lab
-                         "vmname"        => "devxxx02"
-                      }
-                   ],
-                   "should create vms_array with expected values"
+            \@vms,
+            [ {
+                  "custom_fields" => {
+                                       "Contact User ID"   => "testuser",
+                                       "Expires"           => "31.12.2019",
+                                       "Force Boot"        => "ON",
+                                       "Force Boot Target" => "default"
+                  },
+                  "datacenter"    => "some datacenter",
+                  "datastore"     => "esx.id1:datastore1",    # must be the name resolved by Lab
+                  "disksize"      => $expected_diskSize,
+                  "force_network" => undef,
+                  "guestid"       => "rhel6_64Guest",
+                  "has_frontend"  => 0,
+                  "memory"        => $expected_memorySize,
+                  "num_cpus"      => $expected_number_cpu,
+                  "target_folder" => "some folder",
+                  "vmhost"        => "id1.some.domain",       # must be the name resolved by Lab
+                  "vmname"        => "devxxx02"
+               }
+            ],
+            "should create vms_array with expected values"
         );
     }
 }
