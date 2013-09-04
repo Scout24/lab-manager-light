@@ -8,6 +8,7 @@ use CGI ':standard';
 use Data::Dumper;
 use Getopt::Long;
 use JSON;
+use Number::Bytes::Human qw(parse_bytes);
 use LML::VMnetworks;
 use LML::VMresources;
 use LML::VMplacement;
@@ -149,7 +150,7 @@ sub generate_vms_array {
            datacenter    => $self->{config}->get( "vsphere", "datacenter" ),
            guestid       => $self->{guestid},
            datastore     => $esx_host_and_datastore->{esx_host_datastore},
-           disksize      => $vm_spec->{virtualMachine}->{diskSize},
+           disksize      => parse_bytes($vm_spec->{virtualMachine}->{diskSize}),
            memory        => $vm_spec->{virtualMachine}->{memory},
            num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
            custom_fields => \%custom_fields,
