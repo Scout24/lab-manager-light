@@ -143,6 +143,16 @@ sub generate_vms_array {
 
     my $esx_host_and_datastore = $self->_get_esx_host_and_datastore($vm_spec);
 
+    my $parsed_disk_size = parse_bytes($vm_spec->{virtualMachine}->{diskSize});
+    # parsed_size is always in Byte, but if there was no unit given, then historically this was actually in KB.
+    # In any case we need KB, so here we handle the legacy.
+    my $disk_size_in_kb = $parsed_disk_size eq $vm_spec->{virtualMachine}->{diskSize} ? $parsed_disk_size : int($parsed_disk_size / 1024);
+
+    my $parsed_memory_size = parse_bytes($vm_spec->{virtualMachine}->{memory});
+    # parsed_memory_size is always in Byte, but if there was no unit given, then historically this was actually in MB.
+    # In any case we need KB, so here we handle the legacy.
+    my $memory_size_in_mb = $parsed_memory_size eq $vm_spec->{virtualMachine}->{memory} ? $parsed_memory_size : int($parsed_memory_size / 1024 / 1024);
+
     my @vms = (
         {
            vmname        => $self->{vm_name},
@@ -150,9 +160,9 @@ sub generate_vms_array {
            datacenter    => $self->{config}->get( "vsphere", "datacenter" ),
            guestid       => $self->{guestid},
            datastore     => $esx_host_and_datastore->{esx_host_datastore},
-           disksize      => parse_bytes($vm_spec->{virtualMachine}->{diskSize}),
-           memory        => $vm_spec->{virtualMachine}->{memory},
-           num_cpus      => $vm_spec->{virtualMachine}->{numberOfProcessors},
+           disksize      => $disk_size_in_kb,
+           memory        => $memory_size_in_mb,
+           num_cpus      => int($vm_spec->{virtualMachine}->{numberOfProcessors}),
            custom_fields => \%custom_fields,
            # Temporary deactivated (we using cmd or post data for this atm)
            #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
