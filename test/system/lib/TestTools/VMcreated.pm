@@ -100,7 +100,7 @@ sub _fail_team_city_build {
 sub _do_http_get_request {
     my ( $self, $url ) = @_;
     my $ua = LWP::UserAgent->new;
-    $ua->agent("TeamCity/0.1 ");
+    $ua->agent("lml-system-test ");
     my $req = HTTP::Request->new( GET => "$url" );
 
     my $res = $ua->request($req);
@@ -132,11 +132,11 @@ sub _ocr_match {
         print "##teamcity[progressMessage 'OCR scan of image failed.']\n";
         return 0;
     } else {
-        print "OCR Result:\n" . $raw_data ;
+        print "OCR text Result:\n" . $raw_data ;
         my $match = 0;
         foreach my $pattern ( @{ $test_definition->{expect} } ) {
             print "##teamcity[progressMessage 'Validating OCR text for matching pattern \"$pattern\"']\n";
-            $match += $raw_data =~ qr(^$pattern)m;
+            $match += $raw_data =~ qr($pattern)ms;
         }
         return $match;
     }

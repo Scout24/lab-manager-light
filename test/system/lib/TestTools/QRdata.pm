@@ -111,7 +111,7 @@ sub assert_expiration_date {
 sub assert_regex {
     my ($self, $regex) = @_;
     my $text = $self->{vm_created};
-    $self->_fail_team_city_build("the following text does not match the pattern $regex: \"$text\"") unless ($text =~ qr(^$regex$)ms );
+    $self->_fail_team_city_build("the following text does not match the pattern $regex: \"$text\"") unless ($text =~ qr($regex)ms );
 }
 
 #####################################################################
