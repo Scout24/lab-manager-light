@@ -4,7 +4,7 @@ Priority: optional
 Section: web
 Architecture: all
 Maintainer: Schlomo Schapiro <lml@schlomo.schapiro.org>
-Depends: apache2 | httpd-cgi, perl, libconfig-inifiles-perl (>= 2.72) , libdatetime-format-flexible-perl , libjson-perl, libgd-barcode-perl, libgd-gd2-perl, libtest-exception-perl, libtest-mockmodule-perl, libtest-warn-perl, libfile-slurp-perl, libtext-diff-perl, zbar-tools, libtext-tabulardisplay-perl, libnumber-bytes-human-perl     
+Depends: apache2 | httpd-cgi, perl, libconfig-inifiles-perl (>= 2.72) , libdatetime-format-flexible-perl , libjson-perl, libgd-barcode-perl, libgd-gd2-perl, libtest-exception-perl, libtest-mockmodule-perl, libtest-warn-perl, libfile-slurp-perl, libtext-diff-perl, zbar-tools, libtext-tabulardisplay-perl     
 Homepage: https://github.com/ImmobilienScout24/lab-manager-light
 Description: Lab Manager Light
  LML extends existing virtualization farms like VMware vSphere and
