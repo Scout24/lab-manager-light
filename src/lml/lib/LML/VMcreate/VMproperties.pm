@@ -141,8 +141,6 @@ sub generate_vms_array {
     # put the json structure to a perl data structure
     my $vm_spec = decode_json($answer);
 
-    my $esx_host_and_datastore = $self->_get_esx_host_and_datastore($vm_spec);
-
     my $parsed_disk_size = parse_bytes($vm_spec->{virtualMachine}->{diskSize});
     # parsed_size is always in Byte, but if there was no unit given, then historically this was actually in KB.
     # In any case we need KB, so here we handle the legacy.
@@ -152,6 +150,13 @@ sub generate_vms_array {
     # parsed_memory_size is always in Byte, but if there was no unit given, then historically this was actually in MB.
     # In any case we need KB, so here we handle the legacy.
     my $memory_size_in_mb = $parsed_memory_size eq $vm_spec->{virtualMachine}->{memory} ? $parsed_memory_size : int($parsed_memory_size / 1024 / 1024);
+
+    
+    $vm_spec->{virtualMachine}->{diskSize} = $disk_size_in_kb;
+    $vm_spec->{virtualMachine}->{memory} = $memory_size_in_mb;
+
+    my $esx_host_and_datastore = $self->_get_esx_host_and_datastore($vm_spec);
+
 
     my @vms = (
         {
