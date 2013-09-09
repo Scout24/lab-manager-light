@@ -86,7 +86,7 @@ sub _filter {
     }
     my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos, $_ ) } @hosts;
 
-    if ($isDebug) {
+    if ($isDebug or $self->{config}->get("lml","verbose_auto_placement")) {
         $self->_pretty_print_filtering( $debug_infos, $vm_res->{name} );
     }
 
@@ -124,7 +124,7 @@ sub _map_vm_res_on_host {
 sub _rank {
     my ( $self, @hosts ) = @_;
 
-    if ($isDebug) {
+    if ($isDebug or $self->{config}->get("lml","verbose_auto_placement")) {
         $self->_pretty_print_ranking(@hosts);
     }
 
@@ -166,7 +166,7 @@ sub _pretty_print_filtering {
         }
         $t->add(@row) if $has_something_to_debug;
     }
-    Debug( "Apply auto placement for vm $vm_name:\nFiltering of suitable esx hosts (the filter order is like the column order):\n" . $t->render );
+    print STDERR "DEBUG: Apply auto placement for vm $vm_name:\nFiltering of suitable esx hosts (the filter order is like the column order):\n" . $t->render ;
 }
 
 sub _pretty_print_ranking {
@@ -193,7 +193,7 @@ sub _pretty_print_ranking {
         $t->add(@row);
     }
 
-    Debug( "Ranking of suitable esx hosts (the host with the highest Ranking will be choosen):\n" . $t->render );
+    print STDERR "DEBUG: Ranking of suitable esx hosts (the host with the highest Ranking will be choosen):\n" . $t->render ;
 }
 
 1;
