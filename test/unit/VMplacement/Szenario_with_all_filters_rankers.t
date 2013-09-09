@@ -139,7 +139,7 @@ my $simple_lab_with_three_hosts = new LML::Lab( {
 # scenario test cases
 ##################################
 
-my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_hosts ] );    # test builtin filter initialization
+my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_hosts ],"test builtin filter initialization" );
 
 # validate the ranking and filtering for the given scenario, where the requirements are all fulfilled (no hosts should be filtered)
 {
@@ -246,7 +246,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
 
     my $other_config = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
     $other_config->{hostrules}{group_pattern} = '([a-z]{3}).*';
-    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] ); # test builtin filter initialization
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ], "grouping" ); # test builtin filter initialization
 
     my $vm_res = new LML::VMresources( {
           ram      => 1000,
@@ -263,7 +263,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     # id-1 was filtered because id-1 already owns a foo group vm
     is_deeply( [@rec],
                [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ],
-               "should return hosts in descending order by cpu+ram " );
+               "should return hosts in descending order by cpu+ram with 1 host filtered by vm grouping" );
 }
 
 # validate the ranking and filtering for the given scenario, where some requirements (group reliability) are not fulfilled (some hosts should be filtered)
@@ -273,7 +273,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     $other_config->{hostrules}{vm_host_assignment} = ['foo'];
     $other_config->{hostrules}{'foo.vm_pattern'}   = ['foobar[\d]{2}'];
     $other_config->{hostrules}{'foo.host_pattern'} = ['host_id-[1-2]'];    # host with name "host_id-3" will be filtered
-    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ] ); # test builtin filter initialization
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $simple_lab_with_three_hosts ], "host_assignment" ); # test builtin filter initialization
 
     my $vm_res = new LML::VMresources( {
           ram      => 1000,
@@ -290,7 +290,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     # id-3 was filtered because the name of id-3 does not match the foo.host_pattern
     is_deeply( [@rec],
                [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-1", datastores => ['datastore-1'], } ],
-               "should return hosts in descending order by cpu+ram " );
+               "should return hosts in descending order by cpu+ram with 1 host filtered by host assignment" );
 }
 
 done_testing();

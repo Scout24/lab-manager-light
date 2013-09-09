@@ -166,7 +166,7 @@ sub _pretty_print_filtering {
         }
         $t->add(@row) if $has_something_to_debug;
     }
-    print STDERR "DEBUG: Apply auto placement for vm $vm_name:\nFiltering of suitable esx hosts (the filter order is like the column order):\n" . $t->render ;
+    print STDERR "DEBUG: Apply auto placement for vm $vm_name:\nRemoval of unsuitable hosts (filters applied in column order):\n" . $t->render ;
 }
 
 sub _pretty_print_ranking {
@@ -193,7 +193,7 @@ sub _pretty_print_ranking {
         $t->add(@row);
     }
 
-    print STDERR "DEBUG: Ranking of suitable esx hosts (the host with the highest Ranking will be choosen):\n" . $t->render ;
+    print STDERR "DEBUG: Ranking of suitable hosts (prefer higher rank):\n" . $t->render ;
 }
 
 1;

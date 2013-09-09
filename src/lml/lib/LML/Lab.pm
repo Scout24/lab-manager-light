@@ -12,6 +12,7 @@ use LML::Common;
 use Carp;
 use Data::Dumper;
 use File::NFSLock;
+use Clone 'clone';
 
 # new object, takes LAB hash or filename to read from.
 sub new {
@@ -20,7 +21,7 @@ sub new {
     my $filename;
     if ( ref($arg) eq "HASH" ) {
         # arg is hashref
-        $self = $arg;
+        $self = clone($arg);
     }
     elsif ( ref($arg) eq "" ) {
         # arg is not a reference but a scalar, should be file name of lab file
@@ -118,7 +119,7 @@ sub get_vms {
     }
     else {
         # everything we have
-        return map { new LML::VM($_) } values( %{ $self->{HOSTS} } );
+        return map { new LML::VM($_) } values %{ $self->{HOSTS} };
     }
 }
 

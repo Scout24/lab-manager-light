@@ -42,12 +42,12 @@ my $lab = new LML::Lab(
        "ESXHOSTS" => {
                        $test_host_1->{id} => {
                                                "id"   => $test_host_1->{id},
-                                               "name" => "tuvesx01.dev.is24.loc",
+                                               "name" => "esx01.domain",
                                                "vms"  => [ "vm-1-of-group-foo", "vm-1-of-group-bar", "vm-1-of-group-gii", "vm-2-of-group-gii" ]
                        },
                        $test_host_2->{id} => {
                                                "id"   => $test_host_2->{id},
-                                               "name" => "tuvesx01.dev.is24.loc",
+                                               "name" => "esx02.domain",
                                                "vms"  => [  "vm-2-of-group-bar", "vm-3-of-group-gii" ]
                        },
        },

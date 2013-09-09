@@ -53,30 +53,32 @@ sub get_name {
 ##################################################
 
 sub _get_number_of_vms_with_same_group_per_host {
-    my ( $self,  $vm_res, $group_pattern,$expected_group ) = @_;
+    my ( $self,  $vm_res, $group_pattern, $expected_group ) = @_;
 
     my %number_of_vms_with_same_group_per_host = ();
 
+    my @all_vms = $self->{lab}->get_vms();
+    
     # iterate over all esx hosts        
-    foreach my $host ($self->{lab}->get_hosts) {
+    foreach my $host ($self->{lab}->get_hosts()) {
 
+        my $host_id = $host->{id};
         my $counter_same_vm_groups = 0;
         
         # TODO: is there a more perl style to express these nested foreach loops?
         # iterate over all vms on this esx host
-        foreach my $vm_id ( @{ $self->{lab}->{ESXHOSTS}{ $host->{id} }->{vms} } ) {
-    
+        foreach my $vm_id ( @{ $host->{vms} } ) {
+            
             # now the bad thing: iterate over all vms (independent from host) and try to find vm with same id, because we do not know the name of the vm
-            foreach my $vm ( keys %{$self->{lab}->{HOSTS}} ) {
+            foreach my $vm ( @all_vms ) {
                 # is this the vm with a matching id
-                if ( $vm_id eq $self->{lab}->{HOSTS}->{$vm}->{VM_ID} ) {
+                if ( $vm_id eq $vm->vm_id ) {
+                    
                     # resolve group of matching vm
-                    $self->{lab}->{HOSTS}->{$vm}->{NAME} =~ qr(^$group_pattern$);
+                    $vm->name =~ qr(^$group_pattern$);
+                    
                     # if vm group is same, increase the vm counter for this host  
-                  
-                    if ( !defined($expected_group) || $expected_group eq $1 ) {
-                        $counter_same_vm_groups++;
-                    }
+                    $counter_same_vm_groups++ if ( $expected_group eq $1 ) ;
                     
                     # break, because we already found our vm 
                     last;
@@ -85,7 +87,7 @@ sub _get_number_of_vms_with_same_group_per_host {
             }
 
         }
-        $number_of_vms_with_same_group_per_host{$host->{id}} = $counter_same_vm_groups;
+        $number_of_vms_with_same_group_per_host{$host_id} = $counter_same_vm_groups;
     }
     return \%number_of_vms_with_same_group_per_host;
 }

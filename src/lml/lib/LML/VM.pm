@@ -10,17 +10,20 @@ use warnings;
 use LML::Config;
 use LML::VMware;
 use LML::Common;
+use Data::Dumper;;
 use Carp;
+use Clone 'clone';
 
 # new object, takes uuid
 sub new {
     my $class = shift;
     my $self;
     my $search_vm = shift;
+    confess("cannot use LML::VM as argument, it was\n".Data::Dumper->Dump([$search_vm])) if (ref($search_vm) eq "LML::VM");
     if ( ref($search_vm) eq "HASH" ) {
         # hashref given, turn it into a VM object.
         # if some of the data structures are missing, then you are on your own!
-        $self = $search_vm;
+        $self = clone($search_vm);
         # migrate old LAB structure to new VM structure
         if ( !exists $self->{NAME} and exists $self->{HOSTNAME} ) {
             $self->{NAME} = $self->{HOSTNAME};
