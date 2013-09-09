@@ -124,11 +124,15 @@ sub _map_vm_res_on_host {
 sub _rank {
     my ( $self, @hosts ) = @_;
 
-    if ($isDebug or $self->{config}->get("lml","verbose_auto_placement")) {
-        $self->_pretty_print_ranking(@hosts);
-    }
 
-    return sort { $self->_collect_ranks($b) <=> $self->_collect_ranks($a) } @hosts;
+    my @ranked_hosts = sort { $self->_collect_ranks($b) <=> $self->_collect_ranks($a) } @hosts;
+
+    if ($isDebug or $self->{config}->get("lml","verbose_auto_placement")) {
+        $self->_pretty_print_ranking(@ranked_hosts);
+    }
+    
+    return @ranked_hosts;
+    
 }
 
 sub _collect_ranks {
