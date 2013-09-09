@@ -11,6 +11,7 @@ use LML::VM;
 use LML::Common;
 use Carp;
 use Data::Dumper;
+use File::NFSLock;
 
 # new object, takes LAB hash or filename to read from.
 sub new {
@@ -32,16 +33,29 @@ sub new {
         };
         if ( -r $arg ) {
             local $/ = undef;
-            open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
-            flock( LAB_CONF, 1 ) || croak "Could not lock $arg.\n";
-            binmode LAB_CONF;
-            eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
-            close(LAB_CONF);
+            if (
+                my $lock = new File::NFSLock {
+                                               file               => $arg,
+                                               lock_type          => File::NFSLock::LOCK_EX,
+                                               blocking_timeout   => 30,                       # seconds
+                                               stale_lock_timeout => 2 * 60,                   # seconds
+                } )
+            {
+
+                open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
+                binmode LAB_CONF;
+                eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
+                close(LAB_CONF);
+                $lock->unlock();
+            }
+            else {
+                croak "I couldn't lock the file [$File::NFSLock::errstr]";
+            }
         }
         if ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) ) {
             # make sure that LAB is a non-empty hashref
-            $self = $LAB;
-            $self->{filename} = $arg;    # keep filename if we read the data from a file
+            $self             = $LAB;
+            $self->{filename} = $arg;                               # keep filename if we read the data from a file
         }
         else {
             croak '$LAB is not a hashref or empty, your $arg file must be broken.\n';
@@ -51,7 +65,7 @@ sub new {
     else {
         croak "Parameter to " . ( caller(0) )[3] . " should be hashref with LAB data or filename of LAB file and not " . ref($arg) . "\n";
     }
-    $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
+    $self->{vms_to_update} = [];                                    # list of uuids for whom the DHCP data changed
     bless( $self, $class );
     return $self;
 }
@@ -214,8 +228,8 @@ sub get_folders {
 
 # return sorted list of folder paths
 sub get_folder_paths {
-    my ($self, $filter) = @_;
-    my $regex = defined $filter ? qr(^$filter$) : qr(); # default filter is match all
+    my ( $self, $filter ) = @_;
+    my $regex = defined $filter ? qr(^$filter$) : qr();    # default filter is match all
     return sort grep { /$regex/ } map { $_->{path} } $self->get_folders;
 }
 
@@ -327,20 +341,33 @@ sub write_file {
     my ( $self, @comments ) = @_;
     my $filename = $self->filename;
     croak("No filename associated with LML::Lab object\n") unless ($filename);
-    open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing: $!\n";
-    flock( LAB_CONF, 2 ) || croak "Could not lock '$filename': $!\n";
-    print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
-    my $LAB = {};
-    # copy just relevant parts (by reference)
-    $LAB->{HOSTS}      = $self->{HOSTS};
-    $LAB->{ESXHOSTS}   = $self->{ESXHOSTS};
-    $LAB->{NETWORKS}   = $self->{NETWORKS};
-    $LAB->{DATASTORES} = $self->{DATASTORES};
-    $LAB->{FOLDERS}    = $self->{FOLDERS};
-    print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] ) or croak "Could not write to '$filename': $!\n";
-    my $bytes_written = tell LAB_CONF;
-    close(LAB_CONF);
-    return $bytes_written;
+    if (
+        my $lock = new File::NFSLock {
+                                       file               => $filename,
+                                       lock_type          => File::NFSLock::LOCK_EX,
+                                       blocking_timeout   => 30,                       # seconds
+                                       stale_lock_timeout => 2 * 60,                   # seconds
+        } )
+    {
+        open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing: $!\n";
+        print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
+        my $LAB = {};
+        # copy just relevant parts (by reference)
+        $LAB->{HOSTS}      = $self->{HOSTS};
+        $LAB->{ESXHOSTS}   = $self->{ESXHOSTS};
+        $LAB->{NETWORKS}   = $self->{NETWORKS};
+        $LAB->{DATASTORES} = $self->{DATASTORES};
+        $LAB->{FOLDERS}    = $self->{FOLDERS};
+        print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] ) or croak "Could not write to '$filename': $!\n";
+        my $bytes_written = tell LAB_CONF;
+        close(LAB_CONF);
+        $lock->unlock();
+        return $bytes_written;
+    }
+    else {
+        croak "I couldn't lock the file [$File::NFSLock::errstr]";
+    }
+
 }
 
 1;
