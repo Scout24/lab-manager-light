@@ -209,6 +209,16 @@ sub create_vm {
     if ($@) {
         error("Switch on failed");
     }
+    # first update the info about ESX hosts
+    $lab->update_hosts(get_hosts);
+    $lab->update_networks(get_networks);
+    $lab->update_datastores(get_datastores);
+    $lab->update_folders(get_folders);
+    $lab->update_vm(new LML::VM($vm_view->config->uuid));
+    # should also have set dns_domain etc., but works also without. The following call to pxelinux.pl will fix it in any case.
+    if ( not $lab->write_file( "for newly created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
+        die "Strangely writing LAB produced a 0-byte file.\n";
+    }
     # if everything went find give an success status
     success( $vm_view->config->uuid );
 }
