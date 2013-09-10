@@ -17,7 +17,7 @@ Requires: /usr/bin/perl
 Requires: perl(CGI)
 Requires: perl(File::Slurp)
 Requires: perl(Config::IniFiles) >= 2.72
-Requires: perl(DateTime::Format::Flexible) perl(Datetime)
+Requires: perl(DateTime::Format::Flexible) perl(DateTime)
 Requires: perl(VMware::VIRuntime)
 Requires: perl(JSON) perl(Clone)
 Requires: perl(GD) perl(GD::Barcode)
