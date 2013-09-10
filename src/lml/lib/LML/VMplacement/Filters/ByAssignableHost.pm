@@ -28,7 +28,7 @@ sub host_can_vm {
         if ($vm_res->{name} =~ qr(^$vm_pattern$)){
              my $host_pattern=$self->{vm_host_assignments}->{$vm_host_assignment}->{host_pattern};
          
-             if ($host->{name} =~ qr(^$host_pattern$)){
+             if (defined $host->{name} and $host->{name} =~ qr(^$host_pattern$)){
                  return 1;
              } else {
                  return 0;

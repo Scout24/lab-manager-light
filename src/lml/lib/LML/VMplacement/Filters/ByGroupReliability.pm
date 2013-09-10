@@ -76,6 +76,9 @@ sub _get_vm_group_counts {
         foreach my $host ( $self->{lab}->get_hosts() ) {
 
             my $host_id                = $host->{id};
+            my $host_name              = $host->{name};
+            next unless (defined $host_id and defined $host_name); # skip hosts without id and name
+            
             my $counter_same_vm_groups = 0;
 
             # TODO: is there a more perl style to express these nested foreach loops?
@@ -102,7 +105,7 @@ sub _get_vm_group_counts {
             }
             $number_of_vms_with_same_group_per_host{$host_id} = $counter_same_vm_groups;
             if ( $self->{verbose} ) {
-                print STDERR "Host " . $host->{name} . " has $counter_same_vm_groups VMs matching $expected_group\n";
+                print STDERR "Host $host_name has $counter_same_vm_groups VMs matching $expected_group\n";
             }
         }
         my $minimum = 100000000000;
