@@ -6,6 +6,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
 
 	$scope.hosts = [];
 	$scope.paths = [];
+	$scope.expiration = "";
 	$scope.host = "auto_placement";
 	$scope.globals.activeTab = 'new_vm';
 
@@ -15,6 +16,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
 		$log.info("Received hosts data for create new vm: ",data);
 		$scope.hosts = data.create_new_vm.hosts;
 		$scope.paths = data.create_new_vm.paths;
+		$scope.expiration = data.create_new_vm.expiration;
 		$scope.setServerRequestRunning(false);
 	}, function errorCallback(){
 	   $scope.setServerRequestRunning(false);

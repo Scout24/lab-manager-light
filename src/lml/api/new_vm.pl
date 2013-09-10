@@ -14,6 +14,7 @@ use LML::Config;
 use LML::Lab;
 use JSON;
 
+use DateTime;
 use User::pwent;
 
 my $GECOS = {};    # cache for gecos lookups
@@ -60,6 +61,7 @@ sub fill_hosts_json {
                    }
         ],
         paths => [],
+        expiration => DateTime->now()->add(years => 1)->date(),
         ,
     };
 
