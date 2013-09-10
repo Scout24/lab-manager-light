@@ -133,6 +133,7 @@ sub _assert {
 # logs TeamCity build status message with FAILURE status
 sub _fail_team_city_build {
     my ( $self, $reason ) = @_;
+    $reason =~ s(['\]])(|$&)g; # escape reson for TeamCity
     print "##teamcity[buildStatus status='FAILURE' text='$reason']\n";
     die "An error occured - skipping tests.";
 }

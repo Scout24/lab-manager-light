@@ -77,7 +77,7 @@ sub delete_vm {
 
 sub _report_progress {
     my ( $self, $message ) = @_;
-
+    $message =~ s(['\]])(|$&)g; # escape reson for TeamCity
     print "##teamcity[progressMessage '$message']" . $/;
 }
 
