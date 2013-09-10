@@ -186,7 +186,7 @@ sub get_datastore_names {
 # NOTE: network Names are NOT unique in vSphere! If we find that we abort!
 sub get_network {
     my ( $self, $search_network ) = @_;
-    croak( "Must give network moref or name as first parameter in " . ( caller(0) )[3] . "\n" ) unless ($search_network);
+    croak( "Must give network moref or name as first parameter in " . ( caller(0) )[3] . " and not '$search_network'\n" ) unless ($search_network);
     # first try to lookup by moref
     return $self->{NETWORKS}->{$search_network} if ( exists( $self->{NETWORKS}->{$search_network} ) );
     # then search for a datastore with this name, this could yield to more than one result!
@@ -212,7 +212,7 @@ sub get_networks {
     return values %{ $self->{NETWORKS} };
 }
 
-# translate datastore id to name
+# translate network ids to name
 # handle single or multiple args
 sub get_network_names {
     my ( $self, @ids ) = @_;

@@ -37,8 +37,8 @@ sub new {
             new LML::VMplacement::Filters::ByActive,                     #
             new LML::VMplacement::Filters::ByOverallStatus,              #
             new LML::VMplacement::Filters::ByMemory,                     #
-            new LML::VMplacement::Filters::ByNetworkLabel($lab),         #
-            new LML::VMplacement::Filters::ByGroupReliability( $lab, $config )    #
+            new LML::VMplacement::Filters::ByNetworkLabel( $lab, $config ),    #
+            new LML::VMplacement::Filters::ByGroupReliability( $lab, $config ) #
         ];
     }
 
@@ -86,7 +86,7 @@ sub _filter {
     }
     my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos, $_ ) } @hosts;
 
-    if ($isDebug or $self->{config}->get("lml","verbose_auto_placement")) {
+    if ( $isDebug or $self->{config}->get( "lml", "verbose_auto_placement" ) ) {
         $self->_pretty_print_filtering( $debug_infos, $vm_res->{name} );
     }
 
@@ -124,15 +124,14 @@ sub _map_vm_res_on_host {
 sub _rank {
     my ( $self, @hosts ) = @_;
 
-
     my @ranked_hosts = sort { $self->_collect_ranks($b) <=> $self->_collect_ranks($a) } @hosts;
 
-    if ($isDebug or $self->{config}->get("lml","verbose_auto_placement")) {
+    if ( $isDebug or $self->{config}->get( "lml", "verbose_auto_placement" ) ) {
         $self->_pretty_print_ranking(@ranked_hosts);
     }
-    
+
     return @ranked_hosts;
-    
+
 }
 
 sub _collect_ranks {
@@ -170,7 +169,8 @@ sub _pretty_print_filtering {
         }
         $t->add(@row) if $has_something_to_debug;
     }
-    print STDERR "DEBUG: Apply auto placement for vm $vm_name:\nRemoval of unsuitable hosts (filters applied in column order):\n" . $t->render ;
+    print STDERR "DEBUG: Apply auto placement for vm $vm_name:\nRemoval of unsuitable hosts (filters applied in column order):\n"
+      . $t->render;
 }
 
 sub _pretty_print_ranking {
@@ -197,7 +197,7 @@ sub _pretty_print_ranking {
         $t->add(@row);
     }
 
-    print STDERR "DEBUG: Ranking of suitable hosts (prefer higher rank):\n" . $t->render ;
+    print STDERR "DEBUG: Ranking of suitable hosts (prefer higher rank):\n" . $t->render;
 }
 
 1;
