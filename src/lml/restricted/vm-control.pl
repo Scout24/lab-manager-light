@@ -57,15 +57,16 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
                 $LAB->remove( $VM->uuid );       # remove VM from lab data
                 $removed++;
             }
+
             my $triggercommand = $C->get( "triggers", "vm".$action );
             if ($triggercommand) {
                 my $tr = new LML::TokenReplacer($C->get_proxy_parameter,$VM);
                 $triggercommand = $tr->replace($triggercommand);
                 my $result = qx($triggercommand 2>&1);
-                Debug("delete triggercommand '$triggercommand' said:\n$result") if ($isDebug);
+                Debug("vm$action triggercommand '$triggercommand' said:\n$result") if ($isDebug);
                 if ( $? > 0 ) {
-                    warn "delete trigger command '$triggercommand' failed:\n$result";
-                    push( @errors, "Could not run delete triggercommand, please call for help" );
+                    warn "vm$action trigger command '$triggercommand' failed:\n$result";
+                    push( @errors, "Could not run vm$action triggercommand, please call for help" );
                 }
 
             }
