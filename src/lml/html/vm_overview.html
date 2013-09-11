@@ -20,9 +20,9 @@
        </tr>
      </thead>
      <tbody>
-      <tr id="{{vm.id}}" data-ng-repeat="vm in vms">
+      <tr id="{{vm.uuid}}" data-ng-repeat="vm in vms">
         <td>
-          <input type="checkbox" name="hosts" label="" value="{{vm.id}}">
+          <input type="checkbox" name="hosts" label="" value="{{vm.uuid}}">
 
           <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">{{vm.fullname}}</a>
 

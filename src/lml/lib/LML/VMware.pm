@@ -171,7 +171,10 @@ sub retrieve_vm_details ($) {
     }
 
     # store ESX host
-    $VM_DATA{HOST} = $HOSTS{ $vm->get_property("runtime.host")->value }->{name};
+    my $host_id = $vm->get_property("runtime.host")->value;
+    $VM_DATA{HOST} = defined $HOSTS{ $host_id  } ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
+    
+    
 
     return \%VM_DATA;
 }
@@ -489,7 +492,7 @@ sub _get_folder ($) {
 ##
 ## get_hosts
 ##
-## returns a hash of name->data blocks for ESX host info
+## returns a hash of id->data blocks for ESX host info
 ##
 sub get_hosts {
 
@@ -510,8 +513,6 @@ sub get_hosts {
                                                                   "parent",
                                                   ] );
         foreach my $e ( @{$entityViews} ) {
-            #Debug( Data::Dumper->Dump( [$e], ["host"] ) );
-            Debug( "Reading ESX Host " . $e->{name} );
             my $product    = $e->get_property("config.product");
             my $quickStats = $e->get_property("summary.quickStats");
             my $hardware   = $e->get_property("summary.hardware");

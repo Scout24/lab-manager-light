@@ -21,6 +21,7 @@ use LML::VMware;
 use LML::DHCP;
 use LML::Lab;
 use LML::VM;
+use Data::Dumper;
 use Carp;
 
 sub write_vm_file {
