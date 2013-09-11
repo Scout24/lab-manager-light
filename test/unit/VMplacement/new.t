@@ -66,6 +66,7 @@ throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [$testfilter] )
     new_ok( "LML::VMplacement" => [ $C, new LML::Lab( {} ), undef, [$testranker] ] );
 
     my $vm_placement = new_ok( "LML::VMplacement" => [ $C, new LML::Lab( { foo => "bar" } ), [$testfilter], [$testranker] ] );
+    delete $vm_placement->{lab}->{runtime}; # remove runtime data from lab, we cannot predict how it looks
     is_deeply(
         $vm_placement,
         {
