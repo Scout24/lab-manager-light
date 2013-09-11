@@ -81,7 +81,7 @@ sub DESTROY {
     my $self = shift;
     return unless ( defined $self->{runtime} );              # in some test cases we use fake lab objects
     openlog( "lab-manager-light", 'nofatal', 'user' );
-    syslog( 'debug', "LML::Lab |%s|%.0f| milliseconds",
+    syslog( 'info', "LML::Lab |%s|%.0f| milliseconds",
             $self->{runtime}->{created_by}, ( time() - $self->{runtime}->{created_time} ) * 1000 );
     closelog();
 }
@@ -345,6 +345,7 @@ sub update_vm {
         CUSTOMFIELDS    => $VM->customfields,
         PATH            => $VM->path,
         HOST            => $VM->host,
+        CLIENT_IP       => defined $ENV{REMOTE_ADDR} ? $ENV{REMOTE_ADDR} : undef,
     };
     return $update_dhcp;
 }
