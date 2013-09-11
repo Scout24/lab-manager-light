@@ -13,7 +13,7 @@ all: test deb rpm
 
 test: clean
 	mkdir -p test/temp
-	prove -r test/unit
+	prove -vr test/unit
 
 deb: clean test
 	mkdir -p dist build/deb/etc/apache2/conf.d build/deb/etc/cron.d build/deb/usr/lib build/deb/etc/lml build/deb/DEBIAN
