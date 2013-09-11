@@ -28,9 +28,9 @@ use Data::Dumper;
 use LML::Config;
 my $C = new LML::Config();
 
-my $lab = new LML::Lab($C->labfile);
-my $vm_properties = new LML::VMcreate::VMproperties($C, $lab);
-my @vms = $vm_properties->generate_vms_array();
+my $lab           = new LML::Lab( $C->labfile );
+my $vm_properties = new LML::VMcreate::VMproperties( $C, $lab );
+my @vms           = $vm_properties->generate_vms_array();
 
 create_vms(@vms);
 
@@ -43,11 +43,12 @@ sub error {
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
         print header( -status => '500 Error while processing' );
         print $message;
-    } else {
-        print $message . "\n";
-        LML::VMcreate::VMproperties->print_usage(); 
     }
-
+    else {
+        print $message . "\n";
+        LML::VMcreate::VMproperties->print_usage();
+    }
+    print STDERR $message."\n";
     Util::disconnect();
     exit 1;
 }
@@ -91,18 +92,17 @@ sub create_vm {
                                            filter    => { 'name' => $$args{vmhost} } );
 
     if ( !$host_view ) {
-        error( "Host '$$args{vmhost}' not found" );
+        error("Host '$$args{vmhost}' not found");
     }
 
     my %ds_info = HostUtils::get_datastore(
                                             host_view => $host_view,
                                             datastore => $$args{datastore},
-                                            disksize  => $$args{disksize}
-    );
+                                            disksize  => $$args{disksize} );
 
     if ( $ds_info{mor} eq 0 ) {
         if ( $ds_info{name} eq 'datastore_error' ) {
-            error( "Datastore $$args{datastore} not available." );
+            error("Datastore $$args{datastore} not available.");
         }
         if ( $ds_info{name} eq 'disksize_error' ) {
             error("The free space available is less than the specified disksize.");
@@ -121,7 +121,8 @@ sub create_vm {
     if (@vm_nics) {
         push @vm_devices, @vm_nics;
 
-    } else {
+    }
+    else {
         error("No networks for host '$$args{vmname}' found");
     }
 
@@ -148,11 +149,11 @@ sub create_vm {
                                                    filter    => { name => $$args{datacenter} } );
 
     unless (@$datacenter_views) {
-        error( "Datacenter '$$args{datacenter}' not found" );
+        error("Datacenter '$$args{datacenter}' not found");
     }
 
     if ( $#{$datacenter_views} != 0 ) {
-        error( "Datacenter '$$args{datacenter}' not unique" );
+        error("Datacenter '$$args{datacenter}' not unique");
     }
 
     my $datacenter           = shift @$datacenter_views;
@@ -173,28 +174,40 @@ sub create_vm {
                 target_view => \$target_folder_view
     );
 
-    eval { $target_folder_view->CreateVM( config => $vm_config_spec, pool => $comp_res_view->resourcePool ); };
+    if ( defined $target_folder_view ) {
+        eval { $target_folder_view->CreateVM( config => $vm_config_spec, pool => $comp_res_view->resourcePool ); };
 
-    if ($@) {
-        if ( ref($@) eq 'SoapFault' ) {
-            if ( ref( $@->detail ) eq 'PlatformConfigFault' ) {
-                error( "Invalid VM configuration: " . ${ $@->detail }{'text'} );
-            } elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
-                error( "Invalid Device configuration: " . ${ $@->detail }{'property'} );
-            } elsif ( ref( $@->detail ) eq 'DatacenterMismatch' ) {
-                error("DatacenterMismatch, the input arguments had entities that did not belong to the same datacenter");
-            } elsif ( ref( $@->detail ) eq 'HostNotConnected' ) {
-                error("Unable to communicate with the remote host, since it is disconnected");
-            } elsif ( ref( $@->detail ) eq 'InvalidState' ) {
-                error("The operation is not allowed in the current state");
-            } elsif ( ref( $@->detail ) eq 'DuplicateName' ) {
-                error("Virtual machine already exists");
-            } else {
-                error( $@ );
+        if ($@) {
+            if ( ref($@) eq 'SoapFault' ) {
+                if ( ref( $@->detail ) eq 'PlatformConfigFault' ) {
+                    error( "Invalid VM configuration: " . ${ $@->detail }{'text'} );
+                }
+                elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
+                    error( "Invalid Device configuration: " . ${ $@->detail }{'property'} );
+                }
+                elsif ( ref( $@->detail ) eq 'DatacenterMismatch' ) {
+                    error("DatacenterMismatch, the input arguments had entities that did not belong to the same datacenter");
+                }
+                elsif ( ref( $@->detail ) eq 'HostNotConnected' ) {
+                    error("Unable to communicate with the remote host, since it is disconnected");
+                }
+                elsif ( ref( $@->detail ) eq 'InvalidState' ) {
+                    error("The operation is not allowed in the current state");
+                }
+                elsif ( ref( $@->detail ) eq 'DuplicateName' ) {
+                    error("Virtual machine already exists");
+                }
+                else {
+                    error($@);
+                }
             }
-        } else {
-            error( $@ );
+            else {
+                error($@);
+            }
         }
+    }
+    else {
+        error("Invalid Folder $$args{target_folder} specified");
     }
 
     # set the custom fields with defined values
@@ -214,7 +227,7 @@ sub create_vm {
     $lab->update_networks(get_networks);
     $lab->update_datastores(get_datastores);
     $lab->update_folders(get_folders);
-    $lab->update_vm(new LML::VM($vm_view->config->uuid));
+    $lab->update_vm( new LML::VM( $vm_view->config->uuid ) );
     # should also have set dns_domain etc., but works also without. The following call to pxelinux.pl will fix it in any case.
     if ( not $lab->write_file( "for newly created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
         die "Strangely writing LAB produced a 0-byte file.\n";
@@ -298,8 +311,7 @@ sub set_custom_fields {
                     $customFieldsManager->SetField(
                                                     entity => $vm,
                                                     key    => $field->key,
-                                                    value  => ${ $args{custom_fields} }{ $field->name }
-                    );
+                                                    value  => ${ $args{custom_fields} }{ $field->name } );
                 }
             }
         }
@@ -313,8 +325,7 @@ sub create_conf_spec {
                                                      key       => 0,
                                                      device    => [0],
                                                      busNumber => 0,
-                                                     sharedBus => VirtualSCSISharing->new('noSharing')
-    );
+                                                     sharedBus => VirtualSCSISharing->new('noSharing') );
 
     my $controller_vm_dev_conf_spec = VirtualDeviceConfigSpec->new( device    => $controller,
                                                                     operation => VirtualDeviceConfigSpecOperation->new('add') );
@@ -343,8 +354,7 @@ sub create_virtual_disk {
     my $disk_vm_dev_conf_spec = VirtualDeviceConfigSpec->new(
                                                               device        => $disk,
                                                               fileOperation => VirtualDeviceConfigSpecFileOperation->new('create'),
-                                                              operation     => VirtualDeviceConfigSpecOperation->new('add')
-    );
+                                                              operation     => VirtualDeviceConfigSpecOperation->new('add') );
     return $disk_vm_dev_conf_spec;
 }
 

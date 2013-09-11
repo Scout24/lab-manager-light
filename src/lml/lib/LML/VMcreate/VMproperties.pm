@@ -130,9 +130,10 @@ sub generate_vms_array {
     get sprintf $self->{config}->get( "vm_spec", "host_announcement" ), $self->{vm_name};
 
     # get now the json spec for this vm
-    my $answer = LWP::Simple::get sprintf $self->{config}->get( "vm_spec", "host_spec" ), $self->{vm_name};
+    my $json_url = sprintf $self->{config}->get( "vm_spec", "host_spec" ), $self->{vm_name};
+    my $answer = LWP::Simple::get($json_url) ;
     # check if we got something from web call
-    $self->_error( "Unable to get JSON description file for VM " . $self->{vm_name} . " from " . $self->{config}->get( "vm_spec", "host_spec" ) ) unless defined $answer;
+    $self->_error( "Unable to get JSON description file for VM " . $self->{vm_name} . " from $json_url") unless defined $answer;
 
     # convert the HTML answer to pure json
     $answer =~ s/<[^>]*>//gx;
@@ -315,7 +316,7 @@ sub _error {
 
     #Util::disconnect();
 
-    die $message . "\n" . _getUsageMessage();
+    die $message . "\n";
 }
 
 1;
