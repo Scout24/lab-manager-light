@@ -76,7 +76,9 @@ sub display_vm_data {
             $im->string( $font, 480, $y, $_, $color );
             $y += $_ eq "" ? 5 : $font->height; # 5px vertical spacing for blank lines
         }
-        my $logo = new GD::Image( $INC[0] . "/images/LabManagerLightlogo-small.png" );    # logo is 200x75
+        my $logofile = $INC[0] . "/../images/LabManagerLightlogo-small.png";
+        my $logo = new GD::Image( $logofile );    # logo is 200x75
+        die "Could not load logo from $logofile" unless (defined $logo);
         $im->copy( $logo, 481, 0, 0, 0, 160, 60 );
 
         return $im->png;

@@ -44,12 +44,15 @@ sub generate_image {
             }
         } else {
             # no error, add LML logo and custom pic
-            my $logo = new GD::Image( $INC[0] . "/images/LabManagerLightlogo-small.png" );    # logo is 200x75
+            my $logofile=$INC[0] . "/../images/LabManagerLightlogo-small.png";
+            my $logo = new GD::Image( $logofile );    # logo is 200x75
+            die "Could not load logo from $logofile" unless (defined $logo);
             $im->copy( $logo, 481, 200 , 0 , 0, 160, 60 );
             my $custompic=$C->get("backgroundimage","customimage");
-            $custompic = $INC[0]."/images/".$custompic unless (substr($custompic,0,1) eq "/"); # images that are not fully qualified are assumed to be in lib/images
+            $custompic = $INC[0]."/../images/".$custompic unless (substr($custompic,0,1) eq "/"); # images that are not fully qualified are assumed to be in lib/images
             if (-r $custompic) {
                 my $custompic_image = new GD::Image( $custompic );    # custompic is 400x150
+                die "Could not load custom pic from $custompic" unless (defined $custompic_image);
                 $im->copy( $custompic_image,239, 279 , 0 , 0, 400, 150 );
             }            
         }
