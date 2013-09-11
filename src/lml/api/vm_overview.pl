@@ -22,8 +22,7 @@ my $C = new LML::Config();
 
 my $LAB = new LML::Lab( $C->labfile );
 
-my %result = ( 
-);
+my %result = ();
 
 # get full name of userid
 sub get_gecos {
@@ -43,11 +42,12 @@ sub get_gecos {
 }
 
 sub fill_vm_overview_json {
-    my $vm_overview   = [];
-    my $display_filter_vm_path = $C->get( "gui",          "display_filter_vm_path" );
-    my $contactuser_field      = $C->get( "vsphere",      "contactuserid_field" );
-    my $expires_field          = $C->get( "vsphere",      "expires_field" );
+    my $vm_overview            = [];
+    my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
+    my $contactuser_field      = $C->get( "vsphere", "contactuserid_field" );
+    my $expires_field          = $C->get( "vsphere", "expires_field" );
     my $screenshot_enabled     = $C->get( "vmscreenshot", "enabled" );
+    my $force_boot_field       = $C->get( "vsphere", "forceboot_field" );
 
     while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
         next unless ( exists $VM->{UUID} );
@@ -56,7 +56,10 @@ sub fill_vm_overview_json {
         my $display_vm_path = "<em>(no data available)</em>";
         my $esxhost         = "unknown";
         if ( $expires_field and exists $VM->{CUSTOMFIELDS}->{$expires_field} ) {
-            eval { $expires = DateTime::Format::Flexible->parse_datetime( $VM->{CUSTOMFIELDS}->{$expires_field}, european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd(); };
+            eval {
+                $expires = DateTime::Format::Flexible->parse_datetime( $VM->{CUSTOMFIELDS}->{$expires_field},
+                                                                  european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
+            };
         }
         if ( exists $VM->{PATH} ) {
             $display_vm_path = $VM->{PATH};
@@ -78,24 +81,28 @@ sub fill_vm_overview_json {
 
         my %vm_info = ();
 
-        $vm_info{id}               = $VM->{HOSTNAME};
-        $vm_info{uuid}             = $uuid;
-        $vm_info{fullname}         = $VM->{HOSTNAME} . ( defined( $VM->{DNS_DOMAIN} ) ? "." . $VM->{DNS_DOMAIN} : "" );
-        $vm_info{screenshot_enabled}   = $screenshot_url ? "true": "false";
-        $vm_info{screenshot_url}   = $screenshot_url if $screenshot_enabled ;
-        $vm_info{vm_path}          = $display_vm_path;
-        $vm_info{contact_fullname} = get_gecos($contact_user_id);
-        $vm_info{contact_id}       = $contact_user_id;
-        $vm_info{expires}          = $expires;
-        $vm_info{esxhost}          = $esxhost;
-
+        $vm_info{id}                 = $VM->{HOSTNAME};
+        $vm_info{uuid}               = $uuid;
+        $vm_info{fullname}           = $VM->{HOSTNAME} . ( defined( $VM->{DNS_DOMAIN} ) ? "." . $VM->{DNS_DOMAIN} : "" );
+        $vm_info{screenshot_enabled} = $screenshot_url ? "true" : "false";
+        $vm_info{screenshot_url}     = $screenshot_url if $screenshot_enabled;
+        $vm_info{vm_path}            = $display_vm_path;
+        $vm_info{contact_fullname}   = get_gecos($contact_user_id);
+        $vm_info{contact_id}         = $contact_user_id;
+        $vm_info{expires}            = $expires;
+        $vm_info{esxhost}            = $esxhost;
+        # show extra link if we have a client IP and force boot is currently set on.
+        # TODO reuse force boot detection logic from VMPolicy instead of copying it here.
+        $vm_info{extra_link_url} = defined $VM->{CLIENT_IP} ? "http://$VM->{CLIENT_IP}" : 0;
+        $vm_info{extra_link_enabled} =
+          (     defined $VM->{CLIENT_IP}
+            and defined $VM->{CUSTOMFIELDS}->{$force_boot_field}
+            and $VM->{CUSTOMFIELDS}->{$force_boot_field} !~ /^(off||0|false)$/i ) ? "true" : "false";
         push @{$vm_overview}, \%vm_info;
 
     }
     return $vm_overview;
 }
-
-
 
 $result{vm_overview} = fill_vm_overview_json();
 

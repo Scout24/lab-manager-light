@@ -28,6 +28,15 @@
 
           <a  data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip"><img src ="images/console_icon.png"/></a>
 
+          <a
+                        data-ng-show="vm.extra_link_enabled"
+                        href="{{vm.extra_link_url}}"
+                        title="Additional Info"
+                        rel="{{vm.extra_link_url}}"
+                        target="_blank"
+          >
+            Additional Info
+          </a>
         </td>
         <td>{{vm.vm_path}}</td>
         <td><span title="{{vm.contact_fullname}}">{{vm.contact_id}}</span></td>
