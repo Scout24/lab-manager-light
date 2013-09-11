@@ -37,7 +37,7 @@ sub new {
             if (
                 my $lock = new File::NFSLock {
                                                file               => $arg,
-                                               lock_type          => File::NFSLock::LOCK_EX,
+                                               lock_type          => File::NFSLock::LOCK_SH,   # shared lock good enough for reading
                                                blocking_timeout   => 30,                       # seconds
                                                stale_lock_timeout => 2 * 60,                   # seconds
                 } )
