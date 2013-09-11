@@ -13,6 +13,7 @@ use Carp;
 use Data::Dumper;
 use File::NFSLock;
 use Clone 'clone';
+use Time::HiRes 'time';
 
 # new object, takes LAB hash or filename to read from.
 sub new {
@@ -37,9 +38,9 @@ sub new {
             if (
                 my $lock = new File::NFSLock {
                                                file               => $arg,
-                                               lock_type          => File::NFSLock::LOCK_SH,   # shared lock good enough for reading
-                                               blocking_timeout   => 30,                       # seconds
-                                               stale_lock_timeout => 2 * 60,                   # seconds
+                                               lock_type          => File::NFSLock::LOCK_SH,    # shared lock good enough for reading
+                                               blocking_timeout   => 30,                        # seconds
+                                               stale_lock_timeout => 2 * 60,                    # seconds
                 } )
             {
 
@@ -55,8 +56,8 @@ sub new {
         }
         if ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) ) {
             # make sure that LAB is a non-empty hashref
-            $self             = $LAB;
-            $self->{filename} = $arg;                               # keep filename if we read the data from a file
+            $self = $LAB;
+            $self->{filename} = $arg;    # keep filename if we read the data from a file
         }
         else {
             croak '$LAB is not a hashref or empty, your $arg file must be broken.\n';
@@ -66,9 +67,19 @@ sub new {
     else {
         croak "Parameter to " . ( caller(0) )[3] . " should be hashref with LAB data or filename of LAB file and not " . ref($arg) . "\n";
     }
-    $self->{vms_to_update} = [];                                    # list of uuids for whom the DHCP data changed
+    $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
     bless( $self, $class );
+    $self->{runtime} = {
+                 created_time => time(),                              # store object creation time to track how long Lab object is in scope.
+                 created_by => join( ":", ( caller(0) )[ 1, 2 ] ),    # store from where object was created.
+    };
     return $self;
+}
+
+sub DESTROY {
+    my $self = shift;
+    printf STDERR "LML::Lab created in %s lived for %.3f milliseconds\n", $self->{runtime}->{created_by},
+      ( time() - $self->{runtime}->{created_time} ) * 1000;
 }
 
 sub set_filename {
@@ -95,7 +106,7 @@ sub get_vm {
         # try to find VM by name, name is possibly not unique
         my @vms = grep { defined( $_->{NAME} ) and $_->{NAME} eq $search_vm } values( %{ $self->{HOSTS} } );
         if ( scalar(@vms) > 1 ) {
-            croak("Found more than one VM matching '$search_vm', please make sure that VM names are unique");
+            croak("Found more than one VM matching '$search_vm', please make sure that VM names are unique ");
         }
         elsif ( scalar(@vms) == 1 ) {
             return new LML::VM( $vms[0] );
@@ -153,9 +164,9 @@ sub get_datastore {
     # then search for a datastore with this name, this could yield to more than one result!
     my @results = grep { $_->{name} eq $search_datastore } values( %{ $self->{DATASTORES} } );
     if ( scalar(@results) > 1 ) {
-        croak(   "Datastore names must be unique in "
+        croak(   "Datastore names must be unique in"
                . ( caller(0) )[3]
-               . ", $search_datastore has several results:\n"
+               . ", $search_datastore has several results : \n"
                . Data::Dumper->Dump( \@results )
                . "\n" );
     }
@@ -186,7 +197,8 @@ sub get_datastore_names {
 # NOTE: network Names are NOT unique in vSphere! If we find that we abort!
 sub get_network {
     my ( $self, $search_network ) = @_;
-    croak( "Must give network moref or name as first parameter in " . ( caller(0) )[3] . " and not '$search_network'\n" ) unless ($search_network);
+    croak( "Must give network moref or name as first parameter in " . ( caller(0) )[3] . " and not '$search_network' \n" )
+      unless ($search_network);
     # first try to lookup by moref
     return $self->{NETWORKS}->{$search_network} if ( exists( $self->{NETWORKS}->{$search_network} ) );
     # then search for a datastore with this name, this could yield to more than one result!
@@ -194,7 +206,7 @@ sub get_network {
     if ( scalar(@results) > 1 ) {
         croak(   "Network names must be unique in "
                . ( caller(0) )[3]
-               . ", $search_network has several results:\n"
+               . ", $search_network has several results : \n"
                . Data::Dumper->Dump( \@results )
                . "\n" );
     }
@@ -243,7 +255,7 @@ sub get_folder {
     # try to find by path
     my @folders = grep { $_->{path} eq $search_folder } $self->get_folders;
     if ( scalar(@folders) > 1 ) {
-        croak "Found more than one folder matching search path '$search_folder': " . join( ", ", map { $_->{id} } @folders ) . "\n";
+        croak "Found more than one folder matching search path '$search_folder' : " . join( ", ", map { $_->{id} } @folders ) . "\n";
     }
     elsif ( scalar(@folders) == 1 ) {
         return $folders[0];
@@ -293,7 +305,7 @@ sub update_folders {
 # update data about single host from given VM object
 sub update_vm {
     my ( $self, $VM ) = @_;
-    croak( "Must give LML:VM object as first parameter in " . ( caller(0) )[3] . "\n" )
+    croak( "Must give LML:VM object as first parameter in " . ( caller(0) )[3] . " and not " . Data::Dumper->Dump( [$VM], ["VM"] ) . "\n " )
       unless ( ref($VM) eq "LML::VM" );
     my $uuid        = $VM->uuid;
     my $name        = $VM->name;
@@ -318,7 +330,7 @@ sub update_vm {
     }
     $self->{HOSTS}->{$uuid} = {
                                 UPDATED         => time,
-                                UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime ),
+                                UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S ", localtime ),
                                 UUID            => $uuid,
                                 HOSTNAME        => $name,
                                 NAME            => $name,
@@ -341,7 +353,7 @@ sub vms_to_update {
 sub write_file {
     my ( $self, @comments ) = @_;
     my $filename = $self->filename;
-    croak("No filename associated with LML::Lab object\n") unless ($filename);
+    croak("No filename associated with LML::Lab object \n") unless ($filename);
     if (
         my $lock = new File::NFSLock {
                                        file               => $filename,
@@ -350,7 +362,7 @@ sub write_file {
                                        stale_lock_timeout => 2 * 60,                   # seconds
         } )
     {
-        open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing: $!\n";
+        open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing : $! \n";
         print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
         my $LAB = {};
         # copy just relevant parts (by reference)
