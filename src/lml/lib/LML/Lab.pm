@@ -13,7 +13,8 @@ use Carp;
 use Data::Dumper;
 use File::NFSLock;
 use Clone 'clone';
-use Time::HiRes 'time';
+use Time::HiRes qw(time gettimeofday);
+use Sys::Syslog;
 
 # new object, takes LAB hash or filename to read from.
 sub new {
@@ -68,18 +69,21 @@ sub new {
         croak "Parameter to " . ( caller(0) )[3] . " should be hashref with LAB data or filename of LAB file and not " . ref($arg) . "\n";
     }
     $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
-    bless( $self, $class );
-    $self->{runtime} = {
+    $self->{runtime}       = {
                  created_time => time(),                              # store object creation time to track how long Lab object is in scope.
                  created_by => join( ":", ( caller(0) )[ 1, 2 ] ),    # store from where object was created.
     };
+    bless( $self, $class );
     return $self;
 }
 
 sub DESTROY {
     my $self = shift;
-    printf STDERR "LML::Lab created in %s lived for %.3f milliseconds\n", $self->{runtime}->{created_by},
-      ( time() - $self->{runtime}->{created_time} ) * 1000;
+    return unless ( defined $self->{runtime} );              # in some test cases we use fake lab objects
+    openlog( "lab-manager-light", 'nofatal', 'user' );
+    syslog( 'debug', "LML::Lab |%s|%.0f| milliseconds",
+            $self->{runtime}->{created_by}, ( time() - $self->{runtime}->{created_time} ) * 1000 );
+    closelog();
 }
 
 sub set_filename {
@@ -329,18 +333,18 @@ sub update_vm {
         push( @{ $self->{vms_to_update} }, $uuid );
     }
     $self->{HOSTS}->{$uuid} = {
-                                UPDATED         => time,
-                                UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S ", localtime ),
-                                UUID            => $uuid,
-                                HOSTNAME        => $name,
-                                NAME            => $name,
-                                DNS_DOMAIN      => $VM->dns_domain,
-                                MACS            => \@vm_lab_macs,
-                                VM_ID           => $vm_id,
-                                MAC             => $VM->mac,
-                                CUSTOMFIELDS    => $VM->customfields,
-                                PATH            => $VM->path,
-                                HOST            => $VM->host,
+        UPDATED         => ( gettimeofday() )[0],                                        # time is from Time::HiRes and gives (seconds,milliseconds)
+        UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S ", localtime ),
+        UUID            => $uuid,
+        HOSTNAME        => $name,
+        NAME            => $name,
+        DNS_DOMAIN      => $VM->dns_domain,
+        MACS            => \@vm_lab_macs,
+        VM_ID           => $vm_id,
+        MAC             => $VM->mac,
+        CUSTOMFIELDS    => $VM->customfields,
+        PATH            => $VM->path,
+        HOST            => $VM->host,
     };
     return $update_dhcp;
 }

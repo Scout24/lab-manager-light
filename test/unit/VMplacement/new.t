@@ -44,19 +44,19 @@ throws_ok { new LML::VMplacement() } qr(must be an instance of LML::Config), "di
 throws_ok { new LML::VMplacement($C) } qr(must be an instance of LML::Lab), "dies on value for lab is not defined";
 throws_ok { new LML::VMplacement( $C, bless { foo => 1 }, "FOO" ) } qr(must be an instance of LML::Lab),
   "dies on value for lab is not defined";
-
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), { foo => 1 } ) } qr(3rd argument must be an Array),
+  
+throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab") , { foo => 1 } ) } qr(3rd argument must be an Array),
   "dies on value for filters is not defined";
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, { foo => 1 } ) } qr(4th argument must be an Array),
+throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab"), undef, { foo => 1 } ) } qr(4th argument must be an Array),
   "dies on value for rankers is not defined";
 
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), [ $failing_testfilter, ] ) } qr(filter failing_testfilter has no host_can_vm or get_name method),
+throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab"), [ $failing_testfilter, ] ) } qr(filter failing_testfilter has no host_can_vm or get_name method),
   "dies on invalid filter";
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), [ $testfilter, "foo" ] ) } qr(filter foo has no host_can_vm or get_name method ),
+throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab"), [ $testfilter, "foo" ] ) } qr(filter foo has no host_can_vm or get_name method ),
   "dies on invalid filter";
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [ $testranker, "foo" ] ) } qr(ranker foo has no get_rank_value or get_name method),
+throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab"), undef, [ $testranker, "foo" ] ) } qr(ranker foo has no get_rank_value or get_name method),
   "dies on invalid ranker";
-throws_ok { new LML::VMplacement( $C, new LML::Lab( {} ), undef, [$testfilter] ) } qr(ranker testfilter has no get_rank_value or get_name method),
+throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab"), undef, [$testfilter] ) } qr(ranker testfilter has no get_rank_value or get_name method),
   "dies on invalid ranker";
 {
 
