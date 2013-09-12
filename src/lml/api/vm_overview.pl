@@ -29,7 +29,7 @@ sub fill_vm_overview_json {
     my $expires_field          = $C->get( "vsphere", "expires_field" );
     my $screenshot_enabled     = $C->get( "vmscreenshot", "enabled" );
     my $force_boot_field       = $C->get( "vsphere", "forceboot_field" );
-    my $extra_link_text = $C->get( "gui", "extra_link_text" );
+    my $extra_link_text        = $C->get( "gui", "extra_link_text" );
 
     while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
         next unless ( exists $VM->{UUID} );
@@ -63,6 +63,10 @@ sub fill_vm_overview_json {
 
         my %vm_info = ();
 
+        my $show_extra_link =
+          (     defined $VM->{CLIENT_IP}
+            and defined $VM->{CUSTOMFIELDS}->{$force_boot_field}
+            and $VM->{CUSTOMFIELDS}->{$force_boot_field} !~ /^(off||0|false)$/i );
         $vm_info{id}                 = $VM->{HOSTNAME};
         $vm_info{uuid}               = $uuid;
         $vm_info{fullname}           = $VM->{HOSTNAME} . ( defined( $VM->{DNS_DOMAIN} ) ? "." . $VM->{DNS_DOMAIN} : "" );
@@ -75,12 +79,10 @@ sub fill_vm_overview_json {
         # show extra link if we have a client IP and force boot is currently set on.
         # TODO reuse force boot detection logic from VMPolicy instead of copying it here.
         # TODO understand if link text should be customized for each VM
-        $vm_info{extra_link_text} = $extra_link_text;
-        $vm_info{extra_link_url} = defined $VM->{CLIENT_IP} ? "http://$VM->{CLIENT_IP}" : 0;
-        $vm_info{extra_link_enabled} =
-          (     defined $VM->{CLIENT_IP}
-            and defined $VM->{CUSTOMFIELDS}->{$force_boot_field}
-            and $VM->{CUSTOMFIELDS}->{$force_boot_field} !~ /^(off||0|false)$/i ) ? "true" : "false";
+        $vm_info{extra_link_text} = $show_extra_link ? $extra_link_text : "";
+
+        $vm_info{extra_link_url} = $show_extra_link ? "http://$VM->{CLIENT_IP}" : 0;
+        $vm_info{extra_link_enabled} = $show_extra_link ? "true" : "false";
         push @{$vm_overview}, \%vm_info;
 
     }
