@@ -21,7 +21,10 @@ sub new {
     my ( $class, $arg, $readwrite ) = @_;
     my $self;
     my $filename;
-    if ( ref($arg) eq "HASH" and ! defined($readwrite)) {
+    my $lock;
+    my $lockwait     = 0.0;
+    my $created_time = time();
+    if ( ref($arg) eq "HASH" and !defined($readwrite) ) {
         # arg is hashref and we don't need to write the lab file
         $self = clone($arg);
     }
@@ -36,23 +39,43 @@ sub new {
         };
         if ( -r $arg ) {
             local $/ = undef;
-            if (
-                my $lock = new File::NFSLock {
-                                               file               => $arg,
-                                               lock_type          => File::NFSLock::LOCK_SH,    # shared lock good enough for reading
-                                               blocking_timeout   => 30,                        # seconds
-                                               stale_lock_timeout => 2 * 60,                    # seconds
-                } )
-            {
 
-                open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
-                binmode LAB_CONF;
-                eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
-                close(LAB_CONF);
-                $lock->unlock();
+            # shared lock good enough for read-only, read-write Lab needs exclusive lock.
+            # according to http://docstore.mik.ua/orelly/perl/cookbook/ch07_12.htm this
+            # is the meaning of LOCK_EX and LOCK_SH.
+            my $locktype = defined $readwrite ? File::NFSLock::LOCK_EX : File::NFSLock::LOCK_SH;
+
+            # first try non-blocking lock, then blocking and report the wait time.
+            unless (
+                $lock = new File::NFSLock( {
+                      file               => $arg,
+                      lock_type          => File::NFSLock::LOCK_NB | $locktype,
+                      stale_lock_timeout => 2 * 60,                               # seconds
+                    } ) )
+            {
+                # need to wait for lock
+                if (
+                    $lock = new File::NFSLock( {
+                          file               => $arg,
+                          lock_type          => $locktype,
+                          blocking_timeout   => 30,                               # seconds
+                          stale_lock_timeout => 2 * 60,                           # seconds
+                        } ) )
+                {
+                    $lockwait = time() - $created_time;
+                }
+                else {
+                    croak "I couldn't lock the file [$File::NFSLock::errstr]";
+                }
             }
-            else {
-                croak "I couldn't lock the file [$File::NFSLock::errstr]";
+            open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
+            binmode LAB_CONF;
+            eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
+            close(LAB_CONF);
+            if ( !defined $readwrite ) {
+                # read-write stays locked.
+                $lock->unlock();
+                undef $lock;    # make sure that lock is gone
             }
         }
         if ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) ) {
@@ -61,7 +84,7 @@ sub new {
             $self->{filename} = $arg;    # keep filename if we read the data from a file
         }
         else {
-            croak '$LAB is not a hashref or empty, your $arg file must be broken.\n';
+            croak '$LAB is not a hashref (with read-only Lab) or empty, your $arg file must be broken.\n';
         }
 
     }
@@ -70,8 +93,10 @@ sub new {
     }
     $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
     $self->{runtime} = {
+               lock         => $lock,                                 # keep lock for unlocking in write_file
                readwrite    => $readwrite,
-               created_time => time(),                                # store object creation time to track how long Lab object is in scope.
+               lockwait     => $lockwait,
+               created_time => $created_time,                         # store object creation time to track how long Lab object is in scope.
                created_by   => join( ":", ( caller(0) )[ 1, 2 ] ),    # store from where object was created.
     };
     bless( $self, $class );
@@ -85,9 +110,10 @@ sub DESTROY {
     return unless ( defined $self->{runtime} and defined $self->{runtime}->{readwrite} );
     openlog( "lab-manager-light", 'nofatal', 'user' );
     syslog( 'info',
-            "LML::Lab |%s|%.0f| milliseconds",
+            "LML::Lab |%s|%.0f|%.0f milliseconds",
             $self->{runtime}->{created_by},
-            ( time() - $self->{runtime}->{created_time} ) * 1000 );
+            ( time() - $self->{runtime}->{created_time} ) * 1000,
+            $self->{runtime}->{lockwait} * 1000 );
     closelog();
 }
 
@@ -362,36 +388,25 @@ sub vms_to_update {
 
 sub write_file {
     my ( $self, @comments ) = @_;
-    confess("LML::Lab instance created in $self->{runtime}->{created_by} is not writable") unless (defined $self->{runtime}->{readwrite});
+    confess("LML::Lab instance created in $self->{runtime}->{created_by} is not writable") unless ( defined $self->{runtime}->{readwrite} );
     my $filename = $self->filename;
     croak("No filename associated with LML::Lab object \n") unless ($filename);
-    if (
-        my $lock = new File::NFSLock {
-                                       file               => $filename,
-                                       lock_type          => File::NFSLock::LOCK_EX,
-                                       blocking_timeout   => 30,                       # seconds
-                                       stale_lock_timeout => 2 * 60,                   # seconds
-        } )
-    {
-        open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing : $! \n";
-        print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
-        my $LAB = {};
-        # copy just relevant parts (by reference)
-        $LAB->{HOSTS}      = $self->{HOSTS};
-        $LAB->{ESXHOSTS}   = $self->{ESXHOSTS};
-        $LAB->{NETWORKS}   = $self->{NETWORKS};
-        $LAB->{DATASTORES} = $self->{DATASTORES};
-        $LAB->{FOLDERS}    = $self->{FOLDERS};
-        print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] ) or croak "Could not write to '$filename': $!\n";
-        my $bytes_written = tell LAB_CONF;
-        close(LAB_CONF);
-        $lock->unlock();
-        return $bytes_written;
-    }
-    else {
-        croak "I couldn't lock the file [$File::NFSLock::errstr]";
-    }
-
+    confess("No lock!") unless ( defined $self->{runtime}->{lock} );
+    open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing : $! \n";
+    print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
+    my $LAB = {};
+    # copy just relevant parts (by reference)
+    $LAB->{HOSTS}      = $self->{HOSTS};
+    $LAB->{ESXHOSTS}   = $self->{ESXHOSTS};
+    $LAB->{NETWORKS}   = $self->{NETWORKS};
+    $LAB->{DATASTORES} = $self->{DATASTORES};
+    $LAB->{FOLDERS}    = $self->{FOLDERS};
+    print LAB_CONF Data::Dumper->Dump( [$LAB], [qw(LAB)] ) or croak "Could not write to '$filename': $!\n";
+    my $bytes_written = tell LAB_CONF;
+    close(LAB_CONF);
+    $self->{runtime}->{lock}->unlock();
+    undef $self->{runtime}->{lock};
+    return $bytes_written;
 }
 
 1;
