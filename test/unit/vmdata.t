@@ -14,7 +14,7 @@ my $C = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
 
 unshift(@INC,"src/lml/lib"); # we find our images from this
 
-my $result = display_vm_data($C,"","text/json");
+my $result = display_vm_data($C,"","application/json");
 chomp($result);
 # would be better to make a full comparison, but the output order of the hash keys is undeterminable
 like ($result,qr(.*development/vm/otherpath/tsthst001.*)sx,"all data");

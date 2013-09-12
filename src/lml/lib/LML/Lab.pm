@@ -18,11 +18,11 @@ use Sys::Syslog;
 
 # new object, takes LAB hash or filename to read from.
 sub new {
-    my ( $class, $arg ) = @_;
+    my ( $class, $arg, $readwrite ) = @_;
     my $self;
     my $filename;
-    if ( ref($arg) eq "HASH" ) {
-        # arg is hashref
+    if ( ref($arg) eq "HASH" and ! defined($readwrite)) {
+        # arg is hashref and we don't need to write the lab file
         $self = clone($arg);
     }
     elsif ( ref($arg) eq "" ) {
@@ -69,9 +69,10 @@ sub new {
         croak "Parameter to " . ( caller(0) )[3] . " should be hashref with LAB data or filename of LAB file and not " . ref($arg) . "\n";
     }
     $self->{vms_to_update} = [];    # list of uuids for whom the DHCP data changed
-    $self->{runtime}       = {
-                 created_time => time(),                              # store object creation time to track how long Lab object is in scope.
-                 created_by => join( ":", ( caller(0) )[ 1, 2 ] ),    # store from where object was created.
+    $self->{runtime} = {
+               readwrite    => $readwrite,
+               created_time => time(),                                # store object creation time to track how long Lab object is in scope.
+               created_by   => join( ":", ( caller(0) )[ 1, 2 ] ),    # store from where object was created.
     };
     bless( $self, $class );
     return $self;
@@ -79,10 +80,14 @@ sub new {
 
 sub DESTROY {
     my $self = shift;
-    return unless ( defined $self->{runtime} );              # in some test cases we use fake lab objects
+    # in some test cases we use fake lab objects
+    # report timings only for writable instances of Lab
+    return unless ( defined $self->{runtime} and defined $self->{runtime}->{readwrite} );
     openlog( "lab-manager-light", 'nofatal', 'user' );
-    syslog( 'info', "LML::Lab |%s|%.0f| milliseconds",
-            $self->{runtime}->{created_by}, ( time() - $self->{runtime}->{created_time} ) * 1000 );
+    syslog( 'info',
+            "LML::Lab |%s|%.0f| milliseconds",
+            $self->{runtime}->{created_by},
+            ( time() - $self->{runtime}->{created_time} ) * 1000 );
     closelog();
 }
 
@@ -333,7 +338,7 @@ sub update_vm {
         push( @{ $self->{vms_to_update} }, $uuid );
     }
     $self->{HOSTS}->{$uuid} = {
-        UPDATED         => ( gettimeofday() )[0],                                        # time is from Time::HiRes and gives (seconds,milliseconds)
+        UPDATED         => ( gettimeofday() )[0],                                # time is from Time::HiRes and gives (seconds,milliseconds)
         UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S ", localtime ),
         UUID            => $uuid,
         HOSTNAME        => $name,
@@ -357,6 +362,7 @@ sub vms_to_update {
 
 sub write_file {
     my ( $self, @comments ) = @_;
+    confess("LML::Lab instance created in $self->{runtime}->{created_by} is not writable") unless (defined $self->{runtime}->{readwrite});
     my $filename = $self->filename;
     croak("No filename associated with LML::Lab object \n") unless ($filename);
     if (

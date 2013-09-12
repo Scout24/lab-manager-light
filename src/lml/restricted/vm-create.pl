@@ -46,9 +46,8 @@ sub error {
     }
     else {
         print $message . "\n";
-        LML::VMcreate::VMproperties->print_usage();
     }
-    print STDERR $message."\n";
+    print STDERR $message . "\n";
     Util::disconnect();
     exit 1;
 }
@@ -61,9 +60,11 @@ sub success {
 
     # print html header before anything else if CGI is used
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
-        print header( -status => '200 vm created' );
+        print header( -status => '200 vm created' ).$uuid;
+    } 
+    else {
+        print "New VM has UUID $uuid\n";
     }
-    print $uuid;
 }
 
 # This subroutine parses the input xml file to retrieve all the
@@ -173,10 +174,10 @@ sub create_vm {
                 found       => \@found,
                 target_view => \$target_folder_view
     );
-
+    
+    my $vm_ref;
     if ( defined $target_folder_view ) {
-        eval { $target_folder_view->CreateVM( config => $vm_config_spec, pool => $comp_res_view->resourcePool ); };
-
+        eval { $vm_ref = $target_folder_view->CreateVM( config => $vm_config_spec, pool => $comp_res_view->resourcePool ); };
         if ($@) {
             if ( ref($@) eq 'SoapFault' ) {
                 if ( ref( $@->detail ) eq 'PlatformConfigFault' ) {
@@ -195,41 +196,45 @@ sub create_vm {
                     error("The operation is not allowed in the current state");
                 }
                 elsif ( ref( $@->detail ) eq 'DuplicateName' ) {
-                    error("Virtual machine already exists");
+                    error("Virtual machine '$$args{vmname}' already exists in folder '$$args{target_folder}'");
                 }
                 else {
-                    error($@);
+                    error("CreateVM failed:\n$@\n");
                 }
             }
             else {
-                error($@);
+                error("CreateVM failed:\n$@\n");
             }
         }
+        error("CreateVM did not return us a mo_ref") unless (defined $vm_ref and ref($vm_ref) eq 'ManagedObjectReference');
     }
     else {
         error("Invalid Folder $$args{target_folder} specified");
     }
 
+    my $vm_view = Vim::get_view(mo_ref=>$vm_ref);
     # set the custom fields with defined values
-    set_custom_fields( vmname        => $$args{vmname},
-                       custom_fields => $$args{custom_fields} );
-    # get the view of the previously created vm
-    my $vm_views = VMUtils::get_vms( 'VirtualMachine', $$args{vmname} );
-    my $vm_view = shift @{$vm_views};
+    set_custom_fields( custom_fields => $$args{custom_fields}, 
+                       vm_view => $vm_view );
     # finally switch on the virtual machine
     eval { $vm_view->PowerOnVM(); };
     # handle errors
     if ($@) {
-        error("Switch on failed");
+        error("Switch on failed:\n$@\n");
     }
+    my $HOSTS=get_hosts;
+    my $NETWORKS=get_networks;
+    my $DATASTORES=get_datastores;
+    my $FOLDERS=get_folders;
+    my $rw_lab = new LML::Lab( $C->labfile,1 );
     # first update the info about ESX hosts
-    $lab->update_hosts(get_hosts);
-    $lab->update_networks(get_networks);
-    $lab->update_datastores(get_datastores);
-    $lab->update_folders(get_folders);
-    $lab->update_vm( new LML::VM( $vm_view->config->uuid ) );
+    $rw_lab->update_hosts($HOSTS);
+    $rw_lab->update_networks($NETWORKS);
+    $rw_lab->update_datastores($DATASTORES);
+    $rw_lab->update_folders($FOLDERS);
+    $rw_lab->update_vm( new LML::VM( $vm_view->config->uuid ) );
     # should also have set dns_domain etc., but works also without. The following call to pxelinux.pl will fix it in any case.
-    if ( not $lab->write_file( "for newly created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
+    if ( not $rw_lab->write_file( "for newly created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
         die "Strangely writing LAB produced a 0-byte file.\n";
     }
     # if everything went find give an success status
@@ -296,11 +301,6 @@ sub set_custom_fields {
     # only if there are fields defined
     if ( defined $customFieldsManager->{field} ) {
         my $fields = $customFieldsManager->{field};
-
-        # get  view of the previous created vm
-        my $vm = Vim::find_entity_view( view_type => 'VirtualMachine',
-                                        filter    => { "config.name" => $args{vmname} } );
-
         # go through each custom field, which is defined globally
         my $key;
         foreach my $field (@$fields) {
@@ -308,10 +308,18 @@ sub set_custom_fields {
             foreach ( keys %{ $args{custom_fields} } ) {
                 # if we are at the right field, use its key to modify the custom field in vm
                 if ( $field->name eq $_ ) {
-                    $customFieldsManager->SetField(
-                                                    entity => $vm,
-                                                    key    => $field->key,
-                                                    value  => ${ $args{custom_fields} }{ $field->name } );
+                    my $key = $field->key;
+                    my $value = ${ $args{custom_fields} }{ $field->name } ;
+                    next unless (defined $value); # skip unset values
+                    eval { $customFieldsManager->SetField(
+                                                    entity => $args{vm_view},
+                                                    key    => $key,
+                                                    value  => $value
+                                                    );
+                    };
+                    if ($@) {
+                        croak("Could not set custom field '$key' to '$value':\n$@\n");
+                    }
                 }
             }
         }

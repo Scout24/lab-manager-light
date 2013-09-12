@@ -84,7 +84,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         $Policy->handle_unmanaged();
         
         # read history to detect renamed VMs and to be able to update the DHCP
-        my $LAB = new LML::Lab( $C->labfile );
+        my $LAB = new LML::Lab( $C->labfile, 1 );
         
         $result->add_error(
                             $Policy->validate_vm_name,                           $Policy->validate_hostrules_pattern,

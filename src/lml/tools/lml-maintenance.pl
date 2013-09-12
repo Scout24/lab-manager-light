@@ -53,7 +53,7 @@ sub maintain_labfile($$$$$$) {
     my $labfile = $C->labfile;
     my @error   = ();
 
-    my $LAB = new LML::Lab($labfile);
+    my $LAB = new LML::Lab($labfile, 1);
     # go through our known VM list and delete host from that list
     # if they are not in the actual VM list we got previously
     my $hosts_removed = 0;

@@ -27,8 +27,15 @@ my $LAB = new LML::Lab( {
                                                              "HOSTNAME" => "foo",
                                                              "MACS"     => [ "1:2:3", "4:5:6" ] } } } );
 
-dies_ok { $LAB->remove } "should be not ok to not specify uuid on host removal";
-ok( $LAB->remove("haha"),                                 "should be ok to remove non-existant host" );
-ok( $LAB->remove('12345-1234-123'), "should be ok to remove existing host" );
+is_deeply(
+           $LAB->get_vm("12345-1234-123"),
+           {
+              "HOSTNAME" => "foo",
+              "NAME"     => "foo",
+              "MACS"     => [ "1:2:3", "4:5:6" ],
+           },
+           "should return test data from previous test"
+);
 
+is( $LAB->get_vm("foobar"), undef, "should return undef if VM not found" );
 done_testing();

@@ -81,8 +81,11 @@ my %LAB_TESTDATA = (
 
 write_file( $C->labfile, Data::Dumper->Dump( [ \%LAB_TESTDATA ], [qw(LAB)] ) );
 
+my $roLAB = new_ok( "LML::Lab" => [ $C->labfile ], "should create new readonly Lab object" );
+dies_ok { $roLAB->write_file(__FILE__) } "should fail writing a read-only Lab object";
+
 # test if we can load config from config files
-my $LAB = new_ok( "LML::Lab" => [ $C->labfile ], "should create new Lab object" );
+my $LAB = new_ok( "LML::Lab" => [ $C->labfile, "1" ], "should create new readwrite Lab object" );
 
 is( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{HOSTNAME},
     "tsthst001", "LAB should contain hostname from test data" );
