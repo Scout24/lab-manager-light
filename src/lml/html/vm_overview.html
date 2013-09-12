@@ -23,23 +23,18 @@
       <tr id="{{vm.uuid}}" data-ng-repeat="vm in vms">
         <td>
           <input type="checkbox" name="hosts" label="" value="{{vm.uuid}}">
-
-          <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">{{vm.fullname}}</a>
-
-          <a  data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip"><img src ="images/console_icon.png"/></a>
-
-          <a
-                        data-ng-show="vm.extra_link_enabled"
-                        href="{{vm.extra_link_url}}"
-                        title="Additional Info"
-                        rel="{{vm.extra_link_url}}"
-                        target="_blank"
-          >
-            Additional Info
+          <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">
+            {{vm.fullname}}
+          </a>
+          <a data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip">
+            <img src ="images/console_icon.png"/>
+          </a>
+          <a data-ng-show="vm.extra_link_enabled" href="{{vm.extra_link_url}}" title="Additional Info" rel="{{vm.extra_link_url}}" target="_blank">
+            {{vm.extra_link_text}}
           </a>
         </td>
         <td>{{vm.vm_path}}</td>
-        <td><span title="{{vm.contact_fullname}}">{{vm.contact_id}}</span></td>
+        <td>{{vm.contact_id}}</td>
         <td>{{vm.expires}}</td>
         <td>{{vm.esxhost}}</td>
       </tr>

@@ -16,30 +16,11 @@ use JSON;
 
 use User::pwent;
 
-my $GECOS = {};    # cache for gecos lookups
-
 my $C = new LML::Config();
 
 my $LAB = new LML::Lab( $C->labfile );
 
 my %result = ();
-
-# get full name of userid
-sub get_gecos {
-    my ($userid) = @_;
-    return "" unless ($userid);
-    Debug "Looking up $userid";
-    if ( not exists $GECOS->{$userid} ) {
-        if ( my $pwnam = getpwnam($userid) ) {
-            $GECOS->{$userid} = $pwnam->gecos;
-        }
-        else {
-            $GECOS->{$userid} = "Could not lookup user";
-        }
-        Debug "Caching $userid = " . $GECOS->{$userid};
-    }
-    return $GECOS->{$userid};
-}
 
 sub fill_vm_overview_json {
     my $vm_overview            = [];
@@ -48,6 +29,7 @@ sub fill_vm_overview_json {
     my $expires_field          = $C->get( "vsphere", "expires_field" );
     my $screenshot_enabled     = $C->get( "vmscreenshot", "enabled" );
     my $force_boot_field       = $C->get( "vsphere", "forceboot_field" );
+    my $extra_link_text = $C->get( "gui", "extra_link_text" );
 
     while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
         next unless ( exists $VM->{UUID} );
@@ -87,12 +69,13 @@ sub fill_vm_overview_json {
         $vm_info{screenshot_enabled} = $screenshot_url ? "true" : "false";
         $vm_info{screenshot_url}     = $screenshot_url if $screenshot_enabled;
         $vm_info{vm_path}            = $display_vm_path;
-        $vm_info{contact_fullname}   = get_gecos($contact_user_id);
         $vm_info{contact_id}         = $contact_user_id;
         $vm_info{expires}            = $expires;
         $vm_info{esxhost}            = $esxhost;
         # show extra link if we have a client IP and force boot is currently set on.
         # TODO reuse force boot detection logic from VMPolicy instead of copying it here.
+        # TODO understand if link text should be customized for each VM
+        $vm_info{extra_link_text} = $extra_link_text;
         $vm_info{extra_link_url} = defined $VM->{CLIENT_IP} ? "http://$VM->{CLIENT_IP}" : 0;
         $vm_info{extra_link_enabled} =
           (     defined $VM->{CLIENT_IP}
