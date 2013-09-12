@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #
 #
-# setCustomValue.pl	can be used to set any custom value
+# setCustomValue.pl can be used to set any custom value
 
 use strict;
 use warnings;
