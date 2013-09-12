@@ -56,8 +56,6 @@ else {
     die("Give UUID address as query parameter 'uuid' or as command line parameter\n");
 }
 
-# read history to detect renamed VMs and to be able to update the DHCP
-my $LAB = new LML::Lab( $C->labfile );
 # find VM
 my $VM = new LML::VM($search_uuid);
 my $result = new LML::Result( $C, url() );
@@ -84,8 +82,16 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
         my $Policy = new LML::VMpolicy( $C, $VM );
 
         $Policy->handle_unmanaged();
-
-        $result->add_error( $Policy->validate_vm_name, $Policy->validate_hostrules_pattern, $Policy->validate_dns_zones(@extra_dns_check_zones), $Policy->validate_contact_user, $Policy->validate_expiry, $Policy->validate_vm_dns_name($LAB), $Policy->validate_network_assignment );
+        
+        # read history to detect renamed VMs and to be able to update the DHCP
+        my $LAB = new LML::Lab( $C->labfile );
+        
+        $result->add_error(
+                            $Policy->validate_vm_name,                           $Policy->validate_hostrules_pattern,
+                            $Policy->validate_dns_zones(@extra_dns_check_zones), $Policy->validate_contact_user,
+                            $Policy->validate_expiry,                            $Policy->validate_vm_dns_name($LAB),
+                            $Policy->validate_network_assignment
+        );
 
         $Policy->handle_forceboot($result);
 
