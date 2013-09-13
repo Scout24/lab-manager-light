@@ -43,12 +43,11 @@ sub error {
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
         print header( -status => '500 Error while processing' );
         print $message;
+        print STDERR $message . "\n";
     }
     else {
         print $message . "\n";
     }
-    print STDERR $message . "\n";
-    Util::disconnect();
     exit 1;
 }
 
@@ -60,8 +59,8 @@ sub success {
 
     # print html header before anything else if CGI is used
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
-        print header( -status => '200 vm created' ).$uuid;
-    } 
+        print header( -status => '200 vm created' ) . $uuid;
+    }
     else {
         print "New VM has UUID $uuid\n";
     }
@@ -138,12 +137,13 @@ sub create_vm {
     );
 
     my $vm_config_spec = VirtualMachineConfigSpec->new(
-                                                        name         => $$args{vmname},
-                                                        memoryMB     => $$args{memory},
-                                                        files        => $files,
-                                                        numCPUs      => $$args{num_cpus},
-                                                        guestId      => $$args{guestid},
-                                                        deviceChange => \@vm_devices
+                                                        name              => $$args{vmname},
+                                                        memoryMB          => int $$args{memory},
+                                                        files             => $files,
+                                                        numCoresPerSocket => int $$args{num_cpus},
+                                                        numCPUs           => int $$args{num_cpus},
+                                                        guestId           => $$args{guestid},
+                                                        deviceChange      => \@vm_devices
     );
 
     my $datacenter_views = Vim::find_entity_views( view_type => 'Datacenter',
@@ -174,7 +174,7 @@ sub create_vm {
                 found       => \@found,
                 target_view => \$target_folder_view
     );
-    
+
     my $vm_ref;
     if ( defined $target_folder_view ) {
         eval { $vm_ref = $target_folder_view->CreateVM( config => $vm_config_spec, pool => $comp_res_view->resourcePool ); };
@@ -199,34 +199,44 @@ sub create_vm {
                     error("Virtual machine '$$args{vmname}' already exists in folder '$$args{target_folder}'");
                 }
                 else {
-                    error("CreateVM failed:\n$@\n");
+                    error("CreateVM failed:\n".Data::Dumper([$@],['$@']));
                 }
             }
             else {
                 error("CreateVM failed:\n$@\n");
             }
         }
-        error("CreateVM did not return us a mo_ref") unless (defined $vm_ref and ref($vm_ref) eq 'ManagedObjectReference');
+        error("CreateVM did not return us a mo_ref") unless ( defined $vm_ref and ref($vm_ref) eq 'ManagedObjectReference' );
     }
     else {
         error("Invalid Folder $$args{target_folder} specified");
     }
 
-    my $vm_view = Vim::get_view(mo_ref=>$vm_ref);
+    my $vm_view = Vim::get_view( mo_ref => $vm_ref );
     # set the custom fields with defined values
-    set_custom_fields( custom_fields => $$args{custom_fields}, 
-                       vm_view => $vm_view );
+    set_custom_fields( custom_fields => $$args{custom_fields},
+                       vm_view       => $vm_view );
     # finally switch on the virtual machine
     eval { $vm_view->PowerOnVM(); };
     # handle errors
     if ($@) {
-        error("Switch on failed:\n$@\n");
+        if (ref($@) eq 'SoapFault' ) {
+            if ( ref( $@->detail ) eq 'NoCompatibleHost' ) {
+                    error("PowerOnVM: Virtual machine '$$args{vmname}' is not compatible with the host '$$args{vmhost}'");
+                }
+                else {
+                    error("Could not power on VM:\n".Data::Dumper([$@],['$@']));
+                }
+        }
+        else {
+            error("Could not power on VM:\n".Data::Dumper([$@],['$@']));
+        }
     }
-    my $HOSTS=get_hosts;
-    my $NETWORKS=get_networks;
-    my $DATASTORES=get_datastores;
-    my $FOLDERS=get_folders;
-    my $rw_lab = new LML::Lab( $C->labfile,1 );
+    my $HOSTS      = get_hosts;
+    my $NETWORKS   = get_networks;
+    my $DATASTORES = get_datastores;
+    my $FOLDERS    = get_folders;
+    my $rw_lab     = new LML::Lab( $C->labfile, 1 );
     # first update the info about ESX hosts
     $rw_lab->update_hosts($HOSTS);
     $rw_lab->update_networks($NETWORKS);
@@ -308,15 +318,10 @@ sub set_custom_fields {
             foreach ( keys %{ $args{custom_fields} } ) {
                 # if we are at the right field, use its key to modify the custom field in vm
                 if ( $field->name eq $_ ) {
-                    my $key = $field->key;
-                    my $value = ${ $args{custom_fields} }{ $field->name } ;
-                    next unless (defined $value); # skip unset values
-                    eval { $customFieldsManager->SetField(
-                                                    entity => $args{vm_view},
-                                                    key    => $key,
-                                                    value  => $value
-                                                    );
-                    };
+                    my $key   = $field->key;
+                    my $value = ${ $args{custom_fields} }{ $field->name };
+                    next unless ( defined $value );    # skip unset values
+                    eval { $customFieldsManager->SetField( entity => $args{vm_view}, key => $key, value => $value ); };
                     if ($@) {
                         croak("Could not set custom field '$key' to '$value':\n$@\n");
                     }
