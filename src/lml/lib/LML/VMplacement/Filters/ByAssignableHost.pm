@@ -20,7 +20,8 @@ sub new {
 }
 
 sub host_can_vm {
-    my ( $self, $host, $vm_res ) = @_;
+    my ( $self, $host, $vm_res, $error_ref ) = @_;
+    $error_ref = [] unless (defined $error_ref and ref($error_ref) eq "ARRAY");
 
     foreach my $vm_host_assignment (keys %{$self->{vm_host_assignments}}){
         my $vm_pattern=$self->{vm_host_assignments}->{$vm_host_assignment}->{vm_pattern};
@@ -31,6 +32,7 @@ sub host_can_vm {
              if (defined $host->{name} and $host->{name} =~ qr(^$host_pattern$)){
                  return 1;
              } else {
+                 push @$error_ref, "Host $host->{name} does not match '$host_pattern'";
                  return 0;
              }
         }

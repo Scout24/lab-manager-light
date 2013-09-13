@@ -76,7 +76,8 @@ throws_ok { new LML::VMplacement( $C, bless({},"LML::Lab"), undef, [$testfilter]
                     "vms_to_update" => [],      # LML::Lab::new always sets this
            },
            filters => [$testfilter],
-           rankers => [$testranker]
+           rankers => [$testranker],
+           errors => [],
         },
         "ensure fake data shows up in object"
     );

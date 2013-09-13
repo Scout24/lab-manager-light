@@ -63,6 +63,7 @@ sub new {
                  lab     => $lab,
                  filters => $filters,
                  rankers => $rankers,
+                 errors => [],
     };
 
     bless( $self, $class );
@@ -70,11 +71,18 @@ sub new {
 }
 
 sub get_recommendations {
-    my ( $self, $vm_res ) = @_;
+    my ( $self, $vm_res) = @_;
     croak( "1st arg must be LML::VMresources in " . ( caller 0 )[3] ) unless ( ref($vm_res) eq "LML::VMresources" );
+    # reset errors list
+    $self->{errors} = [];
     my @filtered_hosts = $self->_filter( $vm_res, $self->{lab}->get_hosts );
     my @ranked_hosts = $self->_rank(@filtered_hosts);
     return $self->_build_recommendations( $vm_res, @ranked_hosts );
+}
+
+sub get_errors {
+    my ($self) = @_;
+    return @{$self->{errors}};
 }
 
 sub _filter {
@@ -82,7 +90,7 @@ sub _filter {
     my $debug_infos = {};
 
     foreach my $filter ( @{ $self->{filters} } ) {
-        ${$debug_infos}{ $filter->get_name() } = [];
+        $debug_infos->{ $filter->get_name() } = [];
     }
     my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos, $_ ) } @hosts;
 
@@ -96,8 +104,8 @@ sub _filter {
 sub _check_by_filters {
     my ( $self, $vm_res, $debug_infos, $host ) = @_;
     foreach my $filter ( @{ $self->{filters} } ) {
-        unless ( $filter->host_can_vm( $host, $vm_res ) ) {
-            push @{ ${$debug_infos}{ $filter->get_name() } }, $host->{name};
+        unless ( $filter->host_can_vm( $host, $vm_res, $self->{errors} ) ) {
+            push @{ $debug_infos->{ $filter->get_name() } }, $host->{name};
             return 0;
         }
     }

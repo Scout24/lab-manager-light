@@ -15,15 +15,20 @@ sub new {
 }
 
 sub host_can_vm {
-    my ( $self, $host ) = @_;
-    if (!defined( $host->{status}->{active} ) ) {
-        croak( "unknown status in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] )
+    my ( $self, $host, $vm_res, $error_ref ) = @_;
+    if ( !defined( $host->{status}->{active} ) ) {
+        croak( "unknown status in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] );
     }
-    return $host->{status}->{active} ? 1 : 0;
+    $error_ref = [] unless ( defined $error_ref and ref($error_ref) eq "ARRAY" );
+    if ( $host->{status}->{active} ) {
+        return 1;
+    }
+    push @$error_ref, "Host $host->{name} is not active";
+    return 0;
 }
 
 sub get_name {
-    return (__PACKAGE__ =~ m((\w+?)$))[0];
+    return ( __PACKAGE__ =~ m((\w+?)$) )[0];
 }
 
 1;

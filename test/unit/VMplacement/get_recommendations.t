@@ -57,6 +57,7 @@ sub truefilter::host_can_vm {
     }
     return 1;
 }
+
 sub truefilter::get_name {
     return "truefilter";
 }
@@ -66,6 +67,7 @@ sub falsefilter::host_can_vm {
     my ( $self, $host, $vm ) = @_;
     return 0;
 }
+
 sub falsefilter::get_name {
     return "falsefilter";
 }
@@ -90,22 +92,25 @@ sub testranker_by_ram::get_rank_value {
     my ( $self, $host ) = @rankerparms = @_;
     return $host->{stats}->{overallMemoryUsage};
 }
+
 sub testranker_by_ram::get_name {
     return "testranker_by_ram";
 }
 my $testranker_by_ram = bless( {}, "testranker_by_ram" );
 
 sub testranker_by_cpu::get_rank_value {
-    my ( $self, $host ) =  @_;
+    my ( $self, $host ) = @_;
     return $host->{stats}->{overallCpuUsage};
 }
+
 sub testranker_by_cpu::get_name {
     return "testranker_by_cpu";
 }
 my $testranker_by_cpu = bless( {}, "testranker_by_cpu" );
 
 my $simple_lab_with_one_host = new LML::Lab( { "ESXHOSTS" => { $test_host_1->{id} => $test_host_1 } } );
-my $simple_lab_with_three_hosts = new LML::Lab( { "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 } } );
+my $simple_lab_with_three_hosts = new LML::Lab(
+         { "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 } } );
 
 ##################################
 # test cases
@@ -113,19 +118,18 @@ my $simple_lab_with_three_hosts = new LML::Lab( { "ESXHOSTS" => { $test_host_1->
 
 # validate function parameters
 {
-    my $obj = new LML::VMplacement($C,$simple_lab_with_one_host,[],[]);
+    my $obj = new LML::VMplacement( $C, $simple_lab_with_one_host, [], [] );
     throws_ok { $obj->get_recommendations("foobar") } qr(LML::VMresources), "should die if arg is not LML::VMresources";
 }
 
 # validate the format of the return value
 {
-    my $obj    = new LML::VMplacement($C,$simple_lab_with_one_host,[],[]);
+    my $obj    = new LML::VMplacement( $C, $simple_lab_with_one_host, [], [] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
     is_deeply(
                [@rec],
-               [
-                  {
+               [ {
                      id         => "id-1",
                      datastores => [],
                   }
@@ -136,16 +140,17 @@ my $simple_lab_with_three_hosts = new LML::Lab( { "ESXHOSTS" => { $test_host_1->
 
 # validate the arguments which are passed to filters and rankers (implicit testing of the truefilter too)
 {
-    my $obj    = new LML::VMplacement($C, $simple_lab_with_three_hosts, [$truefilter], [$testranker] );
+    my $obj    = new LML::VMplacement( $C, $simple_lab_with_three_hosts, [$truefilter], [$testranker] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
-    is_deeply( \@truefilter_params, [ $truefilter, $test_host_1, $vm_res ], "test filter was called with correct parms" );
+    #                  This is the empty arrayref for error messages ->->-\
+    is_deeply( \@truefilter_params, [ $truefilter, $test_host_1, $vm_res, [] ], "test filter was called with correct parms" );
     is_deeply( \@rankerparms, [ $testranker, $test_host_1 ], "test ranker was called with correct parms" );
 }
 
 # validate the filtering
 {
-    my $obj    = new LML::VMplacement($C, $simple_lab_with_one_host, [ $truefilter, $falsefilter ],[] );
+    my $obj    = new LML::VMplacement( $C, $simple_lab_with_one_host, [ $truefilter, $falsefilter ], [] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
     is_deeply( [@rec], [], "should return no recommendation as one filter is always false" );
@@ -153,38 +158,42 @@ my $simple_lab_with_three_hosts = new LML::Lab( { "ESXHOSTS" => { $test_host_1->
 
 # validate the ranking by a single mocked ram filter
 {
-    my $obj    = new LML::VMplacement($C, $simple_lab_with_three_hosts, [$truefilter], [$testranker_by_ram] );
+    my $obj    = new LML::VMplacement( $C, $simple_lab_with_three_hosts, [$truefilter], [$testranker_by_ram] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
-    is_deeply( [@rec], [ { id => "id-1", datastores => [], }, { id => "id-2", datastores => [], }, { id => "id-3", datastores => [], } ], "should return hosts in descending order by ram" );
+    is_deeply( [@rec],
+               [ { id => "id-1", datastores => [], }, { id => "id-2", datastores => [], }, { id => "id-3", datastores => [], } ],
+               "should return hosts in descending order by ram" );
 }
-
 
 # validate the ranking by a single mocked cpu ranker
 {
-    my $obj    = new LML::VMplacement($C, $simple_lab_with_three_hosts, [$truefilter], [$testranker_by_cpu] );
+    my $obj    = new LML::VMplacement( $C, $simple_lab_with_three_hosts, [$truefilter], [$testranker_by_cpu] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
-    is_deeply( [@rec], [ { id => "id-3", datastores => [], }, { id => "id-2", datastores => [], }, { id => "id-1", datastores => [], } ], "should return hosts in descending order by cpu" );
+    is_deeply( [@rec],
+               [ { id => "id-3", datastores => [], }, { id => "id-2", datastores => [], }, { id => "id-1", datastores => [], } ],
+               "should return hosts in descending order by cpu" );
 }
-
 
 # validate the ranking by a mocked ram and a mocked cpu ranker
 {
-    my $obj    = new LML::VMplacement($C, $simple_lab_with_three_hosts, [$truefilter], [$testranker_by_ram,$testranker_by_cpu] );
+    my $obj    = new LML::VMplacement( $C, $simple_lab_with_three_hosts, [$truefilter], [ $testranker_by_ram, $testranker_by_cpu ] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
-    is_deeply( [@rec], [ { id => "id-2", datastores => [], }, { id => "id-1", datastores => [], }, { id => "id-3", datastores => [], } ], "should return hosts in descending order by cpu+ram " );
+    is_deeply( [@rec],
+               [ { id => "id-2", datastores => [], }, { id => "id-1", datastores => [], }, { id => "id-3", datastores => [], } ],
+               "should return hosts in descending order by cpu+ram " );
 }
-
 
 # validate the ranking by a mocked ram and a mocked cpu ranker
 {
-    my $obj    = new LML::VMplacement($C, $simple_lab_with_one_host,[],[] );
-    my $vm_res = new LML::VMresources({disks=>[{size=>2},{size=>2}]});
-    my @rec    = $obj->get_recommendations($vm_res);
-    is_deeply( [@rec], [ { id => "id-1", datastores => ['datastore-1','datastore-1'], } ], "should return the first datastore of suitable host for every required disk" );
+    my $obj = new LML::VMplacement( $C, $simple_lab_with_one_host, [], [] );
+    my $vm_res = new LML::VMresources( { disks => [ { size => 2 }, { size => 2 } ] } );
+    my @rec = $obj->get_recommendations($vm_res);
+    is_deeply( [@rec],
+               [ { id => "id-1", datastores => [ 'datastore-1', 'datastore-1' ], } ],
+               "should return the first datastore of suitable host for every required disk" );
 }
-
 
 done_testing();

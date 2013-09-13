@@ -15,12 +15,18 @@ sub new {
 }
 
 sub host_can_vm {
-    my ( $self, $host ) = @_;
-    if (!defined( $host->{status}->{overallStatus} ) ) {
-        croak( "unknown status in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] )
+    my ( $self, $host, $vm_res, $error_ref ) = @_;
+    if ( !defined( $host->{status}->{overallStatus} ) ) {
+        croak( "unknown status in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] );
     }
-    return $host->{status}->{overallStatus} eq "green"
-      || $host->{status}->{overallStatus} eq "yellow" ? 1 : 0;
+    $error_ref = [] unless ( defined $error_ref and ref($error_ref) eq "ARRAY" );
+    if (    $host->{status}->{overallStatus} eq "green"
+         || $host->{status}->{overallStatus} eq "yellow" )
+    {
+        return 1;
+    }
+    push @$error_ref, "Host $host->{name} status is not 'green' or 'yellow'";
+    return 0;
 }
 
 sub get_name {

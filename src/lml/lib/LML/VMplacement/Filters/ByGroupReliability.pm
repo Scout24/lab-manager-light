@@ -26,7 +26,7 @@ sub new {
 }
 
 sub host_can_vm {
-    my ( $self, $host, $vm_res ) = @_;
+    my ( $self, $host, $vm_res, $error_ref ) = @_;
 
     if ( !defined( $self->{group_pattern} ) ) {
         return 1;    # do not filter if no group pattern was defined
@@ -37,12 +37,14 @@ sub host_can_vm {
     if ( !defined $expected_group ) {
         return 1;    # do not filter if a group pattern was defined but we can not determine the group of our vm
     }
+    $error_ref = [] unless (defined $error_ref and ref($error_ref) eq "ARRAY");
 
     my $vm_group_counts        = $self->_get_vm_group_counts( $vm_res, $expected_group );
     my $minimum                = $vm_group_counts->{minimum};
     my $counter_same_vm_groups = $vm_group_counts->{counters}->{ $host->{id} };
 
     if ( $counter_same_vm_groups > $minimum ) {
+        push @$error_ref, "Host $host->{name} has $counter_same_vm_groups VMs matching $expected_group, looking for host with no more than $minimum VMs";
         if ( $self->{verbose} ) {
             print STDERR "Removing host " . $host->{name} . ", it has $counter_same_vm_groups VMs matching $expected_group\n";
         }

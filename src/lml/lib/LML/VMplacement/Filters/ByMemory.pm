@@ -15,11 +15,16 @@ sub new {
 }
 
 sub host_can_vm {
-    my ( $self, $host, $vm_res ) = @_;
+    my ( $self, $host, $vm_res, $error_ref ) = @_;
     if (! (defined( $host->{hardware}->{memorySize} ) && defined( $host->{stats}->{overallMemoryUsage} ) )) {
         croak( "missing data in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] )
     }
-    return $vm_res->{ram} < ( $host->{hardware}->{memorySize} - $host->{stats}->{overallMemoryUsage}) ? 1 : 0;
+    $error_ref = [] unless (defined $error_ref and ref($error_ref) eq "ARRAY");
+    if ($vm_res->{ram} < ( $host->{hardware}->{memorySize} - $host->{stats}->{overallMemoryUsage})) {
+        return 1;
+    }
+    push @$error_ref, "Host $host->{name} does not have $vm_res->{ram} MB free memory";
+    return 0;
 }
 
 sub get_name {

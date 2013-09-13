@@ -21,12 +21,14 @@ sub new {
 }
 
 sub host_can_vm {
-    my ( $self, $host, $vm_res ) = @_;
+    my ( $self, $host, $vm_res, $error_ref ) = @_;
     return 0 unless ( defined $host->{name} );    # gracefully skip hosts without data.
+    $error_ref = [] unless (defined $error_ref and ref($error_ref) eq "ARRAY");
     my @network_labels_provided_host = $self->_get_network_labels_provided_by($host);
 
     foreach my $label ( @{ $vm_res->{networks} } ) {
         if ( !$self->_host_provides_network( $label, @network_labels_provided_host ) ) {
+            push @$error_ref, "Host $host->{name} does not have the '$label' network";
             if ( $self->{verbose} ) {
                 print STDERR "Removing host " . $host->{name} . " because it has no $label network\n";
             }

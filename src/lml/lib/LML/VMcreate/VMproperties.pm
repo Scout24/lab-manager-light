@@ -26,6 +26,7 @@ sub new {
     my $vm_folder;
     my $force_boot_target;
     my $force_network = undef;
+    my $help = undef;
 
     # are we called via webui?
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
@@ -40,7 +41,7 @@ sub new {
     }
     elsif ( @ARGV > 0 ) {
         # get the long commandline options
-        GetOptions(
+        if ( ! GetOptions(
                     "name=s"              => \$vm_name,
                     "username=s"          => \$username,
                     "expiration=s"        => \$expiration_date,
@@ -48,7 +49,11 @@ sub new {
                     "folder=s"            => \$vm_folder,
                     "force_boot_target=s" => \$force_boot_target,
                     "force_network=s"     => \$force_network,
-        );
+                    "help|h"              => \$help,
+        ) or $help) {
+            print_usage();
+            exit 1;
+        }
 
     }
     elsif ( defined($test_args) && ref($test_args) eq "HASH" ) {
@@ -119,10 +124,10 @@ sub generate_vms_array {
 
     # assemble custom fields hash, field names come from configuration
     my %custom_fields = (
-                          $self->{config}->get("vsphere","contactuserid_field")   => $self->{username},
-                          $self->{config}->get("vsphere","expires_field")           => $self->{expiration_date},
-                          $self->{config}->get("vsphere","forceboot_field")        => 'ON',
-                          $self->{config}->get("vsphere","forceboot_target_field") => $self->{force_boot_target},
+                          $self->{config}->get( "vsphere", "contactuserid_field" )    => $self->{username},
+                          $self->{config}->get( "vsphere", "expires_field" )          => $self->{expiration_date},
+                          $self->{config}->get( "vsphere", "forceboot_field" )        => 'ON',
+                          $self->{config}->get( "vsphere", "forceboot_target_field" ) => $self->{force_boot_target},
     );
 
     # because it is possible that a machine don't exist in subversion we call
@@ -131,9 +136,9 @@ sub generate_vms_array {
 
     # get now the json spec for this vm
     my $json_url = sprintf $self->{config}->get( "vm_spec", "host_spec" ), $self->{vm_name};
-    my $answer = LWP::Simple::get($json_url) ;
+    my $answer = LWP::Simple::get($json_url);
     # check if we got something from web call
-    $self->_error( "Unable to get JSON description file for VM " . $self->{vm_name} . " from $json_url") unless defined $answer;
+    $self->_error( "Unable to get JSON description file for VM " . $self->{vm_name} . " from $json_url" ) unless defined $answer;
 
     # convert the HTML answer to pure json
     $answer =~ s/<[^>]*>//gx;
@@ -142,25 +147,23 @@ sub generate_vms_array {
     # put the json structure to a perl data structure
     my $vm_spec = decode_json($answer);
 
-    my $parsed_disk_size = parse_bytes($vm_spec->{virtualMachine}->{diskSize});
+    my $parsed_disk_size = parse_bytes( $vm_spec->{virtualMachine}->{diskSize} );
     # parsed_size is always in Byte, but if there was no unit given, then historically this was actually in KB.
     # In any case we need KB, so here we handle the legacy.
-    my $disk_size_in_kb = $parsed_disk_size eq $vm_spec->{virtualMachine}->{diskSize} ? $parsed_disk_size : int($parsed_disk_size / 1024);
+    my $disk_size_in_kb = $parsed_disk_size eq $vm_spec->{virtualMachine}->{diskSize} ? $parsed_disk_size : int( $parsed_disk_size / 1024 );
 
-    my $parsed_memory_size = parse_bytes($vm_spec->{virtualMachine}->{memory});
+    my $parsed_memory_size = parse_bytes( $vm_spec->{virtualMachine}->{memory} );
     # parsed_memory_size is always in Byte, but if there was no unit given, then historically this was actually in MB.
     # In any case we need KB, so here we handle the legacy.
-    my $memory_size_in_mb = $parsed_memory_size eq $vm_spec->{virtualMachine}->{memory} ? $parsed_memory_size : int($parsed_memory_size / 1024 / 1024);
+    my $memory_size_in_mb =
+      $parsed_memory_size eq $vm_spec->{virtualMachine}->{memory} ? $parsed_memory_size : int( $parsed_memory_size / 1024 / 1024 );
 
-    
     $vm_spec->{virtualMachine}->{diskSize} = $disk_size_in_kb;
-    $vm_spec->{virtualMachine}->{memory} = $memory_size_in_mb;
+    $vm_spec->{virtualMachine}->{memory}   = $memory_size_in_mb;
 
     my $esx_host_and_datastore = $self->_get_esx_host_and_datastore($vm_spec);
 
-
-    my @vms = (
-        {
+    my @vms = ( {
            vmname        => $self->{vm_name},
            vmhost        => $esx_host_and_datastore->{esx_host},
            datacenter    => $self->{config}->get( "vsphere", "datacenter" ),
@@ -168,15 +171,14 @@ sub generate_vms_array {
            datastore     => $esx_host_and_datastore->{esx_host_datastore},
            disksize      => $disk_size_in_kb,
            memory        => $memory_size_in_mb,
-           num_cpus      => int($vm_spec->{virtualMachine}->{numberOfProcessors}),
+           num_cpus      => int( $vm_spec->{virtualMachine}->{numberOfProcessors} ),
            custom_fields => \%custom_fields,
            # Temporary deactivated (we using cmd or post data for this atm)
            #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
            target_folder => $self->{vm_folder},
            has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend},
            force_network => $self->{force_network},
-        }
-    );
+    } );
 
     #print STDERR "DEBUG - VMproperties->generate_vms_array " . Data::Dumper->Dump( [ \@vms ] ) . "\n";
 
@@ -203,9 +205,9 @@ sub _get_esx_host_and_datastore {
 
     if ( !defined($esx_host) || $esx_host =~ qr(^auto_placement$) ) {
         my $result = $self->_get_esx_host_and_datastore_via_auto_placement($resources);
-        $esx_host = $result->{esx_host};
-        $esx_host_datastore = $result->{esx_host_datastore};;
-        
+        $esx_host           = $result->{esx_host};
+        $esx_host_datastore = $result->{esx_host_datastore};
+
     }
     else {
         # strip down the real hostname from given fqdn
@@ -216,8 +218,8 @@ sub _get_esx_host_and_datastore {
     }
 
     return {
-                   esx_host           => $esx_host,
-                   esx_host_datastore => $esx_host_datastore,
+             esx_host           => $esx_host,
+             esx_host_datastore => $esx_host_datastore,
     };
 }
 
@@ -229,15 +231,12 @@ sub _get_esx_host_and_datastore_via_auto_placement {
     my $vm_networks = new LML::VMnetworks( $self->{config} );
     my @required_network_labels = $vm_networks->find_network_labels( $self->{vm_name}, $self->{force_network} );
 
-    my $vm_resources = new LML::VMresources(
-        {
+    my $vm_resources = new LML::VMresources( {
           ram      => $resources->{virtualMachine}->{memory},
           cpu      => $resources->{virtualMachine}->{numberOfProcessors},
           networks => \@required_network_labels,
           disks    => [ { size => $resources->{virtualMachine}->{diskSize} } ],    # we currently support only one disk
-          name     => $self->{vm_name}
-        }
-    );
+          name     => $self->{vm_name} } );
 
     #print STDERR "DEBUG - VMproperties->generate_vms_array->vm_resources " . Data::Dumper->Dump( [ \$vm_resources ] ) . "\n";
 
@@ -260,14 +259,26 @@ sub _get_esx_host_and_datastore_via_auto_placement {
         }
     }
     else {
-        $self->_error("Recommendation for automatic placement failed (no hosts after filtering left).");
+        $self->_error(
+                "Automatic placement failed, no hosts remain after filtering:\n"
+              . join( "\n", $vm_placement->get_errors() )
+              . "\nMaybe there is a problem with the [new_vm] 2nd_interface and [network_assignment] lists.\n"
+        );
     }
-    
-    return {esx_host => $esx_host, esx_host_datastore => $esx_host_datastore};
+
+    return { esx_host => $esx_host, esx_host_datastore => $esx_host_datastore };
 }
 
 sub _getUsageMessage {
-    return "vm-create.pl <OPTIONS>\n\n" . "   --name=value \t\t Name of the vm to be created (e.g. devxyz01)\n" . "   --username=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n" . "   --expiration=value \t\t Date where the vm will be expired (e.g. 01.01.2015) \n" . "   --esx_host=value \t\t FQDN of the ESX host where the vm should be created\n" . "   --folder=value \t\t VM folder name, where the vm should be placed\n" . "   --force_network=label \t OPTIONAL: Network which the new VM should be attached\n" . "   --force_boot=value \t\t Force boot value for the new vm\n\n";
+    return
+        "vm-create.pl <OPTIONS>\n\n"
+      . "   --name=value \t\t Name of the vm to be created (e.g. devxyz01)\n"
+      . "   --username=value \t\t Name of the user, which is responsible for the vm (e.g. lmueller)\n"
+      . "   --expiration=value \t\t Date where the vm will be expired (e.g. 01.01.2015) \n"
+      . "   --esx_host=value \t\t FQDN of the ESX host where the vm should be created, default is auto placement\n"
+      . "   --folder=value \t\t VM folder name, where the vm should be placed\n"
+      . "   --force_network=label \t OPTIONAL: Network which the new VM should be attached\n"
+      . "   --force_boot=value \t\t Force boot target value for the new vm\n\n";
 }
 
 # check the validity of the given paramter
@@ -280,7 +291,8 @@ sub _check_parameter {
     # Check Expiration-Date
     my $european = $C->get( "vsphere", "expires_european" );
     $result = $result . "invalid expiration_date" . $/
-      if ( !$args{expiration_date} or !eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
+      if (    !$args{expiration_date}
+           or !eval { DateTime::Format::Flexible->parse_datetime( $args{expiration_date}, european => $european ) } );
 
     # Check VM-Name
     my $hostname_pattern = $C->get( "hostrules", "pattern" );
