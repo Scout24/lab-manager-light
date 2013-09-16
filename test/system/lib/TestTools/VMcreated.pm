@@ -40,7 +40,8 @@ sub load_qrdata {
 
     if ($vm_spec) {
         my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
-        qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif);
+        my $out = qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
+        teamcity_build_progress("convert failed:\n$out") if (($? >> 8) > 0);
         link $file, $short_file_basename . ".png";
 
     }
@@ -68,7 +69,8 @@ sub match_ocr {
 
     if ($test_passed) {
         my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
-        qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif);
+        my $out = qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
+        teamcity_build_progress("convert failed:\n$out") if (($? >> 8) > 0);
         link $file, $short_file_basename . ".png";
     }
     else {
