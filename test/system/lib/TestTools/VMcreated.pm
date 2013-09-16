@@ -37,8 +37,12 @@ sub load_qrdata {
     }
 
     if ($vm_spec) {
-        link $file, "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid} . ".png";
-    } else {
+        my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
+        qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif);
+        link $file, $short_file_basename . ".png";
+
+    }
+    else {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
@@ -56,13 +60,16 @@ sub match_ocr {
     while ( not $test_passed and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
         $screenshot_count++;
         $file = $self->_download_vm_screenshot( $self->{uuid}, $screenshot_count );
-        $test_passed = $self->_ocr_match($file, $test_definition);
+        $test_passed = $self->_ocr_match( $file, $test_definition );
         sleep 3;    # be nice to vSphere and try again only after a few seconds
     }
 
     if ($test_passed) {
-        link $file, "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid} . ".png";
-    } else {
+        my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
+        qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif);
+        link $file, $short_file_basename . ".png";
+    }
+    else {
         $self->_fail_team_city_build( "No OCR match after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
@@ -78,8 +85,8 @@ sub match_ocr {
 # downloads VM screenshot and saves it in a file and return file name
 sub _download_vm_screenshot {
     my ( $self, $uuid, $screenshot_count ) = @_;
-    my $file = sprintf("test/temp/%s_%s_%03d.png",$self->{vm_create_options}->{name},$self->{uuid},$screenshot_count);
-    my $url  = sprintf("http://%s/lml/vmscreenshot.pl?image=1&uuid=%s",$self->{vm_create_options}->{test_host},$self->{uuid});
+    my $file = sprintf( "test/temp/%s_%s_%03d.png", $self->{vm_create_options}->{name}, $self->{uuid}, $screenshot_count );
+    my $url = sprintf( "http://%s/lml/vmscreenshot.pl?image=1&uuid=%s", $self->{vm_create_options}->{test_host}, $self->{uuid} );
 
     print "##teamcity[progressMessage 'Downloading VM Screenshot from $url to $file']\n";
     my $png = $self->_do_http_get_request($url);
@@ -116,7 +123,7 @@ sub _decode_qr {
     print "##teamcity[progressMessage 'Decoding QR code from $file']\n";
 
     my $raw_data = qx(zbarimg -q --raw $file);
-    if ( ($? >>8) > 0 ) {
+    if ( ( $? >> 8 ) > 0 ) {
         print "##teamcity[progressMessage 'Decoding of qr-code image failed.']\n";
     }
     #    return $raw_data ? decode_json($raw_data) : undef;
@@ -128,11 +135,12 @@ sub _ocr_match {
     print "##teamcity[progressMessage 'OCR scan on $file']\n";
 
     my $raw_data = qx(gocr -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
-    if ( ($? >>8) > 0 ) {
+    if ( ( $? >> 8 ) > 0 ) {
         print "##teamcity[progressMessage 'OCR scan of image failed.']\n";
         return 0;
-    } else {
-        print "OCR text Result:\n" . $raw_data ;
+    }
+    else {
+        print "OCR text Result:\n" . $raw_data;
         my $match = 0;
         foreach my $pattern ( @{ $test_definition->{expect} } ) {
             print "##teamcity[progressMessage 'Validating OCR text for matching pattern \"$pattern\"']\n";
