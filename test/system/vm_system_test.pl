@@ -20,6 +20,8 @@ use TestTools::VMmanager;
 use TestTools::VmCreateOptions;
 use TestTools::TestDataProvider;
 
+use TeamCity::Messages;
+
 # For debugging
 use Data::Dumper;
 
@@ -45,28 +47,34 @@ sub assert_qrdata {
 
 sub excute_test_case {
     my ($test_definition) = @_;
-    my $test_result = 0;
+    my $test_result       = 0;
     my $vm_create_options = new TestTools::VmCreateOptions($test_definition);
 
     my $vm_manager = new TestTools::VMmanager($vm_create_options);
     my $vm_created = $vm_manager->create_vm();
     eval {
-        if ( "qrdata" eq $test_definition->{result} ) {
+        if ( "qrdata" eq $test_definition->{result} )
+        {
             my $qrdata = $vm_created->load_qrdata();
             assert_qrdata($qrdata);
-            assert_qr($qrdata,$test_definition );
-        } elsif ( "qr" eq $test_definition->{result} ) {
+            assert_qr( $qrdata, $test_definition );
+        }
+        elsif ( "qr" eq $test_definition->{result} ) {
             assert_qr( $vm_created->load_qrdata(), $test_definition );
-        } elsif ("ocr" eq $test_definition->{result} ) {
+        }
+        elsif ( "ocr" eq $test_definition->{result} ) {
             $vm_created->match_ocr($test_definition);
-        } else {
-            print "##teamcity[buildStatus text='Integration Test \"$test_definition->{label}\" uses unkown result \"".$test_definition->{result}."\"']\n";
+        }
+        else {
+            teamcity_build_failure("Integration Test '$test_definition->{label}' uses unkown result type '$test_definition->{result}'");
+            die;    # should find better way without this eval.
         }
     };
     if ($@) {
-        print "##teamcity[buildStatus text='Integration Test \"$test_definition->{label}\" FAILED']\n";
-    } else {
-        print "##teamcity[buildStatus text='Integration Test \"$test_definition->{label}\" OK']\n";
+        teamcity_build_failure("Integration Test '$test_definition->{label}' FAILED");
+    }
+    else {
+        teamcity_build_success("Integration Test '$test_definition->{label}' OK");
         $test_result = 1;
     }
     $vm_manager->delete_vm();
@@ -79,17 +87,18 @@ my $good_tests      = 0;
 my $number_of_tests = scalar(@test_spec);
 
 if ( !$number_of_tests ) {
-    print "##teamcity[buildStatus status='FAILURE' text='No System Tests configured!']\n";
-} else {
+    teamcity_build_failure('No System Tests configured!');
+}
+else {
     foreach my $test_case (@test_spec) {
-        print "##teamcity[buildStatus status='Running test ($counter/$number_of_tests) \"$test_case->{label}\"']\n";
+        teamcity_build_progress("Running test ($counter/$number_of_tests) '$test_case->{label}'");
         if ( excute_test_case($test_case) ) {
-            print "##teamcity[buildStatus text='Integration Test \"$test_case->{label}\" OK']\n";
             $good_tests++;
         }
         $counter++;
     }
 
-    printf "##teamcity[buildStatus status='%s' text='Tests passed:%d failed:%d']\n", ( $number_of_tests == $good_tests ? "SUCCESS" : "FAILURE" ),
-      $good_tests, $number_of_tests - $good_tests;
+    teamcity_build_status( $number_of_tests == $good_tests,
+                           sprintf 'Tests passed:%d failed:%d',
+                           $good_tests, $number_of_tests - $good_tests );
 }

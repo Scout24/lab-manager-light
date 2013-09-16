@@ -8,6 +8,8 @@ use LWP::UserAgent;
 use HTTP::Request;
 use JSON;
 
+use TeamCity::Messages;
+
 sub new {
     my ( $class, $uuid, $vm_create_options ) = @_;
 
@@ -88,7 +90,7 @@ sub _download_vm_screenshot {
     my $file = sprintf( "test/temp/%s_%s_%03d.png", $self->{vm_create_options}->{name}, $self->{uuid}, $screenshot_count );
     my $url = sprintf( "http://%s/lml/vmscreenshot.pl?image=1&uuid=%s", $self->{vm_create_options}->{test_host}, $self->{uuid} );
 
-    print "##teamcity[progressMessage 'Downloading VM Screenshot from $url to $file']\n";
+    teamcity_build_progress("Downloading VM Screenshot from $url to $file");
     my $png = $self->_do_http_get_request($url);
 
     open my $FILE, ">$file" or $self->_fail_team_city_build("Could not open $file for writing");
@@ -100,8 +102,8 @@ sub _download_vm_screenshot {
 # logs TeamCity build status message with FAILURE status
 sub _fail_team_city_build {
     my ( $self, $reason ) = @_;
-    print "##teamcity[buildStatus status='FAILURE' text='$reason']\n";
-    die "An error occured while creating vm";
+    teamcity_build_failure($reason);
+    die "An error occured while creating vm:\n$reason";
 }
 
 sub _do_http_get_request {
@@ -132,18 +134,18 @@ sub _decode_qr {
 
 sub _ocr_match {
     my ( $self, $file, $test_definition ) = @_;
-    print "##teamcity[progressMessage 'OCR scan on $file']\n";
+    teamcity_build_progress("OCR scan on $file");
 
     my $raw_data = qx(gocr -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
     if ( ( $? >> 8 ) > 0 ) {
-        print "##teamcity[progressMessage 'OCR scan of image failed.']\n";
+        teamcity_build_progress("OCR scan of image failed.");
         return 0;
     }
     else {
         print "OCR text Result:\n" . $raw_data;
         my $match = 0;
         foreach my $pattern ( @{ $test_definition->{expect} } ) {
-            print "##teamcity[progressMessage 'Validating OCR text for matching pattern \"$pattern\"']\n";
+            teamcity_build_progress("Validating OCR text for matching pattern '$pattern'");
             $match += $raw_data =~ qr($pattern)ms;
         }
         return $match;

@@ -10,6 +10,8 @@ use LWP::UserAgent;
 use HTTP::Request;
 use DateTime;
 
+use TeamCity::Messages;
+
 # Constructor
 sub new {
     my ( $class, $vm_create_options ) = @_;
@@ -30,21 +32,21 @@ sub create_vm {
     my ($self) = @_;
 
     if ( $self->{already_deleted} ) {
-        print "##teamcity[buildStatus status='FAILURE' text='Wrong usage - the created VM must be deleted before create a new one']\n";
-        exit 1;
+        teamcity_build_failure("Wrong usage - the created VM must be deleted before create a new one");
+        die;
     }
 
     my %create_options = %{$self->{vm_create_options}};
     # take only keys that have a non-default (0) value and that can be send to vmcreate.pl
     my @send_options = grep { $create_options{$_} } ("name","username","expiration","folder","force_boot_target","esx_host","force_network");
     my $vm_create_url_data = join("&",map { "$_=$create_options{$_}" } @send_options); # build url option=option_value for send_options
-    $self->_report_progress( "Creating " . $self->{vm_create_options}->{name} . " ($vm_create_url_data)");
+    teamcity_build_progress( "Creating " . $self->{vm_create_options}->{name} . " ($vm_create_url_data)");
 
     my $uuid = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-create.pl", $vm_create_url_data );
 
     if ( $uuid =~ /ERROR: / or $uuid =~ /\s+/ ) {
-        print "##teamcity[buildStatus status='FAILURE' text='Could not retrieve uuid " . $uuid . "']\n";
-        die "An error occured while creating a vm";
+        teamcity_build_failure("Could not retrieve UUID '$uuid' of new VM");
+        die;
     }
     return new TestTools::VMcreated( $uuid, $self->{vm_create_options} );
 }
@@ -57,11 +59,11 @@ sub delete_vm {
         return;
     }
     else {
-        $self->_report_progress( "Deleting " . $self->{vm_create_options}->{name} );
+        teamcity_build_progress( "Deleting " . $self->{vm_create_options}->{name} );
         my $res = $self->_do_http_post_request( "http://" . $self->{vm_create_options}->{test_host} . "/lml/restricted/vm-control.pl", "action=destroy&hosts=" . $self->{vm_create_options}->{name} );
         if ( $res =~ /ERROR/ ) {
-            print "##teamcity[buildStatus status='FAILURE' text='Could not delete " . $res . "']\n";
-            die "An error occured while deleting a vm";
+            teamcity_build_failure("Could not delete $res");
+            die;
         }
         else {
             $self->{already_deleted} = 1;
@@ -74,12 +76,6 @@ sub delete_vm {
 # PRIVATE FUNCTIONS
 #####################################################################
 #####################################################################
-
-sub _report_progress {
-    my ( $self, $message ) = @_;
-    $message =~ s(['\]])(|$&)g; # escape reson for TeamCity
-    print "##teamcity[progressMessage '$message']" . $/;
-}
 
 sub _do_http_post_request {
     my ( $self, $url, $data ) = @_;

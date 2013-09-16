@@ -7,6 +7,7 @@ use Getopt::Long;
 use Data::Dumper;
 use DateTime;
 use Carp;
+use TeamCity::Messages;
 
 sub new {
     my ( $class, $self ) = @_;
@@ -25,7 +26,8 @@ sub new {
               and $self->{lmlhostpattern} )
       )
     {
-        croak "##teamcity[buildStatus status='FAILURE' text='Need to provide at least test_host, vm_name_prefix, username, folder and lmlhostpattern options.']\n";
+        teamcity_build_failure("Cannot create VM - not all requires options specified");
+        croak "Need to provide at least test_host, vm_name_prefix, username, folder and lmlhostpattern options.";
     }
 
     bless $self, $class;
