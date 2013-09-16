@@ -10,6 +10,9 @@ use LML::Common;
 use LML::Config;
 use LML::Lab;
 
+use DateTime::Format::Flexible;
+use DateTime;
+
 sub new {
     my ( $class, $config, $VM ) = @_;
     croak( "1st parameter to " . ( caller(0) )[3] . " must be a LML::Config object" ) unless ( ref($config) eq "LML::Config" );

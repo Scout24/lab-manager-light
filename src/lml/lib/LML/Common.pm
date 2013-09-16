@@ -28,7 +28,6 @@ use File::Glob ':glob';
 use IO::Handle;
 use Path::Class 'dir';
 use Cwd 'realpath';
-use DateTime::Format::Flexible;
 use Config::IniFiles;
 
 use POSIX;
