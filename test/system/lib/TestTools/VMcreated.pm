@@ -40,8 +40,8 @@ sub load_qrdata {
 
     if ($vm_spec) {
         my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
-        my $out = qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
-        teamcity_build_progress("convert failed:\n$out") if (($? >> 8) > 0);
+        my $out                 = qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
+        teamcity_build_progress("convert failed:\n$out") if ( ( $? >> 8 ) > 0 );
         link $file, $short_file_basename . ".png";
 
     }
@@ -69,8 +69,8 @@ sub match_ocr {
 
     if ($test_passed) {
         my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
-        my $out = qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
-        teamcity_build_progress("convert failed:\n$out") if (($? >> 8) > 0);
+        my $out                 = qx(convert -delay 20 -page 800x600 $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
+        teamcity_build_progress("convert failed:\n$out") if ( ( $? >> 8 ) > 0 );
         link $file, $short_file_basename . ".png";
     }
     else {
@@ -140,12 +140,6 @@ sub _ocr_match {
 
     my $raw_data = qx(gocr -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
     if ( ( $? >> 8 ) > 0 ) {
-        teamcity_build_progress("OCR scan of image failed, checking negative image for errors.");
-        my $error_data = qx(gocr -l 160 -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
-        if ( $error_data =~ qr(error|failure)i ) {
-            teamcity_build_failure("OCR scan found error:\n$error_data");
-            die "OCR found failure";
-        }
         return 0;
     }
     else {
@@ -153,7 +147,15 @@ sub _ocr_match {
         my $match = 0;
         foreach my $pattern ( @{ $test_definition->{expect} } ) {
             teamcity_build_progress("Validating OCR text for matching pattern '$pattern'");
-            $match += $raw_data =~ qr($pattern)ms;
+            $match += ($raw_data =~ qr($pattern)ms) ? 1 : 0; # add 1 for matching patterns
+        }
+        if ( $match == 0 ) {
+            # kickstart errors show up in negative
+            my $error_data = qx(gocr -l 160 -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
+            if ( $error_data =~ qr(error|failure)i ) {
+                teamcity_build_failure("OCR scan found error:\n$error_data");
+                die "OCR found failure";
+            }
         }
         return $match;
     }
