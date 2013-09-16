@@ -138,7 +138,12 @@ sub _ocr_match {
 
     my $raw_data = qx(gocr -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
     if ( ( $? >> 8 ) > 0 ) {
-        teamcity_build_progress("OCR scan of image failed.");
+        teamcity_build_progress("OCR scan of image failed, checking negative image for errors.");
+        my $error_data = qx(gocr -l 160 -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
+        if ( $error_data =~ qr(error|failure)i ) {
+            teamcity_build_failure("OCR scan found error:\n$error_data");
+            die "OCR found failure";
+        }
         return 0;
     }
     else {
@@ -150,8 +155,6 @@ sub _ocr_match {
         }
         return $match;
     }
-
-    #    return $raw_data ? decode_json($raw_data) : undef;
 
 }
 1;
