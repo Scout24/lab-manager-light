@@ -213,6 +213,26 @@ sub create_vm {
     }
 
     my $vm_view = Vim::get_view( mo_ref => $vm_ref );
+    
+    # first thing add VM data to lab.conf so that it can be deleted through LML even if the following operations fail.
+    my $HOSTS      = get_hosts;
+    my $NETWORKS   = get_networks;
+    my $DATASTORES = get_datastores;
+    my $FOLDERS    = get_folders;
+    my $rw_lab     = new LML::Lab( $C->labfile, 1 );
+    # first update the info about ESX hosts
+    $rw_lab->update_hosts($HOSTS);
+    $rw_lab->update_networks($NETWORKS);
+    $rw_lab->update_datastores($DATASTORES);
+    $rw_lab->update_folders($FOLDERS);
+    $rw_lab->update_vm( new LML::VM( $vm_view->config->uuid ) );
+    # Should also have set dns_domain and the custom fields from below etc., but works also without.
+    # When the VM boots via pxelinux.pl we will write the correct values to lab.conf
+    if ( not $rw_lab->write_file( "for just now created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
+        # NOT dying here on purpose to give vm-create a chance to finish starting the VM.
+        warn "Strangely writing LAB produced a 0-byte file.\n";
+    }
+    
     # set the custom fields with defined values
     set_custom_fields( custom_fields => $$args{custom_fields},
                        vm_view       => $vm_view );
@@ -232,21 +252,7 @@ sub create_vm {
             error("Could not power on VM:\n".Data::Dumper([$@],['$@']));
         }
     }
-    my $HOSTS      = get_hosts;
-    my $NETWORKS   = get_networks;
-    my $DATASTORES = get_datastores;
-    my $FOLDERS    = get_folders;
-    my $rw_lab     = new LML::Lab( $C->labfile, 1 );
-    # first update the info about ESX hosts
-    $rw_lab->update_hosts($HOSTS);
-    $rw_lab->update_networks($NETWORKS);
-    $rw_lab->update_datastores($DATASTORES);
-    $rw_lab->update_folders($FOLDERS);
-    $rw_lab->update_vm( new LML::VM( $vm_view->config->uuid ) );
-    # should also have set dns_domain etc., but works also without. The following call to pxelinux.pl will fix it in any case.
-    if ( not $rw_lab->write_file( "for newly created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
-        die "Strangely writing LAB produced a 0-byte file.\n";
-    }
+
     # if everything went find give an success status
     success( $vm_view->config->uuid );
 }
