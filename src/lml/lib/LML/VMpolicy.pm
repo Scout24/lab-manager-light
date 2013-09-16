@@ -178,11 +178,14 @@ sub validate_expiry {
         my $vmdate   = $self->{VM}{CUSTOMFIELDS}{$expires_field};
         my $expires  = "THERE WAS AN ERROR";
         my $european = $self->{Config}->get( "vsphere", "expires_european" ) ? 1 : 0;
+        my $expires_maximum = $self->{Config}->get( "vsphere", "expires_maximum" );
         eval { $expires = DateTime::Format::Flexible->parse_datetime( $vmdate, european => $european ) };
         if ($@) {
-            push( @error, "Cannot parse $expires_field date '" . $vmdate . "'" );
+            push @error, "Cannot parse $expires_field date '" . $vmdate . "'" ;
         } elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
-            push( @error, "VM expired on " . $expires );
+            push @error, "VM expired on " . $expires ;
+        } elsif ( DateTime->compare( $expires, DateTime->now()->add(days=>$expires_maximum) ) >= 0 ) {
+            push @error, "VM is not allowed to expire more than $expires_maximum days in the future";
         }
         Debug("validating expiry '$vmdate', parsed as '$expires'");
 
