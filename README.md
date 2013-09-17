@@ -2,7 +2,7 @@ More documentation, especially a description of what it does, can be found at ht
 
 Please refer to the new [wiki](https://github.com/ImmobilienScout24/lab-manager-light/wiki/) and the old [wiki](http://code.google.com/p/lml/w/list) for additional documentation.
 
-See [default.conf] for a full and commented list of configuration options. Override them in `/etc/lml/*.conf` files.
+See [default.conf](https://github.com/ImmobilienScout24/lab-manager-light/blob/master/src/lml/default.conf) for a full and commented list of configuration options. Override them in `/etc/lml/*.conf` files.
 
 # Building
 
