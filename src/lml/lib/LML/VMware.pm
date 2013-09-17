@@ -21,6 +21,8 @@ use VMware::VIRuntime;
 use LML::Common;
 use Carp;
 
+use Sys::Syslog;
+
 ################ Old Interface #############
 #
 #
@@ -41,7 +43,8 @@ my %FOLDERIDS;
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
 my $VM_PROPERTIES = [
                       "name",            "config.name",            "config.uuid", "config.extraConfig",
-                      "config.template", "config.hardware.device", "customValue", "runtime.host", "parent",
+                      "config.template", "config.hardware.device", "customValue", "runtime.host",
+                      "parent",
 ];
 
 # return if arg looks like a UUID
@@ -172,9 +175,7 @@ sub retrieve_vm_details ($) {
 
     # store ESX host
     my $host_id = $vm->get_property("runtime.host")->value;
-    $VM_DATA{HOST} = defined $HOSTS{ $host_id  } ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
-    
-    
+    $VM_DATA{HOST} = defined $HOSTS{$host_id} ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
 
     return \%VM_DATA;
 }
@@ -210,6 +211,12 @@ sub get_vi_connection() {
     eval { $connection = Util::connect(); };
     croak("Could not connect to vSphere, SDK error message:\n$@") if ($@);
     Debug("Connected to vSphere");
+    openlog( "lab-manager-light", 'nofatal', 'user' );
+    syslog( 'info',
+            "VI connect |%s|",
+            join( "|", ( caller(1) )[ 1, 2, 3 ] )
+            );
+    closelog();
     return $connection;
 }
 
@@ -379,8 +386,8 @@ sub get_folders {
     unless ( scalar keys %FOLDERIDS ) {
         get_vi_connection();
         # collect all object types that could be part of a folder hierarchy
-        my $folderViews     = Vim::find_entity_views( view_type => "Folder",     properties => [ "name", "parent" ] );
-        my $datacenterViews = Vim::find_entity_views( view_type => "Datacenter", properties => [ "name", "parent" ] );
+        my $folderViews          = Vim::find_entity_views( view_type => "Folder",          properties => [ "name", "parent" ] );
+        my $datacenterViews      = Vim::find_entity_views( view_type => "Datacenter",      properties => [ "name", "parent" ] );
         my $computeResourceViews = Vim::find_entity_views( view_type => "ComputeResource", properties => [ "name", "parent" ] );
         %FOLDERIDS = (
             map {
@@ -502,16 +509,12 @@ sub get_hosts {
         # initialize HOSTS if they don't contain data
         %HOSTS = ();
         my $entityViews = Vim::find_entity_views(
-                                                  view_type    => "HostSystem",
-                                                  begin_entity => Vim::get_service_content()->rootFolder,
-                                                  properties   => [
-                                                                  "runtime.inMaintenanceMode", "hardware.systemInfo.uuid",
-                                                                  "name",                      "config.product",
-                                                                  "summary.quickStats",        "summary.hardware",
-                                                                  "overallStatus",             "network",
-                                                                  "datastore",                 "vm",
-                                                                  "parent",
-                                                  ] );
+                    view_type    => "HostSystem",
+                    begin_entity => Vim::get_service_content()->rootFolder,
+                    properties   => [
+                                    "runtime.inMaintenanceMode", "hardware.systemInfo.uuid", "name", "config.product", "summary.quickStats",
+                                    "summary.hardware", "overallStatus", "network", "datastore", "vm", "parent",
+                    ] );
         foreach my $e ( @{$entityViews} ) {
             my $product    = $e->get_property("config.product");
             my $quickStats = $e->get_property("summary.quickStats");
@@ -546,7 +549,7 @@ sub get_hosts {
                 networks   => [ map { $_->{value} } @{ $e->get_property("network")   || [] } ],  # use empty array if host has no networks
                 datastores => [ map { $_->{value} } @{ $e->get_property("datastore") || [] } ],  # use empty array if host has no datastores
                 vms        => [ map { $_->{value} } @{ $e->get_property("vm")        || [] } ],  # use empty array if host has no VMs
-                path => _get_folder( $e ),
+                path => _get_folder($e),
             };
         }
     }
