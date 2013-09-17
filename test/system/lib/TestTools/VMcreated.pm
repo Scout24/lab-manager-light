@@ -6,9 +6,11 @@ use warnings;
 use TestTools::QRdata;
 use LWP::UserAgent;
 use HTTP::Request;
+use Time::HiRes qw(sleep time);
 use JSON;
 
 use TeamCity::Messages;
+my $screenshot_interval = 10;    # take a screenshot every 10 seconds
 
 sub new {
     my ( $class, $uuid, $vm_create_options ) = @_;
@@ -33,19 +35,18 @@ sub load_qrdata {
 
     while ( not $vm_spec and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
         $screenshot_count++;
+        my $last = time();
         $file = $self->_download_vm_screenshot( $self->{uuid}, $screenshot_count );
         $vm_spec = $self->_decode_qr($file);
-        sleep 3;    # be nice to vSphere and try again only after a few seconds
+        my $sleep_time = $screenshot_interval - ( time() - $last );    # the remaining time till the screenshot interval
+        sleep($sleep_time) if ( $sleep_time > 0 );                     # be nice to vSphere and try again only after a few seconds
     }
+    my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
+    my $out = qx(convert -delay 20 -page 800x600 -dispose background $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
+    teamcity_build_progress("convert failed:\n$out") if ( ( $? >> 8 ) > 0 );
+    link $file, $short_file_basename . ".png";
 
-    if ($vm_spec) {
-        my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
-        my $out                 = qx(convert -delay 20 -page 800x600 -dispose previous $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
-        teamcity_build_progress("convert failed:\n$out") if ( ( $? >> 8 ) > 0 );
-        link $file, $short_file_basename . ".png";
-
-    }
-    else {
+    unless ($vm_spec) {
         $self->_fail_team_city_build( "No QR code recognized after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
@@ -62,18 +63,18 @@ sub match_ocr {
 
     while ( not $test_passed and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
         $screenshot_count++;
+        my $last = time();
         $file = $self->_download_vm_screenshot( $self->{uuid}, $screenshot_count );
         $test_passed = $self->_ocr_match( $file, $test_definition );
-        sleep 3;    # be nice to vSphere and try again only after a few seconds
+        my $sleep_time = $screenshot_interval - ( time() - $last );    # the remaining time till the screenshot interval
+        sleep($sleep_time) if ( $sleep_time > 0 );                     # be nice to vSphere and try again only after a few seconds
     }
+    my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
+    my $out = qx(convert -delay 20 -page 800x600 -dispose background $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
+    teamcity_build_progress("convert failed:\n$out") if ( ( $? >> 8 ) > 0 );
+    link $file, $short_file_basename . ".png";
 
-    if ($test_passed) {
-        my $short_file_basename = "test/temp/" . $self->{vm_create_options}->{name} . "_" . $self->{uuid};
-        my $out                 = qx(convert -delay 20 -page 800x600 -dispose previous $short_file_basename*.png -loop 1 $short_file_basename.gif 2>&1);
-        teamcity_build_progress("convert failed:\n$out") if ( ( $? >> 8 ) > 0 );
-        link $file, $short_file_basename . ".png";
-    }
-    else {
+    unless ($test_passed) {
         $self->_fail_team_city_build( "No OCR match after " . $self->{vm_create_options}->{boot_timeout} . " seconds" );
     }
 
@@ -147,7 +148,7 @@ sub _ocr_match {
         my $match = 0;
         foreach my $pattern ( @{ $test_definition->{expect} } ) {
             teamcity_build_progress("Validating OCR text for matching pattern '$pattern'");
-            $match += ($raw_data =~ qr($pattern)ms) ? 1 : 0; # add 1 for matching patterns
+            $match += ( $raw_data =~ qr($pattern)ms ) ? 1 : 0;    # add 1 for matching patterns
         }
         if ( $match == 0 ) {
             # kickstart errors show up in negative
