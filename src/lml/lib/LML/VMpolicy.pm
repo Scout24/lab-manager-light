@@ -53,13 +53,13 @@ sub validate_hostrules_pattern {
 
 sub validate_dns_zones {
     # check VM name against other DNS zones to prevent creating duplicate entries
-    my ($self,@extrazones) = @_;
+    my ( $self, @extrazones ) = @_;
     my @error;
     my $dnscheck = $self->{Config}->get( "hostrules", "dnscheck" );
 
     # only process the dnscheck, if it is enabled in configuration
     if ($dnscheck) {
-        my @dnscheckzones = ($self->{Config}->get_array( "hostrules", "dnscheckzones" ), @extrazones);
+        my @dnscheckzones = ( $self->{Config}->get_array( "hostrules", "dnscheckzones" ), @extrazones );
         my $vm_name = $self->{VM}->name;
         if ( scalar(@dnscheckzones) ) {
             for my $z (@dnscheckzones) {
@@ -69,12 +69,13 @@ sub validate_dns_zones {
                 }
             }
         }
-        Debug( "Result: " . join( ", ", @error ) );
     }
 
     if (@error) {
+        Debug( "Result: " . join( ", ", @error ) );
         return @error;
-    } else {
+    }
+    else {
         return;
     }
 }
@@ -88,33 +89,35 @@ sub validate_vm_dns_name {
     my ( $self, $LAB ) = @_;
     # validate arg
     croak( "Parameter to " . ( caller(0) )[3] . " must be LML::Lab object" ) unless ( ref($LAB) eq "LML::Lab" );
-    
+
     my $vm_name = $self->{VM}->name;
-    
-    if ($self->{VM}->matching_networks($self->{Config}->get_array("dhcp","managed_networks"))) {
+
+    if ( $self->{VM}->matching_networks( $self->{Config}->get_array( "dhcp", "managed_networks" ) ) ) {
         # this test is only relevant for those networks, where we manage a DHCP server
         my $result;
-        my $vm_uuid = $self->{VM}->uuid;
+        my $vm_uuid      = $self->{VM}->uuid;
         my $appenddomain = $self->{VM}->dns_domain;
-        if (! $appenddomain) {
+        if ( !$appenddomain ) {
             # This test needs an fqdn of the VM, it should be set elsewhere
-            Debug(Data::Dumper->Dump([$self->{VM}],['self->{VM}']));
-            confess("VM $vm_uuid ($vm_name) has no DNS Domain set\n")
+            Debug( Data::Dumper->Dump( [ $self->{VM} ], ['self->{VM}'] ) );
+            confess("VM $vm_uuid ($vm_name) has no DNS Domain set\n");
         }
         my $vm_fqdn = $vm_name . ".$appenddomain.";
         my ( $dns_fqdn, $aliases, $addrtype, $length, @addrs ) = gethostbyname($vm_fqdn);
-    
+
         Debug( "validating name '$vm_name' in managed DNS domain: $appenddomain: " . join( ", ", map { inet_ntoa($_) } @addrs ) );
         if ( exists( $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) ) {
             # we have old data
             if ( $vm_name eq $LAB->{HOSTS}->{$vm_uuid}->{HOSTNAME} ) {
                 # old name equals new name
                 return;
-            } elsif ($dns_fqdn) {
+            }
+            elsif ($dns_fqdn) {
                 # new VM name exists in DNS
                 $result = "Renamed VM '$vm_fqdn' exists already in '$appenddomain'";
             }    # else new VM name does not exist in DNS -> all OK
-        } else {
+        }
+        else {
             # we don't have old data, must be new VM
             if ($dns_fqdn) {
                 # new VM name conflicts with existing systems in managed domain
@@ -125,8 +128,9 @@ sub validate_vm_dns_name {
             Debug("Result: $result");
             return $result;
         }
-    
-    } else {
+
+    }
+    else {
         Debug("NOT validating name '$vm_name', it is not on [dhcp] managed_networks");
     }
     return;
@@ -154,17 +158,20 @@ sub validate_contact_user {
                         push( @error, "$contactuserid_field '" . $contactuserid . "' is not allowed" );
                     }
                 }
-            } else {
+            }
+            else {
                 push( @error, "$contactuserid_field '" . $contactuserid . "' does not exist" );
             }
-        } else {
+        }
+        else {
             push( @error, "Must set $contactuserid_field to valid username" );
         }
     }    # else test not configured
-    Debug( "Result: " . join( ", ", @error ) );
     if (@error) {
+        Debug( "Result: " . join( ", ", @error ) );
         return @error;
-    } else {
+    }
+    else {
         return;
     }
 }
@@ -175,46 +182,103 @@ sub validate_expiry {
     my @error;
     my $expires_field = $self->{Config}->get( "vsphere", "expires_field" );
     if ( exists $self->{VM}{CUSTOMFIELDS}{$expires_field} ) {
-        my $vmdate   = $self->{VM}{CUSTOMFIELDS}{$expires_field};
-        my $expires  = "THERE WAS AN ERROR";
-        my $european = $self->{Config}->get( "vsphere", "expires_european" ) ? 1 : 0;
+        my $vmdate          = $self->{VM}{CUSTOMFIELDS}{$expires_field};
+        my $expires         = "THERE WAS AN ERROR";
+        my $european        = $self->{Config}->get( "vsphere", "expires_european" ) ? 1 : 0;
         my $expires_maximum = $self->{Config}->get( "vsphere", "expires_maximum" );
         eval { $expires = DateTime::Format::Flexible->parse_datetime( $vmdate, european => $european ) };
         if ($@) {
-            push @error, "Cannot parse $expires_field date '" . $vmdate . "'" ;
-        } elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
-            push @error, "VM expired on " . $expires ;
-        } elsif ( DateTime->compare( $expires, DateTime->now()->add(days=>$expires_maximum) ) >= 0 ) {
+            push @error, "Cannot parse $expires_field date '" . $vmdate . "'";
+        }
+        elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
+            push @error, "VM expired on " . $expires;
+        }
+        elsif ( DateTime->compare( $expires, DateTime->now()->add( days => $expires_maximum ) ) >= 0 ) {
             push @error, "VM is not allowed to expire more than $expires_maximum days in the future";
         }
         Debug("validating expiry '$vmdate', parsed as '$expires'");
 
         # implicit logic: If we got here without errors then the date is parsable and in the future
-    } else {
+    }
+    else {
         push( @error, "Must set $expires_field to valid date or date/time" );
     }
-    Debug( "Result: " . join( ", ", @error ) );
+
     if (@error) {
+        Debug( "Result: " . join( ", ", @error ) );
         return @error;
-    } else {
+    }
+    else {
         return;
     }
 }
 
 sub validate_network_assignment {
-    my $self = shift;
+    my $self    = shift;
     my @results = ();
-    my $name = $self->{VM}->name;
-    for my $net ($self->{VM}->networks) {
-        if (my @rules = $self->{Config}->get_array("network_assignment",$net)) {
-            Debug("validating network assignment for '$net': ^".join('$, ^',@rules).'$');
-            if (not grep { $name =~ qr(^$_$) } @rules) {
+    my $name    = $self->{VM}->name;
+    for my $net ( $self->{VM}->networks ) {
+        if ( my @rules = $self->{Config}->get_array( "network_assignment", $net ) ) {
+            Debug( "validating network assignment for '$net': ^" . join( '$, ^', @rules ) . '$' );
+            if ( not grep { $name =~ qr(^$_$) } @rules ) {
                 # if none of the patterns matched the VM name then this VM is not authorized on this net.
-                push(@results,"VM not authorized for network '".$net."'");
+                push( @results, "VM not authorized for network '" . $net . "'" );
             }
         }
     }
     return @results;
+}
+
+# VMs in ignore_path_patterns are not handled by LML, return is boolean
+sub ignore_vm_by_path {
+    my ($self)  = @_;
+    my @results = ();
+    my $name    = $self->{VM}->name;
+    my @ignore_path_patterns = $self->{Config}->get_array( "vsphere", "ignore_paths" );
+    if (@ignore_path_patterns) {
+        my $path = $self->{VM}->path;
+        Debug( "ignore vm by path for '$path': ^" . join( '$, ^', @ignore_path_patterns ) . '$' );
+        # match path case-insensitive
+        foreach my $pattern (@ignore_path_patterns) {
+            $pattern = qr(^$pattern$)i;
+            if ( $path =~ $pattern ) {
+                Debug("ignore_vm_by_path matches $pattern");
+                return 1;    # enough to find one that does not match
+            }
+        }
+    }
+    return 0;
+}
+
+# VM must be in one of allow_path_patterns and in none of deny_path_patterns.
+sub validate_path {
+    my ($self) = @_;
+    my $name = $self->{VM}->name;
+    my @allow_path_patterns = $self->{Config}->get_array( "vsphere", "allow_paths" );
+    my @deny_path_patterns  = $self->{Config}->get_array( "vsphere", "deny_paths" );
+
+    my $path = $self->{VM}->path;
+    Debug("validate path '$path'");
+
+    if (@allow_path_patterns) {
+        Debug( "validate path allow: : ^" . join( '$, ^', @allow_path_patterns ) . '$' );
+        my @matching_allow_patterns = grep { $path =~ $_ } map { qr(^$_$)i } @allow_path_patterns;
+        unless (@matching_allow_patterns) {
+            Debug( "validate path allow matched: ^" . join( '$, ^', @matching_allow_patterns ) . '$' );
+            return "VM not allowed in '$path' folder";
+        }
+    }
+    if (@deny_path_patterns) {
+        Debug( "validate path deny: : ^" . join( '$, ^', @deny_path_patterns ) . '$' );
+        foreach my $pattern (@deny_path_patterns) {
+            $pattern = qr(^$pattern$)i;
+            if ( $path =~ $pattern ) {
+                Debug("validate path denied by $pattern");
+                return "VM not allowed in '$path' folder";    # enough to find one that does not match
+            }
+        }
+    }
+    return;
 }
 
 sub handle_unmanaged {
@@ -225,8 +289,7 @@ sub handle_unmanaged {
     if (
          ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} and $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} eq "unmanaged" )
          or ( exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field}
-              and $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} eq "unmanaged" )
-      )
+              and $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} eq "unmanaged" ) )
     {
         die("You don't want to be managed - I won't let you boot here.\n");
     }
@@ -251,13 +314,15 @@ sub handle_forceboot {
          and not grep { $_ eq uc( $self->{VM}->{CUSTOMFIELDS}{$forceboot_field} ) } @disabled_forceboot )
     {
         my $forceboot_target;    # Will be set in the next step, just to define with my
-        my $forceboot              = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
+        my $forceboot = $self->{VM}->{CUSTOMFIELDS}{$forceboot_field};
         my $forceboot_target_field = $self->{Config}->get( "vsphere", "forceboot_target_field" );
 
         my $forceboot_target_value;
         if ($forceboot_target_field) {
-            $forceboot_target_value = exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
-        } else {
+            $forceboot_target_value =
+              exists $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} ? $self->{VM}->{CUSTOMFIELDS}{$forceboot_target_field} : "";
+        }
+        else {
             $forceboot_target_value = "";
         }
 
@@ -315,7 +380,8 @@ sub handle_forceboot {
             # we hit the else block above (a bit ugly, but it works)
             if ($compat_mode) {
                 $result->add_error("Invalid force boot target '$forceboot_field'");
-            } else {
+            }
+            else {
                 $result->add_error("Invalid force boot target in '$forceboot_target_field'");
             }
         }    # else do nothing to silently ignore invalid force boot targets

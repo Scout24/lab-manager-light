@@ -133,12 +133,12 @@ sub retrieve_vm_details ($) {
 
                 if ( defined $NETWORKIDS{$portgroupkey} ) {
                     $net = $NETWORKIDS{$portgroupkey}->{name};
+                }
+                else {
                     Debug(   "VM "
                            . $VM_DATA{"NAME"} . " ("
                            . $VM_DATA{VM_ID}
                            . ") mac $mac has unresolvable network '$portgroupkey' connected" );
-                }
-                else {
                     $net = "";
                 }
             }
@@ -212,10 +212,7 @@ sub get_vi_connection() {
     croak("Could not connect to vSphere, SDK error message:\n$@") if ($@);
     Debug("Connected to vSphere");
     openlog( "lab-manager-light", 'nofatal', 'user' );
-    syslog( 'info',
-            "VI connect |%s|",
-            join( "|", ( caller(1) )[ 1, 2, 3 ] )
-            );
+    syslog( 'info', "VI connect |%s|", join( "|", ( caller(1) )[ 1, 2, 3 ] ) );
     closelog();
     return $connection;
 }

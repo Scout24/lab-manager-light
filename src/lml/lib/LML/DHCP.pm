@@ -28,7 +28,7 @@ sub UpdateDHCP {
                     $dhcp_hosts .= "host $u" . ( $count > 0 ? "-$count" : "" ) . " { \n";
                     $dhcp_hosts .= "\thardware ethernet $m;\n";
                     my $hostname = $LAB->{HOSTS}->{$u}->{HOSTNAME} . ( $count > 0 ? "-$count" : "" );
-                    Debug(Data::Dumper->Dump([$LAB->{HOSTS}->{$u}],["LAB->{HOSTS}->{$u}"]));
+                    #Debug(Data::Dumper->Dump([$LAB->{HOSTS}->{$u}],["LAB->{HOSTS}->{$u}"]));
                     $dhcp_hosts .= "\toption host-name \"$hostname"
                       . "." . (defined($LAB->{HOSTS}->{$u}->{DNS_DOMAIN}) ? $LAB->{HOSTS}->{$u}->{DNS_DOMAIN} : $default_appenddomain) . "\";\n";
 
