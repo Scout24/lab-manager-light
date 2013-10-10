@@ -37,7 +37,8 @@ sub new {
                     "DATASTORES" => {},
                     "FOLDERS"    => {},
         };
-        if ( -r $arg ) {
+        $filename = $arg;
+        {
             local $/ = undef;
 
             # shared lock good enough for read-only, read-write Lab needs exclusive lock.
@@ -48,7 +49,7 @@ sub new {
             # first try non-blocking lock, then blocking and report the wait time.
             unless (
                 $lock = new File::NFSLock( {
-                      file               => $arg,
+                      file               => $filename,
                       lock_type          => File::NFSLock::LOCK_NB | $locktype,
                       stale_lock_timeout => 2 * 60,                               # seconds
                     } ) )
@@ -56,7 +57,7 @@ sub new {
                 # need to wait for lock
                 if (
                     $lock = new File::NFSLock( {
-                          file               => $arg,
+                          file               => $filename,
                           lock_type          => $locktype,
                           blocking_timeout   => 30,                               # seconds
                           stale_lock_timeout => 2 * 60,                           # seconds
@@ -65,13 +66,15 @@ sub new {
                     $lockwait = time() - $created_time;
                 }
                 else {
-                    croak "I couldn't lock the file [$File::NFSLock::errstr]";
+                    croak "I could not get a lock for '$filename': [$File::NFSLock::errstr]";
                 }
             }
-            open( LAB_CONF, "<", $arg ) || croak "Could not open $arg for reading.\n";
-            binmode LAB_CONF;
-            eval <LAB_CONF> || croak "Could not parse $arg:\n$@\n";
-            close(LAB_CONF);
+            if ( -r $filename ) {
+                open( LAB_CONF, "<", $filename ) || croak "Could not open $filename for reading.\n";
+                binmode LAB_CONF;
+                eval <LAB_CONF> || croak "Could not parse $filename:\n$@\n";
+                close(LAB_CONF);
+            }
             if ( !defined $readwrite ) {
                 # read-write stays locked.
                 $lock->unlock();
@@ -81,10 +84,10 @@ sub new {
         if ( ref($LAB) eq "HASH" and scalar( %{$LAB} ) ) {
             # make sure that LAB is a non-empty hashref
             $self = $LAB;
-            $self->{filename} = $arg;    # keep filename if we read the data from a file
+            $self->{filename} = $filename;    # keep filename if we read the data from a file
         }
         else {
-            croak '$LAB is not a hashref (with read-only Lab) or empty, your $arg file must be broken.\n';
+            croak '$LAB is not a hashref (with read-only Lab) or empty, your $filename file must be broken.\n';
         }
 
     }
@@ -392,7 +395,7 @@ sub write_file {
     confess("LML::Lab instance created in $self->{runtime}->{created_by} is not writable") unless ( defined $self->{runtime}->{readwrite} );
     my $filename = $self->filename;
     croak("No filename associated with LML::Lab object \n") unless ($filename);
-    confess("No lock!") unless ( defined $self->{runtime}->{lock} );
+    confess("Cannot get lock for '$filename'!") unless ( defined $self->{runtime}->{lock} );
     open( LAB_CONF, ">", $filename ) || croak "Could not open '$filename' for writing : $! \n";
     print LAB_CONF "# " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime() ) . " " . join( ", ", @comments ) . "\n";
     my $LAB = {};
