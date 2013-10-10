@@ -254,6 +254,7 @@ my %LAB_TESTDATA = (
                                                              "VM_ID"            => "vm-1000",
                                                              "EXTRAOPTS"        => "option foo \"bar\";option bar baz;",
                                                              "UUID"  => "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf",
+                                                             "CLIENT_IP" => "1.2.3.4",
                  } }
 
 );
@@ -273,6 +274,7 @@ is_deeply( $LAB_NEW->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{MAC},
            $VM_ALL->{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{MAC},
            "should have updated MAC list from VM data" );
 
+is ($LAB_NEW->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{CLIENT_IP},"1.2.3.4","should keep old client IP on update");
 is_deeply( $LAB_NEW->{HOSTS}{'4213059e-70c2-6f34-1986-50463d0222f8'}, undef, "should have removed obsolete VM" );
 
 is_deeply( $LAB_NEW->{ESXHOSTS},   $HOSTS,      "should find ESX hosts in lab file" );

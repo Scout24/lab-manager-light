@@ -161,6 +161,7 @@ sub set_custom_value {
     my ($self,$key,$value) = @_;
     return LML::VMware::setVmCustomValue( $self->uuid, $key, $value );
 }
+
 sub reboot {
     my $self = shift;
     return LML::VMware::perform_reboot( $self->uuid );

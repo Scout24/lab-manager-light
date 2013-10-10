@@ -344,7 +344,6 @@ sub update_vm {
       unless ( ref($VM) eq "LML::VM" );
     my $uuid        = $VM->uuid;
     my $name        = $VM->name;
-    my $vm_id       = $VM->vm_id;
     my @vm_lab_macs = $VM->get_filtered_macs;
 
     Debug( "Updating LAB for '$name' with '" . join( ", ", @vm_lab_macs ) . "'" );
@@ -363,20 +362,22 @@ sub update_vm {
     if ($update_dhcp) {
         push( @{ $self->{vms_to_update} }, $uuid );
     }
+    my $old_ip = defined($self->{HOSTS}->{$uuid}->{CLIENT_IP}) ? $self->{HOSTS}->{$uuid}->{CLIENT_IP} : undef;
     $self->{HOSTS}->{$uuid} = {
         UPDATED         => ( gettimeofday() )[0],                                # time is from Time::HiRes and gives (seconds,milliseconds)
-        UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S ", localtime ),
+        UPDATED_DISPLAY => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime ),
         UUID            => $uuid,
         HOSTNAME        => $name,
         NAME            => $name,
         DNS_DOMAIN      => $VM->dns_domain,
         MACS            => \@vm_lab_macs,
-        VM_ID           => $vm_id,
+        VM_ID           => $VM->vm_id,
         MAC             => $VM->mac,
         CUSTOMFIELDS    => $VM->customfields,
         PATH            => $VM->path,
         HOST            => $VM->host,
-        CLIENT_IP       => defined $ENV{REMOTE_ADDR} ? $ENV{REMOTE_ADDR} : undef,
+        # update client ip if we have one, otherwise keep previous data
+        CLIENT_IP       => defined $ENV{REMOTE_ADDR} ? $ENV{REMOTE_ADDR} : $old_ip,
     };
     return $update_dhcp;
 }
