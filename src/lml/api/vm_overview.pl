@@ -31,18 +31,31 @@ sub fill_vm_overview_json {
     my $screenshot_enabled     = $C->get( "vmscreenshot", "enabled" );
     my $force_boot_field       = $C->get( "vsphere", "forceboot_field" );
     my $extra_link_text        = $C->get( "gui", "extra_link_text" );
-
+    my $expires_european       = $C->get( "vsphere", "expires_european" );
+    my $expires_maximum        = $C->get( "vsphere", "expires_maximum" );
     while ( my ( $uuid, $VM ) = each %{ $LAB->{HOSTS} } ) {
         next unless ( exists $VM->{UUID} );
         my $expires         = "unknown";
+        my $expires_bad     = "false";
         my $contact_user_id = "unknown";
         my $display_vm_path = "<em>(no data available)</em>";
         my $esxhost         = "unknown";
         if ( $expires_field and exists $VM->{CUSTOMFIELDS}->{$expires_field} ) {
             eval {
-                $expires = DateTime::Format::Flexible->parse_datetime( $VM->{CUSTOMFIELDS}->{$expires_field},
-                                                                  european => ( $C->get( "vsphere", "expires_european" ) ? 1 : 0 ) )->ymd();
+                my $expires_dt = DateTime::Format::Flexible->parse_datetime( $VM->{CUSTOMFIELDS}->{$expires_field},
+                                                                       european => ( $expires_european ? 1 : 0 ) );
+                $expires = $expires_dt->ymd();
+                if ( DateTime->compare( DateTime->now(), $expires_dt ) > 0 ) {
+                    $expires     = "$expires already expired";
+                    $expires_bad = "true";
+                }
+                elsif ( DateTime->compare( $expires_dt, DateTime->now()->add( days => $expires_maximum ) ) >= 0 ) {
+                    $expires     = "$expires expires in more than $expires_maximum days";
+                    $expires_bad = "true";
+                }
+
             };
+            # ignore errors in date decoding
         }
         if ( exists $VM->{PATH} ) {
             $display_vm_path = $VM->{PATH};
@@ -76,6 +89,7 @@ sub fill_vm_overview_json {
         $vm_info{vm_path}            = $display_vm_path;
         $vm_info{contact_id}         = $contact_user_id;
         $vm_info{expires}            = $expires;
+        $vm_info{date_bad}        = $expires_bad; # field should not contain expires to allow searching for expires
         $vm_info{esxhost}            = $esxhost;
         # show extra link if we have a client IP and force boot is currently set on.
         # TODO reuse force boot detection logic from VMPolicy instead of copying it here.
