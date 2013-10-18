@@ -103,4 +103,4 @@ else {
                            $good_tests, $number_of_tests - $good_tests );
 }
 
-exit $number_of_tests == $good_tests ? 0 : 1;
+exit ($number_of_tests == $good_tests ? 0 : 1);
