@@ -102,3 +102,5 @@ else {
                            sprintf 'Tests passed:%d failed:%d',
                            $good_tests, $number_of_tests - $good_tests );
 }
+
+exit $number_of_tests == $good_tests ? 0 : 1;
