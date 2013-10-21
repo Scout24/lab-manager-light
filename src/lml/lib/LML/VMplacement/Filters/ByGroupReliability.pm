@@ -18,6 +18,7 @@ sub new {
         vm_minimum_cache      => {},
         verbose               => $config->get( "lml", "verbose_auto_placement" ),
         group_pattern         => $config->get( "hostrules", "group_pattern" ),
+        hosts                 => [],
 
     };
 
@@ -55,6 +56,12 @@ sub host_can_vm {
     }
 }
 
+sub filter_hosts {
+    my ($self, $error_ref, $vm_res, @hosts) = @_;
+    $self->{hosts} = \@hosts;
+    return grep { $self->host_can_vm($_,$vm_res,$error_ref) } @hosts; 
+}
+
 sub get_name {
     return 'ByGroupReliability';
 }
@@ -75,7 +82,7 @@ sub _get_vm_group_counts {
         my @all_vms = $self->{lab}->get_vms();
 
         # iterate over all esx hosts
-        foreach my $host ( $self->{lab}->get_hosts() ) {
+        foreach my $host ( @{ $self->{hosts} } ) {
 
             my $host_id                = $host->{id};
             my $host_name              = $host->{name};

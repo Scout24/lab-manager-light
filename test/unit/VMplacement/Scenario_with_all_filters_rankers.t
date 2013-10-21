@@ -7,6 +7,7 @@ use Test::Exception;
 use LML::Lab;
 use LML::VMresources;
 use LML::Config;
+use Clone qw(clone);
 
 BEGIN {
     use_ok "LML::VMplacement";
@@ -264,6 +265,36 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     is_deeply( [@rec],
                [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-3", datastores => ['datastore-3'], } ],
                "should return hosts in descending order by cpu+ram with 1 host filtered by vm grouping" );
+}
+
+# validate the ranking and filtering for the given scenario,
+# where we make sure that hosts removed by previous filters are not considered for group reliablity,
+# see https://github.com/ImmobilienScout24/lab-manager-light/issues/31 for detailed description (issue #31)
+{
+
+    my $other_config = new LML::Config( "src/lml/default.conf", "test/data/test.conf" );
+    my $modified_lab = clone($simple_lab_with_three_hosts);
+    $modified_lab->{ESXHOSTS}->{"id-3"}->{status}->{overallStatus} = "red"; # set one host to red
+    $modified_lab->{ESXHOSTS}->{"id-2"}->{status}->{overallStatus} = "red"; # set one host to red
+    $other_config->{hostrules}{group_pattern} = '([a-z]{3}).*';
+    my $vm_placement = new_ok( "LML::VMplacement" => [ $other_config, $modified_lab ], "grouping" ); # test builtin filter initialization
+
+    my $vm_res = new LML::VMresources( {
+          ram      => 1000,
+          cpu      => 2000,                     # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],      # all hosts support this network
+          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          name     => 'foobar00'
+    } );
+    my @rec = $vm_placement->get_recommendations($vm_res);
+    is( scalar(@rec), 1, "Two hosts should be filtered out" );
+    # in the current lab config we expect the following order:
+    # Only placement is host with id-1, because its overall Status is OK
+    # id-2 was filtered out because overallStatus is red
+    # id-3 was filtered out because overallStatus is red
+    is_deeply( [@rec],
+               [ { id => "id-1", datastores => ['datastore-1'], } ],
+               "should return only host id-1" );
 }
 
 # validate the ranking and filtering for the given scenario, where some requirements (group reliability) are not fulfilled (some hosts should be filtered)

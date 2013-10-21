@@ -50,16 +50,12 @@ my $test_host_3 = {
                     },
 };
 
-sub truefilter::host_can_vm {
-    my ( $self, $host, $vm ) = @_;
-    if ( $host->{id} eq "id-1" ) {
-        @truefilter_params = @_;    # remember only test_host_1, because the filter get called with hosts in random order
-    }
-    return 1;
-}
-
 sub truefilter::get_name {
     return "truefilter";
+}
+sub truefilter::filter_hosts {
+    my ($self, $error_ref, $vm_res, @hosts) = @truefilter_params = @_;
+    return @hosts; 
 }
 my $truefilter = bless( {}, "truefilter" );
 
@@ -71,6 +67,11 @@ sub falsefilter::host_can_vm {
 sub falsefilter::get_name {
     return "falsefilter";
 }
+sub falsefilter::filter_hosts {
+    my @empty = ();
+    return @empty;
+}
+
 my $falsefilter = bless( {}, "falsefilter" );
 
 my @rankerparms;
@@ -143,8 +144,8 @@ my $simple_lab_with_three_hosts = new LML::Lab(
     my $obj    = new LML::VMplacement( $C, $simple_lab_with_three_hosts, [$truefilter], [$testranker] );
     my $vm_res = new LML::VMresources();
     my @rec    = $obj->get_recommendations($vm_res);
-    #                  This is the empty arrayref for error messages ->->-\
-    is_deeply( \@truefilter_params, [ $truefilter, $test_host_1, $vm_res, [] ], "test filter was called with correct parms" );
+    #                                               /<-<-<- This is the empty arrayref for error messages
+    is_deeply( \@truefilter_params, [ $truefilter, [], $vm_res, $simple_lab_with_three_hosts->get_hosts() ], "test filter was called with correct parms" );
     is_deeply( \@rankerparms, [ $testranker, $test_host_1 ], "test ranker was called with correct parms" );
 }
 

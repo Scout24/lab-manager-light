@@ -88,31 +88,36 @@ throws_ok { new LML::VMplacement::Filters::ByGroupReliability( $lab, {} ) } qr(m
 
 my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
 
-# when a vm with name foobar90 should be created, the test_host_1 should get filtered, because instead of test_host_2 he owns a vm of same group
+my @hosts = $lab->get_hosts();
+
+# foobar90 can be created only on host id-2 because id-2 already has a foo* VM
 {
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        0, "should return false for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
+    is_deeply( 
+        [$filter->filter_hosts( [], $vm_res, @hosts)],
+        [$test_host_2], 
+        "host id-2  is the only choice for " . $vm_res->{name} 
+    );
 }
 
-# when a vm with name barbar90 should be created, the no hosts should get filtered, because all hosts own the same number of vm of same group
+# barbar90 can be created on host id-1 and id-2 because each has 1 bar* VM
 {
     $vm_res = new LML::VMresources( { name => 'barbar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
+    is_deeply( 
+        [$filter->filter_hosts( [], $vm_res, @hosts)],
+        [$test_host_1,$test_host_2], 
+        "hosts id-1 and id-2 are candidates for " . $vm_res->{name} 
+    );
 }
 
-# when a vm with name barbar90 should be created, the no hosts should get filtered, because all hosts own the same number of vm of same group
+# giibar90 can be created only on host id-2 because it has less gii* VMs
 {
     $vm_res = new LML::VMresources( { name => 'giibar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        0, "should return false for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
+    is_deeply( 
+        [$filter->filter_hosts( [], $vm_res, @hosts)],
+        [$test_host_2], 
+        "host id-2 is only candidates for " . $vm_res->{name} 
+    );
 }
 
 # when no group pattern was defined, the filter should pass everything
@@ -120,42 +125,24 @@ my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     my $C = new LML::Config( { hostrules => {}, } );    # no group pattern
     my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
-    $vm_res = new LML::VMresources( { name => 'barbar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
-    $vm_res = new LML::VMresources( { name => 'giibar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
+    is_deeply( 
+        [$filter->filter_hosts( [], $vm_res, @hosts)],
+        [$test_host_1,$test_host_2], 
+        "hosts id-1 and id-2 are candidates for " . $vm_res->{name} 
+    );
 }
 
-# when no group pattern was defined, the filter should pass everything
+# when group pattern does not match anything, the filter should pass everything
 {
     my $C =
       new LML::Config( { hostrules => { group_pattern => '(this is a non matching group pattern)' }, } ); # group pattern with 3 letters (i)
     my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
-    $vm_res = new LML::VMresources( { name => 'barbar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
-    $vm_res = new LML::VMresources( { name => 'giibar90' } );
-    is( $filter->host_can_vm( $test_host_1, $vm_res ),
-        1, "should return true for host $test_host_1->{id} when a vm with name " . $vm_res->{name} . " should be created" );
-    is( $filter->host_can_vm( $test_host_2, $vm_res ),
-        1, "should return true for host $test_host_2->{id} when a vm with name " . $vm_res->{name} . "  should be created" );
+    is_deeply( 
+        [$filter->filter_hosts( [], $vm_res, @hosts)],
+        [$test_host_1,$test_host_2], 
+        "hosts id-1 and id-2 are candidates for " . $vm_res->{name} 
+    );
 }
 
 done_testing();

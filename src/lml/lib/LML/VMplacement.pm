@@ -26,8 +26,8 @@ sub new {
     if ( defined($filters) ) {
         croak( "3rd argument must be an Array Ref called at " . ( caller 0 )[3] ) unless ( ref($filters) eq "ARRAY" );
         foreach (@$filters) {
-            croak( "filter " . ( ref($_) ? ref($_) : $_ ) . " has no host_can_vm or get_name method called at " . ( caller 0 )[3] )
-              unless ( $_->can("host_can_vm") && $_->can("get_name") );
+            croak( "filter " . ( ref($_) ? ref($_) : $_ ) . " has no filter_hosts or get_name method called at " . ( caller 0 )[3] )
+              unless ( $_->can("filter_hosts") && $_->can("get_name") );
         }
     }
     else {
@@ -88,11 +88,12 @@ sub get_errors {
 sub _filter {
     my ( $self, $vm_res, @hosts ) = @_;
     my $debug_infos = {};
-
+    my @filtered_hosts = @hosts;
+    
     foreach my $filter ( @{ $self->{filters} } ) {
         $debug_infos->{ $filter->get_name() } = [];
+        @filtered_hosts = $filter->filter_hosts($self->{errors},$vm_res,@filtered_hosts);
     }
-    my @filtered_hosts = grep { $self->_check_by_filters( $vm_res, $debug_infos, $_ ) } @hosts;
 
     if ( $isDebug or $self->{config}->get( "lml", "verbose_auto_placement" ) ) {
         $self->_pretty_print_filtering( $debug_infos, $vm_res->{name} );

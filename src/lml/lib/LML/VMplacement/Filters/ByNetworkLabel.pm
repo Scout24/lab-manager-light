@@ -39,6 +39,11 @@ sub host_can_vm {
     return 1;
 }
 
+sub filter_hosts {
+    my ($self, $error_ref, $vm_res, @hosts) = @_;
+    return grep { $self->host_can_vm($_,$vm_res,$error_ref) } @hosts; 
+}
+
 sub get_name {
     return 'ByNetworks';
 }
