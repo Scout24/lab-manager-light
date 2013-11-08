@@ -4,6 +4,8 @@ window.lml = window.lml || {};
 
 window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService, $http) {
   var searchTerm;
+  $scope.detonateDisabled = false;
+  $scope.destroyDisabled  = false;
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
@@ -202,7 +204,10 @@ $("a.confirm").click(function(link) {
   });
   $("#dialog").dialog("open");
 });
+<<<<<<< HEAD
 
+=======
+>>>>>>> 00005b10ce4c421d57a2a03ae7a1aa9522863aa1
 };
 
 
