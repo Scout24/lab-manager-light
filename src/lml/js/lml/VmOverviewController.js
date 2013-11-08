@@ -10,6 +10,14 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
 
+  $scope.tableHeaders = [
+    { name: "fullname", title: "Hostname"},
+    { name: "vm_path", title: "VM Path"},
+    { name: "contact_id", title: "Contact User ID"},
+    { name: "expires", title: "Expires"},
+    { name: "esxhost", title: "ESX Host"}
+  ];
+
   $scope.sort = {
     column: '',
     descending: false
