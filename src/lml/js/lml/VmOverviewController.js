@@ -204,10 +204,7 @@ $("a.confirm").click(function(link) {
   });
   $("#dialog").dialog("open");
 });
-<<<<<<< HEAD
 
-=======
->>>>>>> 00005b10ce4c421d57a2a03ae7a1aa9522863aa1
 };
 
 
