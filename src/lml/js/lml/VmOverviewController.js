@@ -9,6 +9,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
+  $scope.errorMsgs;
 
   $scope.tableHeaders = [
     { name: "fullname", title: "Hostname"},
@@ -46,6 +47,19 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
         uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&") + "&action=detonate";
     $log.info("detonate: " + uuids);
+
+    if (selectedVms.length === 0 ){
+      $scope.errorMsgs = "Anzahl VMs ist 0.";
+      return;
+    }
+    if (selectedVms.length > 3){
+      $scope.errorMsgs = "Anzahl VM > 3";
+      return;
+    }
+
+    $scope.errorMsgs = "";
+
+    $scope.$apply();
     $scope.setServerRequestRunning(true);
     $http.post("restricted/vm-control.pl?action=detonate", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
          .success(function(detonated_uuids){
@@ -58,10 +72,15 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
               });
             });
             $scope.setServerRequestRunning(false);
-        });
+        })
+      .error(function(failure){
+        $scope.setServerRequestRunning(false);
+        $scope.errorMsgs = "Unkannter Fehler";
+      });
   };
 
   AjaxCallService.sendAjaxCall('api/vm_overview.pl',{}, function successCallback(data){
+    $scope.errorMsgs = "";
     $log.info("Received vm overview data: ",data);
     $scope.vms = data.vm_overview;
     filterVms('');

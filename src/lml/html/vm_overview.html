@@ -1,9 +1,8 @@
-<div class="main_content" id="vm_overview" data-ng-controller="VmOverviewController"
-     xmlns="http://www.w3.org/1999/html">
+<div class="main_content" id="vm_overview" data-ng-controller="VmOverviewController">
   <div id="dialog"></div>
-  <div class="error message" id="vm_action_error">
+  <div class="error" id="vm_action_error" data-ng-show="errorMsgs">
     <h3>Problems while performing action</h3>
-    <p>The following error occured: <b id="vm_action_error_message"></b></p>
+    <p>The following error occured: <b id="vm_action_error_message">{{errorMsgs}}</b></p>
   </div>
   <form id="vm_action_form" ng-disabled="isServerRequestRunning">
     <table class="table table-striped" id="vmlist_table" cellpadding="3" cellspacing="0">
