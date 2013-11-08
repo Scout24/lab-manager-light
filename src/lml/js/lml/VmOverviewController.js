@@ -67,8 +67,8 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     filterVms('');
 
     // INITIALIZE JQUERY DATA TABLE
-/*    setTimeout(function(){
-      $('#vmlist_table').dataTable({
+   setTimeout(function(){
+    /*  $('#vmlist_table').dataTable({
         "bPaginate" : false,
         "bProcessing" : true,
         "sScrollY" : ($(window).height() - framework_datatables_height),
@@ -81,6 +81,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
             "sInfo" : "Showing _TOTAL_ entries"
           }
         });
+   */
       // TODO: do this in angular style
       $('a.tip').cluetip({
               attribute : 'href',
@@ -94,7 +95,8 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
               waitImage : true
           });
 
-    },10);*/
+    },10);
+
     $scope.setServerRequestRunning(false);
   }, function errorCallback(){
     $scope.setServerRequestRunning(false);
