@@ -14,16 +14,17 @@ use LML::Config;
 use LML::Lab;
 use DateTime::Format::Flexible;
 use JSON;
+use File::Slurp;
 
 use User::pwent;
 
 my $C = new LML::Config();
 
-my $LAB = new LML::Lab( $C->labfile );
 
 my %result = ();
 
 sub fill_vm_overview_json {
+    my ($LAB) = @_; 
     my $vm_overview            = [];
     my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
     my $contactuser_field      = $C->get( "vsphere", "contactuserid_field" );
@@ -89,7 +90,7 @@ sub fill_vm_overview_json {
         $vm_info{vm_path}            = $display_vm_path;
         $vm_info{contact_id}         = $contact_user_id;
         $vm_info{expires}            = $expires;
-        $vm_info{date_bad}        = $expires_bad; # field should not contain expires to allow searching for expires
+        $vm_info{date_bad}           = $expires_bad; # field should not contain expires to allow searching for expires
         $vm_info{esxhost}            = $esxhost;
         # show extra link if we have a client IP and force boot is currently set on.
         # TODO reuse force boot detection logic from VMPolicy instead of copying it here.
@@ -104,8 +105,15 @@ sub fill_vm_overview_json {
     return $vm_overview;
 }
 
-$result{vm_overview} = fill_vm_overview_json();
-
 print header('application/json');
-print encode_json( \%result );
+
+my $mock_file = $ENV{HOME}."/.lml-vm_overview.json";
+if (-s $mock_file) {
+    Debug("Sending mock file ".$mock_file);
+    print read_file($mock_file);
+} else {
+    my $LAB = new LML::Lab( $C->labfile );
+    $result{vm_overview} = fill_vm_overview_json($LAB);
+    print encode_json( \%result );
+}
 1;
