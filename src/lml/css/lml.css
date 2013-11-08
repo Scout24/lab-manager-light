@@ -35,6 +35,7 @@ div.main_content {
   padding: 10px;
   font-style: italic;
   width: 100%;
+  z-index: 101;
 }
 .left {
   float: left;
@@ -166,7 +167,6 @@ div.DTTT_container {
 #waiting {
   display: block;
   position: fixed;
-  padding: 100px;
   text-align: center;
   background-color: rgba(0,0,0,0.6);
   left: 0px;
@@ -174,6 +174,11 @@ div.DTTT_container {
   bottom: 0px;
   top: 0px;
   z-index: 100; /* always on top */
+}
+#waiting > img {
+  position: absolute;
+  top: 50%;
+  bottom: 50%;
 }
 
 /* button */
