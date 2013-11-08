@@ -52,7 +52,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     queuedSearch = setTimeout(function(){
       filterVms(query);
       $scope.$apply();
-    }, 500);
+    }, 300);
   }
 
   $scope.$watch("searchTerm", throttledFilterVms);
