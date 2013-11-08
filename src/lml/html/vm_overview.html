@@ -27,7 +27,7 @@
      <tbody>
       <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
         <td>
-          <input type="checkbox" ng-model="vm.selected" value="{{vm.uuid}}">
+          <input  ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected" value="{{vm.uuid}}">
           <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">
             {{vm.fullname}}
           </a>
