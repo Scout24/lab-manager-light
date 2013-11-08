@@ -12,11 +12,10 @@
       <thead id="vmlist">
        <tr valign ="top">
 
-         <th title="Click to sort" data-ng-click="changeSorting('fullname')">Hostname</th>
-         <th title ="Click to sort" data-ng-click="changeSorting('vm_path')">VM Path</th>
-         <th title ="Click to sort" data-ng-click="changeSorting('contact_id')">Contact User ID</th>
-         <th title ="Click to sort" data-ng-click="changeSorting('vm_path')">Expires</th>
-         <th title ="Click to sort" data-ng-click="changeSorting('esxhost')">ESX Host</th>
+         <th ng-repeat="header in tableHeaders" title ="Click to sort" data-ng-click="changeSorting(header.name)">
+           {{header.title}}
+           <img src="images/sort_both.png" />
+         </th>
 
        </tr>
      </thead>
