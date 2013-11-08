@@ -1,9 +1,9 @@
-  
+
 window.lml = window.lml || {};
 
 
 window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService) {
-
+  var searchTerm;
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
@@ -28,9 +28,19 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.$watch("table_filter", filterVms);
 
   function filterVms(query){
+    $scope.vms.forEach(function(vm){ vm.selected = false; });
     $scope.filteredData = $filter("filter")($scope.vms, query);
   }
 
+  $scope.detonate = function(){
+    var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
+        uuids = selectedVms.map(function(vm){ return vm.uuid});
+    console.log(uuids);
+    var form_data = $("#vm_action_form").serialize() + "&action=detonate";
+    AjaxCallService.sendAjaxCall("restricted/vm-control.pl?action=detonate", uuids, function(data){
+      console.log(data);
+    });
+  };
 
   AjaxCallService.sendAjaxCall('api/vm_overview.pl',{}, function successCallback(data){
     $log.info("Received vm overview data: ",data);
@@ -48,7 +58,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
           "sSwfPath" : "swf/copy_csv_xls_pdf.swf"
         },
         "oLanguage" : {
-            // without pagination only the total is interesting 
+            // without pagination only the total is interesting
             "sInfo" : "Showing _TOTAL_ entries"
           }
         });
@@ -64,7 +74,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
               ajaxCache : false,
               waitImage : true
           });
-      
+
     },10);*/
     $scope.setServerRequestRunning(false);
   }, function errorCallback(){
@@ -73,7 +83,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
 
   // TODO: do this in angular style
-  $("#detonate_button").on('click', function(){
+  $("#detonate_buttonxx").on('click', function(){
     var form_data = $("#vm_action_form").serialize() + "&action=detonate";
     $.ajax({
       type: "POST",
@@ -166,7 +176,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     height: 215,
     autoOpen: false,
     title: 'Really delete?'
-  });       
+  });
 
 
   // set windows content
@@ -182,7 +192,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     }
   });
   $("#dialog").dialog("open");
-});  */       
+});  */
 
 };
 
