@@ -26,7 +26,7 @@
      <tbody>
       <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
         <td>
-          <input type="checkbox" name="hosts" label="" value="{{vm.uuid}}">
+          <input type="checkbox" ng-model="vm.selected" value="{{vm.uuid}}">
           <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">
             {{vm.fullname}}
           </a>
@@ -45,7 +45,7 @@
     </tbody>
   </table>
   <div class="vm_action_panel">
-    <a id="detonate_button" class="button" href="#" title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
+    <a ng-click="detonate($event)" class="button" title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
     <a id="destroy_button" class="button confirm" href="#" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="images/delete.png" class="button_image"/>&nbsp;Delete</a>
   </div>
 </form>
