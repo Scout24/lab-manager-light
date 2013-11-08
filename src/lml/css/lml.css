@@ -126,6 +126,14 @@ div.DTTT_container {
   float: left;
 }
 
+.search span.indent{
+  padding-right: 3px;
+}
+
+.search div.indent{
+  padding-left: 48px;
+}
+
 #tools_title {
   border-radius: 10px;
   border: 1px solid black;

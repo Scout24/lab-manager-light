@@ -20,9 +20,15 @@
 
        </tr>
      </thead>
-        Suche: <input type="text" data-ng-model="searchTerm"/>
-        Ergebnis: <span data-ng-bind="filteredData.length"></span>
-        von <span data-ng-bind="vms.length"/></span>
+       <div class="search pull-right">
+         <div>
+           <span class="indent">Suche:</span><input type="text" data-ng-model="searchTerm"/>
+         </div>
+         <div class="indent">
+           Ergebnis: <span data-ng-bind="filteredData.length"></span>
+           von <span data-ng-bind="vms.length"/></span>
+         </div>
+       </div>
      <tbody>
       <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
         <td>
