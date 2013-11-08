@@ -35,11 +35,20 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.detonate = function(){
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
         uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&") + "&action=detonate";
-    console.log(uuids);
+    $log.info("detonate: " + uuids);
+    $scope.setServerRequestRunning(true);
     $http.post("restricted/vm-control.pl?action=detonate", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
-         .success(function(data){
-           console.log(data);
-         });
+         .success(function(detonated_uuids){
+            detonated_uuids.forEach(function(detonated_uuid){
+              selectedVms.forEach(function(selectedVM){
+                if (detonated_uuid ===  selectedVM.uuid){
+                  selectedVM.selected = false;
+                  $log.info("detonation of "+ detonated_uuid +" was successful");
+                }
+              });
+            });
+            $scope.setServerRequestRunning(false);
+        });
   };
 
   AjaxCallService.sendAjaxCall('api/vm_overview.pl',{}, function successCallback(data){
@@ -165,7 +174,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
 
 // TODO: do this in angular style
-/*$("a.confirm").click(function(link) {
+$("a.confirm").click(function(link) {
   link.preventDefault();
   var message = $(this).attr("rel");
 
@@ -192,7 +201,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     }
   });
   $("#dialog").dialog("open");
-});  */
+});
 
 };
 
