@@ -2,17 +2,43 @@
 window.lml = window.lml || {};
 
 
-window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, AjaxCallService) {
+window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService) {
 
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
+
+  $scope.sort = {
+    column: '',
+    descending: false
+  };
+
+  $scope.changeSorting = function(column) {
+
+    var sort = $scope.sort;
+
+    if (sort.column == column) {
+      sort.descending = !sort.descending;
+    } else {
+      sort.column = column;
+      sort.descending = false;
+    }
+  };
+
+  $scope.$watch("table_filter", filterVms);
+
+  function filterVms(query){
+    $scope.filteredData = $filter("filter")($scope.vms, query);
+  }
+
+
   AjaxCallService.sendAjaxCall('api/vm_overview.pl',{}, function successCallback(data){
     $log.info("Received vm overview data: ",data);
     $scope.vms = data.vm_overview;
+    filterVms('');
 
     // INITIALIZE JQUERY DATA TABLE
-    setTimeout(function(){
+/*    setTimeout(function(){
       $('#vmlist_table').dataTable({
         "bPaginate" : false,
         "bProcessing" : true,
@@ -39,7 +65,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
               waitImage : true
           });
       
-    },10);
+    },10);*/
     $scope.setServerRequestRunning(false);
   }, function errorCallback(){
     $scope.setServerRequestRunning(false);
@@ -129,7 +155,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
 
 // TODO: do this in angular style
-$("a.confirm").click(function(link) {
+/*$("a.confirm").click(function(link) {
   link.preventDefault();
   var message = $(this).attr("rel");
 
@@ -156,7 +182,7 @@ $("a.confirm").click(function(link) {
     }
   });
   $("#dialog").dialog("open");
-});         
+});  */       
 
 };
 
