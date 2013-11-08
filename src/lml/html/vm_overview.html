@@ -14,7 +14,9 @@
 
          <th ng-repeat="header in tableHeaders" title ="Click to sort" data-ng-click="changeSorting(header.name)">
            {{header.title}}
-           <img src="images/sort_both.png" />
+           <img ng-show="sort.column == header.name && sort.descending" src="images/sort_desc.png" />
+           <img ng-show="sort.column == header.name && !sort.descending" src="images/sort_asc.png" />
+           <img ng-show="sort.column != header.name" src="images/sort_both.png" />
          </th>
 
        </tr>
