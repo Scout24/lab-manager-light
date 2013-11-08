@@ -165,18 +165,14 @@ div.DTTT_container {
 
 #waiting {
   display: block;
-  border-radius: 10px;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  width: 100px;
-  padding: 20px;
+  position: fixed;
+  padding: 100px;
   text-align: center;
-  background-color: rgba(0,0,0,0.4);
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  margin-left: -50px;
-  margin-top: -50px;
+  background-color: rgba(0,0,0,0.6);
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  top: 0px;
   z-index: 100; /* always on top */
 }
 
