@@ -58,6 +58,7 @@ div.main_content {
 }
 .main_content {
   overflow: auto;
+  padding-bottom: 100px;
 }
 
 .tabsLite-mainDiv ul {
@@ -115,6 +116,10 @@ div.cluetip-inner img {
 
 thead {
   background-color: white;
+}
+
+thead th {
+  cursor: pointer;
 }
 
 div.DTTT_container {
