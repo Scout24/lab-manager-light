@@ -2,7 +2,7 @@
 window.lml = window.lml || {};
 
 
-window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService) {
+window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService, $http) {
   var searchTerm;
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
@@ -34,12 +34,12 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
   $scope.detonate = function(){
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
-        uuids = selectedVms.map(function(vm){ return vm.uuid});
+        uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&") + "&action=detonate";
     console.log(uuids);
-    var form_data = $("#vm_action_form").serialize() + "&action=detonate";
-    AjaxCallService.sendAjaxCall("restricted/vm-control.pl?action=detonate", uuids, function(data){
-      console.log(data);
-    });
+    $http.post("restricted/vm-control.pl?action=detonate", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
+         .success(function(data){
+           console.log(data);
+         });
   };
 
   AjaxCallService.sendAjaxCall('api/vm_overview.pl',{}, function successCallback(data){
