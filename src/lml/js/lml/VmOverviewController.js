@@ -3,7 +3,8 @@ window.lml = window.lml || {};
 
 
 window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService, $http) {
-  var searchTerm;
+  var queuedSearch;
+  $scope.searchTerm = "";
   $scope.detonateDisabled = false;
   $scope.destroyDisabled  = false;
   $scope.vms = [];
@@ -11,11 +12,11 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.setServerRequestRunning(true);
 
   $scope.tableHeaders = [
-    { name: "fullname", title: "Hostname"},
-    { name: "vm_path", title: "VM Path"},
+    { name: "fullname",   title: "Hostname"},
+    { name: "vm_path",    title: "VM Path"},
     { name: "contact_id", title: "Contact User ID"},
-    { name: "expires", title: "Expires"},
-    { name: "esxhost", title: "ESX Host"}
+    { name: "expires",    title: "Expires"},
+    { name: "esxhost",    title: "ESX Host"}
   ];
 
   $scope.sort = {
@@ -35,12 +36,25 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     }
   };
 
-  $scope.$watch("table_filter", filterVms);
 
-  function filterVms(query){
+  var filterVms = function(query){
     $scope.vms.forEach(function(vm){ vm.selected = false; });
     $scope.filteredData = $filter("filter")($scope.vms, query);
+  };
+
+  var throttledFilterVms = function(query){
+    if (queuedSearch){
+      clearTimeout(queuedSearch);
+      queuedSearch = null;
+    }
+
+    queuedSearch = setTimeout(function(){
+      filterVms(query);
+      $scope.$apply();
+    }, 500);
   }
+
+  $scope.$watch("searchTerm", throttledFilterVms);
 
   $scope.detonate = function(){
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
