@@ -48,7 +48,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
   var filterVms = function(query){
     $scope.vms.forEach(function(vm){ vm.selected = false; });
-    $scope.filteredData = $filter("filter")($scope.vms, query);
+    $scope.filteredData = $filter("filter")($scope.vms, query); // TODO anstelle der DOM-Manipulation besser Sichtbarkeit setzen (Performance-Issue)
   };
 
   var throttledFilterVms = function(query){
