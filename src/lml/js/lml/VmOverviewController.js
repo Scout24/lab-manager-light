@@ -122,7 +122,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
               waitImage : true
           });
 
-    },10);
+    },500);
 
     $scope.setServerRequestRunning(false);
   }, function errorCallback(){
