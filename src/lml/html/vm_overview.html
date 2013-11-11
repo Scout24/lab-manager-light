@@ -4,10 +4,10 @@
     <h3>Problems while performing action</h3>
     <p>The following error occured: <b id="vm_action_error_message">{{errorMsgs}}</b></p>
   </div>
+
   <form id="vm_action_form" ng-disabled="isServerRequestRunning">
     <table class="table table-striped" id="vmlist_table" cellpadding="3" cellspacing="0">
 
-      <!-- TODO VM_OVERVIEW-->
       <thead id="vmlist">
        <tr valign ="top">
 
@@ -20,8 +20,13 @@
 
        </tr>
      </thead>
+        <div class="pull-left">
+            <button class="button" type="button" data-ng-csv="getCsvValues()" data-csv-header="['date_bad','vm_path','extra_link_enabled','extra_link_text','uuid','fullname','screenshot_enabled','contact_id','id','screenshot_url','extra_link_url','esxhost','expires']" filename="vm_overview.csv">CSV</button>
+            <button class="button" type="button" data-ng-click="print()">Print</button>
+        </div>
+
        <div class="search pull-right">
-         <div>
+           <div>
            <span class="indent">Suche:</span><input type="text" data-ng-model="searchTerm"/>
          </div>
          <div class="indent">

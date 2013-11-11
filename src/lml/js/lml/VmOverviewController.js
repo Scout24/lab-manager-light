@@ -25,6 +25,14 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     descending: false
   };
 
+  $scope.getCsvValues = function(){
+    return  $scope.filteredData;
+  };
+
+  $scope.print = function(){
+    return  window.print();
+  };
+
   $scope.changeSorting = function(column) {
 
     var sort = $scope.sort;
@@ -124,7 +132,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 // TODO: do this in angular style
   $.fn.destroy = function() {
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
-      uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&")+ "&action=detonate";
+      uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&")+ "&action=destroy";
     $.ajax({
       type: "POST",
       beforeSend: function() {
