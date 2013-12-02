@@ -112,9 +112,9 @@ my $test_host_3 = {
 my $simple_lab_with_three_hosts = new LML::Lab( {
        "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 },
        "DATASTORES" => {
-                       "datastore-1" => { "freespace" => "20000"},
-                       "datastore-2" => { "freespace" => "20000"},
-                       "datastore-3" => { "freespace" => "2000000"}
+                       "datastore-1" => { "freespace" => "20000000"},
+                       "datastore-2" => { "freespace" => "20000000"},
+                       "datastore-3" => { "freespace" => "2000000000"}
        },
        "NETWORKS" => {
                        "network-1" => {

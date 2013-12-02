@@ -18,7 +18,7 @@ BEGIN {
 my $lab = new LML::Lab( {
        "DATASTORES" => {
             "datastore-1111" => {
-                 "freespace" => "10737418240"
+                 "freespace" => "10240" # in bytes
              }
        }
     } );
@@ -26,8 +26,8 @@ my $lab = new LML::Lab( {
 
 my $obj = new_ok "LML::VMplacement::Filters::ByDiskSpace" => [ $lab ], "can create object";
 
-ok ( $obj->host_can_vm({datastores=>["datastore-1111"], name=>"foobar01"},new LML::VMresources({disks=>[{size=>1007418240}]})), "VM fits on host");
-ok ( ! $obj->host_can_vm({datastores=>["datastore-1111"], name=>"foobar01"},new LML::VMresources({disks=>[{size=>20737418240}]})), "VM does not fit on host");
+ok ( $obj->host_can_vm({datastores=>["datastore-1111"], name=>"foobar01"},new LML::VMresources({disks=>[{size=>8}]})), "VM fits on host");
+ok ( ! $obj->host_can_vm({datastores=>["datastore-1111"], name=>"foobar01"},new LML::VMresources({disks=>[{size=>12}]})), "VM does not fit on host");
 
 throws_ok { $obj->host_can_vm({}) } qr(missing data), "host without data fails";
 
