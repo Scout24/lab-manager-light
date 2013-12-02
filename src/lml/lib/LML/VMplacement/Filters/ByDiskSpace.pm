@@ -19,9 +19,6 @@ sub new {
 }
 
 sub host_can_vm {
-    # datastore_id = $host->{datastores}[0]
-    # $lab->{DATASTORES}->{datastore_id}->{freespace}
-
     my ( $self, $host, $vm_res, $error_ref ) = @_;
     if (! (defined( $host->{datastores}[0] ))) {
         croak( "missing data in host\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] )
