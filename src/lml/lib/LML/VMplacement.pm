@@ -9,6 +9,7 @@ use LML::VMplacement::Filters::ByMemory;
 use LML::VMplacement::Filters::ByNetworkLabel;
 use LML::VMplacement::Filters::ByGroupReliability;
 use LML::VMplacement::Filters::ByAssignableHost;
+use LML::VMplacement::Filters::ByDiskSpace;
 
 use LML::VMplacement::Rankers::ByOverallStatus;
 use LML::VMplacement::Rankers::ByCpuUsage;
@@ -38,7 +39,8 @@ sub new {
             new LML::VMplacement::Filters::ByOverallStatus,              #
             new LML::VMplacement::Filters::ByMemory,                     #
             new LML::VMplacement::Filters::ByNetworkLabel( $lab, $config ),    #
-            new LML::VMplacement::Filters::ByGroupReliability( $lab, $config ) #
+            new LML::VMplacement::Filters::ByGroupReliability( $lab, $config ), #
+            new LML::VMplacement::Filters::ByDiskSpace( $lab ) #
         ];
     }
 

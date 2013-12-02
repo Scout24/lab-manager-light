@@ -111,6 +111,11 @@ my $test_host_3 = {
 # the Lab config should be consistent, that means the hosts in the NETWORKS section must be fit to the host definition
 my $simple_lab_with_three_hosts = new LML::Lab( {
        "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 },
+       "DATASTORES" => {
+                       "datastore-1" => { "freespace" => "20000"},
+                       "datastore-2" => { "freespace" => "20000"},
+                       "datastore-3" => { "freespace" => "2000000"}
+       },
        "NETWORKS" => {
                        "network-1" => {
                                         "hosts" => [ $test_host_1->{id} ],
@@ -148,7 +153,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -174,7 +179,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 2'],
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -193,7 +198,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
            ram      => 1000,
            cpu      => 2000,                                        # this is currently no filter criteria
            networks => [ 'NETWORK LABEL 1', 'NETWORK LABEL 2' ],    # all hosts support 'NETWORK LABEL 1'
-           disks    => [ { size => 16000 } ],                       # disk size is currently no filter criteria
+           disks    => [ { size => 16000 } ],                       # small disk
            name => 'foobar00'    # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -212,7 +217,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 3'],      # all hosts support 'NETWORK LABEL 1'
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -228,7 +233,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 2048,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -253,7 +258,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -283,7 +288,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -310,7 +315,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # disk size is currently no filter criteria
+          disks    => [ { size => 16000 } ],    # small disk
           name     => 'foobar00'
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -322,6 +327,30 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
     is_deeply( [@rec],
                [ { id => "id-2", datastores => ['datastore-2'], }, { id => "id-1", datastores => ['datastore-1'], } ],
                "should return hosts in descending order by cpu+ram with 1 host filtered by host assignment" );
+}
+
+# validate the ranking and filtering for the given scenario, where the a big hard drive is needed
+{
+    my $vm_res = new LML::VMresources( {
+          ram      => 1000,
+          cpu      => 2000,                     # this is currently no filter criteria
+          networks => ['NETWORK LABEL 1'],      # all hosts support this network
+          disks    => [ { size => 160000 } ],   # huge disk 
+          name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
+    } );
+    my @rec = $vm_placement->get_recommendations($vm_res);
+    is( scalar(@rec), 1, "Only one hosts should be fit that disk" );
+    # in the current lab config we expect the following order:
+    # 1st placement is host with id-2, because it has a rank value of 80 (30 for free ram and 50 for free cpu)
+    # 2nd placement is host with id-1, because it has a rank value of 70 (10 for free ram and 60 for free cpu)
+    # 3rd placement is host with id-3, because it has a rank value of 60 (50 for free ram and 10 for free cpu)
+    is_deeply(
+               [@rec],
+               [
+                  { id => "id-3", datastores => ['datastore-3'], }
+               ],
+               "should return host with enough free diskspace "
+    );
 }
 
 done_testing();
