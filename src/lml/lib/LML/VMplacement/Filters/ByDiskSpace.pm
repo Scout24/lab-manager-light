@@ -39,10 +39,10 @@ sub host_can_vm {
         croak( "missing freespace attribute in datastore\n" . Data::Dumper->Dump( [$datastore], ["datastore"] ) . "\ngiven in " . ( caller 0 )[3] )
     }
 
-    if ($vm_res->{disks}[0] < $datastore->{freespace}) {
+    if ($vm_res->{disks}[0]->{size} < $datastore->{freespace}) {
         return 1;
     }
-    push @$error_ref, "Host $host->{name} does not have $vm_res->{disks}[0] byte free diskspace";
+    push @$error_ref, "Host $host->{name} does not have $vm_res->{disks}[0]->{size} byte free diskspace";
     return 0;
 }
 
