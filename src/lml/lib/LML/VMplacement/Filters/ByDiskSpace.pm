@@ -28,6 +28,8 @@ sub host_can_vm {
     my $datastore_id = $host->{datastores}[0];
     my $datastore = $self->{lab}->get_datastore($datastore_id);
 
+    print STDERR "DEBUG: ".Data::Dumper->Dump([$vm_res, $datastore_id, $datastore], ["vm_res", "datastore_id", "datastore"])."\n";
+
     if (! $datastore) {
         croak( "missing datastore (". $datastore_id .") in lab\n" . Data::Dumper->Dump( [$host], ["host"] ) . "\ngiven in " . ( caller 0 )[3] )
     }
