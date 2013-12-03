@@ -245,11 +245,11 @@ sub create_vm {
                     error("PowerOnVM: Virtual machine '$$args{vmname}' is not compatible with the host '$$args{vmhost}'");
                 }
                 else {
-                    error("Could not power on VM:\n".Data::Dumper([$@],['$@']));
+                    error("Could not power on VM:\n".Data::Dumper->Dump([$@],['$@']));
                 }
         }
         else {
-            error("Could not power on VM:\n".Data::Dumper([$@],['$@']));
+            error("Could not power on VM:\n".Data::Dumper->Dump([$@],['$@']));
         }
     }
 
