@@ -73,7 +73,8 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
     # If this VM uses our managed network
     if ( $VM->get_filtered_macs and not $Policy->ignore_vm_by_path ){
           # Set dns domain of VM from first network card
-          $VM->set_dns_domain( $C->appenddomain( ( $VM->networks() )[0] ) );
+          my $vm_dns_domain = $C->appenddomain( ( $VM->networks() )[0] );
+          $VM->set_dns_domain( $vm_dns_domain );
 
           # Set redirect parameters (take the right dns_domain for appending to the hostname)
           $result->set_redirect_parameter( $C->get_proxy_parameter( hostname => $vm_name . "." . $VM->dns_domain ) );
@@ -123,7 +124,7 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
               my $url = $result->get_full_url("/lml/backgroundimage.pl") . "?n=$vm_name;e=" . join( ";e=", map { uri_escape($_) } @error );
               $error_main =~ s/QRIMAGE/$url/;
               push( @body, $error_main );
-              push( @body, "menu title " . $C->get( "pxelinux", "error_title" ) . " " . $vm_name );
+              push( @body, "menu title " . $C->get( "pxelinux", "error_title" ) . " " . $vm_name . "." . $vm_dns_domain );
               my $c = 1;
               foreach my $e (@error) {
                   $e =~ s/\^/^^/g;    # pxelinux menu uses ^ to mark keyboard shortcuts. ^^ comes out as plain ^
