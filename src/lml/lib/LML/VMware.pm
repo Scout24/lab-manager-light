@@ -278,7 +278,7 @@ sub get_datastores {
                         $_->{mountInfo}->{accessible}
                           and $_->{mountInfo}->{mounted}
                           and $_->{mountInfo}->{accessMode} eq 'readWrite'
-                      } @{ $e->{host} }
+                    } @{ $e->{host} }
                 ],
                 "vm"        => [ map { $_->{value} } @{ $e->{vm} } ],
                 "freespace" => $e->{info}->{freeSpace},
@@ -523,8 +523,12 @@ sub get_hosts {
                 product => { fullName => $product->{fullName}, },
                 stats   => {
                     # the fairness values are -1 if the host is not part of a cluster. We set it to 1000 so that it will rank badly
-                    distributedCpuFairness => $quickStats->{distributedCpuFairness} > -1 ? $quickStats->{distributedCpuFairness} : 1000,
-                    distributedMemoryFairness => $quickStats->{distributedMemoryFairness} > -1
+                    distributedCpuFairness =>
+                      ( exists( $quickStats->{distributedCpuFairness} ) && $quickStats->{distributedCpuFairness} > -1 )
+                    ? $quickStats->{distributedCpuFairness}
+                    : 1000,
+                    distributedMemoryFairness =>
+                      ( exists( $quickStats->{distributedMemoryFairness} ) && $quickStats->{distributedMemoryFairness} > -1 )
                     ? $quickStats->{distributedMemoryFairness}
                     : 1000,
                     overallCpuUsage    => $quickStats->{overallCpuUsage},
@@ -533,7 +537,7 @@ sub get_hosts {
                 hardware => {
                     totalCpuMhz => $hardware->{cpuMhz} * $hardware->{numCpuCores},
                     memorySize  => int( $hardware->{memorySize} / 1024 / 1024 )
-                    ,    # strangely the value from the API does not divide cleanly by 1024^2
+                    ,          # strangely the value from the API does not divide cleanly by 1024^2
                     vendor => $hardware->{vendor},
                     model  => $hardware->{model},
                 },
