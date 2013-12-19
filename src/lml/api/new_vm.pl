@@ -42,7 +42,7 @@ sub hostFairness($) {
 sub displayHost($) {
     # display ESX host together with CPU and MEM usage
     my $h = shift;
-    return $h unless ( exists( $h->{stats} ) );
+    return $h->{name} unless ( exists( $h->{stats}->{overallCpuUsage} ) and defined($h->{stats}->{overallCpuUsage}) );
     return
       sprintf( "%s (%d GHz CPU, %d GB MEM used)",
                $h->{name},
@@ -69,6 +69,7 @@ sub fill_hosts_json {
 
     foreach my $host (@hosts) {
         my $host_info = {};
+        next unless ($host->{status}->{active} == 1);
         $host_info->{value} = $host->{name};
         $host_info->{label} = displayHost($host);
         push @{ $json->{hosts} }, $host_info;
