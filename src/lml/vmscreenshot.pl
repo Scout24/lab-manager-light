@@ -24,7 +24,7 @@ unless (caller) {
             $search_uuid = lc( $q->param('uuid') );
             if ( my $screenshot = new LML::VMscreenshot( $C, $search_uuid ) ) {
                 # we could load the VM data from LAB, return image data or HTML document
-                if ( $q->Accept("image/png") >= 0.9 or $q->param('image') ) {
+                if ( $q->Accept("image/webp") >= 0.9 or $q->Accept("image/png") >= 0.9 or $q->param('image') ) {
                     if ( $q->param("stream") ) {
                         $q->do_push(
                                      -type      => "dynamic",
