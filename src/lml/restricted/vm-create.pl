@@ -85,6 +85,10 @@ sub create_vm {
     my $args = shift;
     my @vm_devices;
 
+    if (defined $lab->get_vm($$args{vmname})) {
+        error("The VM with name \"$$args{vmname}\" already exist.");
+    }
+
     # connect to VMware
     get_vi_connection();
 
@@ -213,7 +217,7 @@ sub create_vm {
     }
 
     my $vm_view = Vim::get_view( mo_ref => $vm_ref );
-    
+
     # first thing add VM data to lab.conf so that it can be deleted through LML even if the following operations fail.
     my $HOSTS      = get_hosts;
     my $NETWORKS   = get_networks;
@@ -232,7 +236,7 @@ sub create_vm {
         # NOT dying here on purpose to give vm-create a chance to finish starting the VM.
         warn "Strangely writing LAB produced a 0-byte file.\n";
     }
-    
+
     # set the custom fields with defined values
     set_custom_fields( custom_fields => $$args{custom_fields},
                        vm_view       => $vm_view );
