@@ -1,4 +1,5 @@
 <div class="main_content" id="vm_overview" data-ng-controller="VmOverviewController">
+
   <div id="dialog"></div>
   <div class="error" id="vm_action_error" data-ng-show="errorMsgs">
     <h3>Problems while performing action</h3>
@@ -41,12 +42,12 @@
       <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
         <td>
           <input  ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected" value="{{vm.uuid}}">
-          <a href="vmdata.pl/{{vm.uuid}}" title="Details" onclick ="return false;" rel="vmdata.pl/{{vm.uuid}}" class="tip vmhostname">
-            {{vm.fullname}}
-          </a>
-          <a data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip">
+          <a remote-tooltip vm-name="vm.fullname" data-open-Popup="openPopup"
+                  href="vmdata.pl/{{vm.uuid}}" title="Details" rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
+            {{vm.fullname}}</a>
+          <span data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip">
             <img src ="images/console_icon.png"/>
-          </a>
+          </span>
           <a data-ng-show="vm.extra_link_enabled" href="{{vm.extra_link_url}}" title="Additional Info" rel="{{vm.extra_link_url}}" target="_blank">
             {{vm.extra_link_text}}
           </a>

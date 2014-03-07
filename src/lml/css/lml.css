@@ -248,3 +248,11 @@ div.DTTT_container {
 .inactive {
   display: none;
 }
+
+div.remoteTooltip pre {
+  padding-bottom: 45px;
+  z-index: 100;
+  background-color: white;
+
+
+}

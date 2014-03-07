@@ -12,6 +12,8 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.setServerRequestRunning(true);
   $scope.errorMsgs;
 
+  $scope.openPopup='23';
+
   $scope.tableHeaders = [
     { name: "fullname",   title: "Hostname"},
     { name: "vm_path",    title: "VM Path"},
@@ -61,9 +63,15 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
       filterVms(query);
       $scope.$apply();
     }, 300);
-  }
+  };
 
   $scope.$watch("searchTerm", throttledFilterVms);
+
+
+  $scope.$on('OPEN_POPUP',function bounce(event,data){
+    $scope.openPopup = data;
+    $scope.$apply();
+  });
 
   $scope.detonate = function(){
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
