@@ -87,7 +87,7 @@ use_ok "LML::VMmodify";
 
 #$isDebug = 1;    # tell us why it did not work
 dies_ok { remove_forceboot( $C, "" ) } "should fail on empty uuid";
-ok( !remove_forceboot( $C, "123123123-124123-23421342-2341234234" ), "should fail not non-existant uuid" );
+ok( remove_forceboot( $C, "123123123-124123-23421342-2341234234" ), "should not fail with non-existant uuid" );
 
 ok( remove_forceboot( $C, '4213038e-9203-3a2b-ce9d-c6dac1f2dbbf' ),
     "old style, no force boot target field, set empty value" );

@@ -69,7 +69,9 @@ sub remove_forceboot {
         } else {
             # bail out if not VM data available, probably no VM for this uuid
             Debug("No VM data for uuid '$uuid' found.");
-            return 0;
+            # it is OK to call unsetforceboot for unknown systems,
+            # e.g. in case that LML is configured to ignore some VMs due to folder blacklisting
+            return 1;
         }
     } else {
         # bail out if not VM data available, probably no VM for this uuid
