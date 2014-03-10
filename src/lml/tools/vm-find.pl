@@ -18,14 +18,11 @@ use LML::VMware;
 
 # Check if an value was submitted, else return an default
 sub check_value {
-    # Get the parameters
     my $value = shift;
 
-    # Check if value is set
     if ( defined $value ) {
         return $value;
     }
-    # If not, mark it
     else {
         return "-- NOT SET --";
     }
@@ -35,9 +32,9 @@ sub check_value {
 my %opts = (
     format => {
                 type     => "=s",
-                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET). ",
+                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET, %STATUS). ",
                 required => 0,
-                default  => "%UUID%NAME%PATH"
+                default  => "%UUID%NAME%PATH%STATUS"
     }
 );
 
@@ -67,7 +64,6 @@ if (keys %$HOSTS ) {
     print "No ESX Hosts found - You will not have much fun using LML without them.\n";
 }
 
-# search for VM
 print "Searching for VMs" . "\n";
 my $VM = get_all_vm_data( @ARGV ? ( "config.name" => qr($ARGV[0])xi ) : () );
 # bail out if no VMs found
@@ -115,17 +111,21 @@ foreach my $uuid ( keys %{$VM} ) {
         elsif ( $_ eq "FORCEBOOT_TARGET" ) {
             push @output, check_value( $VM->{$uuid}{CUSTOMFIELDS}->{'Force Boot Target'} );
         }
-                # Raw path
+        # Raw path
         elsif ( $_ eq "PATH" ) {
             push @output, $VM->{$uuid}{PATH};
         }
         # Use the display regex for vm paths if there is one
-        elsif ( $_ eq "DISPLAPATH" ) {
+        elsif ( $_ eq "DISPLAYPATH" ) {
             my $display_vm_path = $VM->{$uuid}{PATH};
             if ($display_filter_vm_path) {
                 $display_vm_path =~ s/$display_filter_vm_path/$1/x;
             }
             push @output, $display_vm_path;
+        }
+        # Is the VM powered on or off
+        elsif ( $_ eq "STATUS" ) {
+            push @output, $VM->{$uuid}{POWERSTATE};
         }
         # Just push the hash value to output array
         else {

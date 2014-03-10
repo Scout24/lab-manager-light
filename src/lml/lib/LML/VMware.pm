@@ -44,7 +44,7 @@ my %FOLDERIDS;
 my $VM_PROPERTIES = [
                       "name",            "config.name",            "config.uuid", "config.extraConfig",
                       "config.template", "config.hardware.device", "customValue", "runtime.host",
-                      "parent",
+                      "parent", "runtime.powerState",
 ];
 
 # return if arg looks like a UUID
@@ -82,6 +82,7 @@ sub retrieve_vm_details ($) {
 
     $VM_DATA{UUID} = $vm->get_property("config.uuid");
     $VM_DATA{NAME} = $vm->get_property("name");
+    $VM_DATA{POWERSTATE} = $vm->get_property("runtime.powerState")->val;
     $VM_DATA{PATH} = _get_folder($vm);
     # store moref
     $VM_DATA{VM_ID} = $vm->{mo_ref}->{value};
