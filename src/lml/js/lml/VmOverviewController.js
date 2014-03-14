@@ -13,7 +13,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.errorMsgs = '';
 
   // pagination
-  $scope.itemsPerPage = 10;
+  $scope.itemsPerPage = 20;
   $scope.totaItems = 0;
   $scope.currentPage = 1;
   $scope.maxSize = 5;
