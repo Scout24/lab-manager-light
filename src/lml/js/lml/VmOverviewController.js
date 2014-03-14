@@ -10,9 +10,20 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
-  $scope.errorMsgs;
+  $scope.errorMsgs = '';
 
-  $scope.openPopup='23';
+  $scope.vmOverviewPopup={
+    style: {
+      top: '0px',
+      left: '0px'
+    },
+    display: false,
+    currentVM: null,
+    content: '',
+    close: function close(){
+      $scope.vmOverviewPopup.display = false;
+    }
+  };
 
   $scope.tableHeaders = [
     { name: "fullname",   title: "Hostname"},
@@ -67,7 +78,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
   $scope.$watch("searchTerm", throttledFilterVms);
 
-
+  // TODO delete?
   $scope.$on('OPEN_POPUP',function bounce(event,data){
     $scope.openPopup = data;
     $scope.$apply();
@@ -109,7 +120,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
       });
   };
 
-  AjaxCallService.sendAjaxCall('api/vm_overview.pl',{}, function successCallback(data){
+  AjaxCallService.get('api/vm_overview.pl',function successCallback(data){
     $scope.errorMsgs = "";
     $log.info("Received vm overview data: ",data);
     $scope.vms = data.vm_overview;

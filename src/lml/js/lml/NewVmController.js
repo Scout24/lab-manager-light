@@ -12,7 +12,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
 
 
 	$scope.setServerRequestRunning(true);
-	AjaxCallService.sendAjaxCall('api/new_vm.pl',{}, function successCallback(data){
+	AjaxCallService.post('api/new_vm.pl',{}, function successCallback(data){
 		$log.info("Received hosts data for create new vm: ",data);
 		$scope.hosts = data.create_new_vm.hosts;
 		$scope.paths = data.create_new_vm.paths;

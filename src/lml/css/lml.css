@@ -249,6 +249,12 @@ div.DTTT_container {
   display: none;
 }
 
+div.remoteTooltip {
+  position: absolute;
+  display: block;
+  border: solid 1px;
+}
+
 div.remoteTooltip pre {
   padding-bottom: 45px;
   z-index: 100;

@@ -10,7 +10,7 @@ window.lml.MainController = function MainController($scope,$log,AjaxCallService)
   };
   $scope.version="";
 
-  	AjaxCallService.sendAjaxCall('api/version.pl',{}, function successCallback(data){
+  	AjaxCallService.get('api/version.pl',function successCallback(data){
 		$log.info("Received lml version: ",data.version);
 		$scope.version = data.version;
 	}, function errorCallback(){

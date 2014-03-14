@@ -5,7 +5,9 @@
     <h3>Problems while performing action</h3>
     <p>The following error occured: <b id="vm_action_error_message">{{errorMsgs}}</b></p>
   </div>
-
+    <div data-ng-show="vmOverviewPopup.display" ng-style="vmOverviewPopup.style" class="remoteTooltip"><button data-ng-click="vmOverviewPopup.close()">Schliessen</button>
+    <pre>{{vmOverviewPopup.content}}</pre>
+    </div>
   <form id="vm_action_form" ng-disabled="isServerRequestRunning">
     <div style="clear:both">
       <div class="pull-left">
@@ -42,8 +44,7 @@
       <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
         <td>
           <input  ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected" value="{{vm.uuid}}">
-          <a remote-tooltip vm-name="vm.fullname" data-open-Popup="openPopup"
-                  href="vmdata.pl/{{vm.uuid}}" title="Details" rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
+          <a remote-tooltip remote-tooltip-data="vmOverviewPopup"  vm-name="vm.fullname" vm-uuid="vm.uuid" title="Details" rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
             {{vm.fullname}}</a>
           <span data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip">
             <img src ="images/console_icon.png"/>
@@ -65,3 +66,4 @@
   </div>
 </form>
 </div>
+
