@@ -238,7 +238,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
                 if (detonated_uuid ===  selectedVM.uuid){
                   var indexOfDeletedElement = null;
                   for (var i = 0; i < vms.length; i++){
-                    if (detonated_uuid == vms.uuid){
+                    if (detonated_uuid === vms[i].uuid){
                       indexOfDeletedElement = i;
                       break;
                     }
