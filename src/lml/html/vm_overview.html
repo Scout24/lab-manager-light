@@ -30,7 +30,7 @@
                 </div>
                 <div class="indent">
                     Ergebnis: <span data-ng-bind="filteredData.length"></span>
-                    von <span data-ng-bind="vms.length"/></span>
+                    von <span data-ng-bind="totaItems"/></span>
                 </div>
             </div>
         </div>
@@ -50,7 +50,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | filter:{ deleted: '!'+true} | orderBy:sort.column:sort.descending">
+            <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | filter:{ deleted: '!'+true}">
                 <td>
                     <input ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected"
                            value="{{vm.uuid}}">
@@ -72,6 +72,22 @@
             </tr>
             </tbody>
         </table>
+        <div class="pagination-container">
+        <div class="pagination-container2">
+        <pagination
+                items-per-page="itemsPerPage"
+                total-items="totaItems"
+                page="currentPage"
+                max-size="5"
+                class="pagination-sm"
+                boundary-links="true"
+                rotate="false"
+                num-pages="numPages">
+
+        </pagination>
+        </div>
+        </div>
+
         <div class="vm_action_panel">
             <a ng-click="detonate()" ng-disabled="{{detonateDisabled}}" class="button"
                title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>

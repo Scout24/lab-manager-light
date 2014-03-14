@@ -4,14 +4,20 @@ window.lml = window.lml || {};
 
 window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, $modal,AjaxCallService, $http) {
   'use strict';
-  var queuedSearch;
+  var queuedSearch,vms = [];
   $scope.searchTerm = "";
   $scope.detonateDisabled = false;
   $scope.destroyDisabled  = false;
-  $scope.vms = [];
   $scope.globals.activeTab = 'vm_overview';
   $scope.setServerRequestRunning(true);
   $scope.errorMsgs = '';
+
+  // pagination
+  $scope.itemsPerPage = 10;
+  $scope.totaItems = 0;
+  $scope.currentPage = 1;
+  $scope.maxSize = 5;
+
 
   $scope.vmOverviewPicturePopup={
     style: {
@@ -59,24 +65,31 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   };
 
   $scope.changeSorting = function(column) {
-
+    $scope.vmOverviewPopup.display = false;
+    $scope.vmOverviewPicturePopup.display = false;
     var sort = $scope.sort;
 
-    if (sort.column == column) {
+    if (sort.column === column) {
       sort.descending = !sort.descending;
     } else {
       sort.column = column;
       sort.descending = false;
     }
+    vms.forEach(function(vm){ vm.selected = false; });
+    $scope.currentPage = 1;
+    rebuildVmModel();
   };
 
 
   var filterVms = function(query){
+    var filteredVMs = $filter("filter")(vms, query);
     $scope.vmOverviewPopup.display = false;
     $scope.vmOverviewPicturePopup.display = false;
 
-    $scope.vms.forEach(function(vm){ vm.selected = false; });
-    $scope.filteredData = $filter("filter")($scope.vms, query); // TODO anstelle der DOM-Manipulation besser Sichtbarkeit setzen (Performance-Issue)
+    filteredVMs.forEach(function(vm){ vm.selected = false; });
+    $scope.filteredData = filteredVMs.slice(0, $scope.itemsPerPage ) // TODO anstelle der DOM-Manipulation besser Sichtbarkeit setzen (Performance-Issue)
+    $scope.totaItems = filteredVMs.length;
+    $scope.currentPage = 1;
   };
 
   var throttledFilterVms = function(query){
@@ -91,8 +104,22 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     }, 300);
   };
 
-  $scope.$watch("searchTerm", throttledFilterVms);
+  var updatePage = function(){
+    rebuildVmModel();
+  };
 
+  $scope.$watch("searchTerm", throttledFilterVms);
+  $scope.$watch("currentPage", updatePage);
+
+
+  var rebuildVmModel = function(){
+    $scope.vmOverviewPopup.display = false;
+    $scope.vmOverviewPicturePopup.display = false;
+    var filteredVMs = $filter("filter")(vms, $scope.searchTerm);
+    var sortedVMs = $filter('orderBy')(filteredVMs, $scope.sort.column, $scope.sort.descending);
+    $scope.filteredData = sortedVMs.slice($scope.itemsPerPage * ($scope.currentPage -1), $scope.itemsPerPage * ($scope.currentPage -1)+ $scope.itemsPerPage);
+    $scope.totaItems = vms.length;
+  };
 
   var ModalInstanceCtrl = function ($scope, $modalInstance, items, action) {
 
@@ -108,6 +135,8 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   };
 
   $scope.detonate = function(){
+    $scope.vmOverviewPopup.display = false;
+    $scope.vmOverviewPicturePopup.display = false;
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
         uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&") + "&action=detonate";
 
@@ -168,6 +197,8 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   };
 
     $scope.destroy = function(){
+      $scope.vmOverviewPopup.display = false;
+      $scope.vmOverviewPicturePopup.display = false;
       var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
         uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&")+ "&action=destroy";
 
@@ -205,12 +236,24 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
             detonated_uuids.forEach(function(detonated_uuid){
               selectedVms.forEach(function(selectedVM){
                 if (detonated_uuid ===  selectedVM.uuid){
-                  selectedVM.selected = false; // TODO remove from $scope.vms and $scope.?
-                  selectedVM.deleted = true; // TODO remove from $scope.vms and $scope.?
+                  var indexOfDeletedElement = null;
+                  for (var i = 0; i < vms.length; i++){
+                    if (detonated_uuid == vms.uuid){
+                      indexOfDeletedElement = i;
+                      break;
+                    }
+                  }
+                  if (indexOfDeletedElement !== null){
+                    vms.splice(indexOfDeletedElement, 1);
+                  }
+
                   $log.info("destroying of "+ detonated_uuid +" was successful");
                 }
               });
             });
+            if (detonated_uuids.length > 0){
+              rebuildVmModel();
+            }
             window.scroll(0,0);
             $scope.setServerRequestRunning(false);
           })
@@ -228,8 +271,9 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   AjaxCallService.get('api/vm_overview.pl',function successCallback(data){
     $scope.errorMsgs = "";
     $log.info("Received vm overview data: ",data);
-    $scope.vms = data.vm_overview;
-    filterVms('');
+    vms = data.vm_overview;
+    $scope.totaItems = vms.length;
+    rebuildVmModel();
 
     $scope.setServerRequestRunning(false);
   }, function errorCallback(){
