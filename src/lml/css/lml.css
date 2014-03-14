@@ -254,6 +254,7 @@ div.DTTT_container {
 }
 
 div.remoteTooltip {
+  z-index: 100;
   position: absolute;
   display: block;
   border: solid 1px;
