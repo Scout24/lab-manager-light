@@ -191,7 +191,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
             return selectedVms;
           },
           action: function(){
-            return 'physikalisch löschen';
+            return 'physikalisch l\u00F6schen';
           }
         }
       });
