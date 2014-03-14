@@ -13,6 +13,17 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.setServerRequestRunning(true);
   $scope.errorMsgs = '';
 
+  $scope.vmOverviewPicturePopup={
+    style: {
+      top: '0px',
+      left: '0px'
+    },
+    display: false,
+    currentVM: null,
+    close: function close(){
+      $scope.vmOverviewPicturePopup.display = false;
+    }
+  };
   $scope.vmOverviewPopup={
     style: {
       top: '0px',

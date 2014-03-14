@@ -10,6 +10,10 @@
         <button data-ng-click="vmOverviewPopup.close()">Schliessen</button>
         <pre>{{vmOverviewPopup.content}}</pre>
     </div>
+    <div data-ng-show="vmOverviewPicturePopup.display" ng-style="vmOverviewPicturePopup.style" class="remoteTooltip">
+        <button data-ng-click="vmOverviewPicturePopup.close()">Schliessen</button>
+        <pre><img data-ng-src="{{vmOverviewPicturePopup.src}}" alt="Screenshot"></pre>
+    </div>
     <form id="vm_action_form" ng-disabled="isServerRequestRunning">
         <div style="clear:both">
             <div class="pull-left">
@@ -51,12 +55,11 @@
                     <input ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected"
                            value="{{vm.uuid}}">
                     <a remote-tooltip remote-tooltip-data="vmOverviewPopup" vm-name="vm.fullname" vm-uuid="vm.uuid"
-                       title="Details" rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
+                       rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
                         {{vm.fullname}}</a>
-          <span data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot"
-                onclick="return false;" rel="{{vm.screenshot_url}}" class="tip">
-            <img src="images/console_icon.png"/>
-          </span>
+                    <span data-ng-show="vm.screenshot_enabled">
+                        <a remote-picture-tooltip remote-tooltip-data="vmOverviewPicturePopup"  vm-uuid="vm.uuid" vm-name="vm.fullname">Screenshot</a>
+                    </span>
                     <a data-ng-show="vm.extra_link_enabled" href="{{vm.extra_link_url}}" title="Additional Info"
                        rel="{{vm.extra_link_url}}" target="_blank">
                         {{vm.extra_link_text}}

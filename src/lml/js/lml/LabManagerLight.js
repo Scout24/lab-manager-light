@@ -4,6 +4,7 @@
   window.lml = window.lml || {};
 
   angular.module('lml-app', ['ui.bootstrap', 'ngCsv','ui.bootstrap.position'])
+    .directive('remotePictureTooltip', lml.TooltipPictureDirective)
     .directive('remoteTooltip', lml.TooltipDirective)
     .controller('LmlController', lml.LmlController)
     .controller('VmOverviewController', lml.VmOverviewController)

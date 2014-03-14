@@ -1,11 +1,11 @@
 window.lml = window.lml || {};
 
 
-window.lml.TooltipDirective = function TooltipDirective($compile, $position, AjaxCallService) {
+window.lml.TooltipPictureDirective = function TooltipPictureDirective($compile, $position, AjaxCallService) {
   'use strict';
   return {
     restrict: "A",
-    template: '<a href="javascript:" title="Details" class="vmhostname">{{vm_name}}</a>',
+    template: '<a href="javascript:" title="Screenshot" class=""><img src="images/console_icon.png"/></a>',
     replace: true,
     scope: {
       popup: '=remoteTooltipData',
@@ -27,16 +27,14 @@ window.lml.TooltipDirective = function TooltipDirective($compile, $position, Aja
         scope.popup.style.top = popupElementPosition.top;
       }
 
-      function loadVmData() {
-        scope.popup.content = 'Retrieving vm data...';
-        AjaxCallService.get('vmdata.pl/' + scope.vm_uuid,
-          function onSuccess(a, b, c, d) {
-            scope.popup.content = angular.toJson(a, true);
-          },
-          function onError() {
-            console.log('error received');
-            scope.popup.content = 'An error occured while retrieving vm data.';
-          });
+      function reloadWhilePictureIsDisplayed(){
+        setTimeout(function reload(){
+          if (scope.popup.currentVM === scope.vm_name && scope.popup.display){
+            scope.popup.src = 'vmscreenshot.pl?stream=0;uuid=' + scope.vm_uuid + '&counter=' + Math.random();
+            reloadWhilePictureIsDisplayed();
+            scope.$apply();
+          }
+        },10000);
       }
 
       // Register the event listeners.
@@ -44,16 +42,13 @@ window.lml.TooltipDirective = function TooltipDirective($compile, $position, Aja
         e.preventDefault();
         if (scope.popup.currentVM === scope.vm_name) {
           scope.popup.display = !scope.popup.display;
-          if (scope.popup.display){
-            loadVmData();
-          }
         } else {
           updatePosition(angular.element(e.target));
           scope.popup.currentVM = scope.vm_name;
           scope.popup.display = true;
-          loadVmData();
+          scope.popup.src = 'vmscreenshot.pl?stream=0;uuid=' + scope.vm_uuid + '&counter=' + Math.random();
+          reloadWhilePictureIsDisplayed();
         }
-
         scope.$apply();
       });
     }
