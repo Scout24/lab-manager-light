@@ -3,6 +3,7 @@ window.lml = window.lml || {};
 
 
 window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService, $http) {
+  'use strict';
   var queuedSearch;
   $scope.searchTerm = "";
   $scope.detonateDisabled = false;
