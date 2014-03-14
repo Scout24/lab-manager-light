@@ -78,11 +78,6 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
   $scope.$watch("searchTerm", throttledFilterVms);
 
-  // TODO delete?
-  $scope.$on('OPEN_POPUP',function bounce(event,data){
-    $scope.openPopup = data;
-    $scope.$apply();
-  });
 
   $scope.detonate = function(){
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
