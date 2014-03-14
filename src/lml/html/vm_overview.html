@@ -80,5 +80,23 @@
                rel="Really delete the selected machines physically?"><img src="images/delete.png" class="button_image"/>&nbsp;Delete</a>
         </div>
     </form>
+
+    <script type="text/ng-template" id="modalContent.html">
+        <div class="modal-header">
+            <h3>Wollen Sie wirklich die ausgewählten VMs {{action}}?</h3>
+        </div>
+        <div class="modal-body">
+            <ul>
+                <li ng-repeat="item in items">
+                    {{ item.fullname }}
+                </li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" ng-click="ok()">OK</button>
+            <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+        </div>
+    </script>
+
 </div>
 

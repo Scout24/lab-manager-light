@@ -2,7 +2,7 @@
 window.lml = window.lml || {};
 
 
-window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, AjaxCallService, $http) {
+window.lml.VmOverviewController = function VmOverviewController($scope, $log, $location, $filter, $modal,AjaxCallService, $http) {
   'use strict';
   var queuedSearch;
   $scope.searchTerm = "";
@@ -72,6 +72,9 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
 
 
   var filterVms = function(query){
+    $scope.vmOverviewPopup.display = false;
+    $scope.vmOverviewPicturePopup.display = false;
+
     $scope.vms.forEach(function(vm){ vm.selected = false; });
     $scope.filteredData = $filter("filter")($scope.vms, query); // TODO anstelle der DOM-Manipulation besser Sichtbarkeit setzen (Performance-Issue)
   };
@@ -91,40 +94,78 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   $scope.$watch("searchTerm", throttledFilterVms);
 
 
+  var ModalInstanceCtrl = function ($scope, $modalInstance, items, action) {
+
+    $scope.items = items;
+    $scope.action = action;
+    $scope.ok = function () {
+      $modalInstance.close($scope.selected.item);
+    };
+
+    $scope.cancel = function () {
+      $modalInstance.dismiss('cancel');
+    };
+  };
+
   $scope.detonate = function(){
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
         uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&") + "&action=detonate";
-    $log.info("detonate: " + uuids);
 
-    if (selectedVms.length === 0 ){
-      $scope.errorMsgs = "Anzahl VMs ist 0.";
-      return;
-    }
-    if (selectedVms.length > 3){
-      $scope.errorMsgs = "Anzahl VM > 3";
+    if (selectedVms && selectedVms.length == 0){
       return;
     }
 
-    $scope.errorMsgs = "";
+    var modalInstance = $modal.open({
+      templateUrl: 'modalContent.html',
+      controller: ModalInstanceCtrl,
+      resolve: {
+        items: function () {
+          return selectedVms;
+        },
+        action: function(){
+          return 'neu aufsetzen';
+        }
+      }
+    });
 
-    $scope.$apply();
-    $scope.setServerRequestRunning(true);
-    $http.post("restricted/vm-control.pl?action=detonate", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
-         .success(function(detonated_uuids){
-            detonated_uuids.forEach(function(detonated_uuid){
-              selectedVms.forEach(function(selectedVM){
-                if (detonated_uuid ===  selectedVM.uuid){
-                  selectedVM.selected = false;
-                  $log.info("detonation of "+ detonated_uuid +" was successful");
-                }
-              });
+    modalInstance.result.then(function (selectedItem) {
+      $log.info("detonate: " + uuids);
+
+      if (selectedVms.length === 0 ){
+        $scope.errorMsgs = "Anzahl VMs ist 0.";
+        return;
+      }
+      if (selectedVms.length > 3){
+        $scope.errorMsgs = "Anzahl VM > 3";
+        return;
+      }
+
+      $scope.errorMsgs = "";
+
+      $scope.$apply();
+      $scope.setServerRequestRunning(true);
+      $http.post("restricted/vm-control.pl?action=detonate", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
+        .success(function(detonated_uuids){
+          detonated_uuids.forEach(function(detonated_uuid){
+            selectedVms.forEach(function(selectedVM){
+              if (detonated_uuid ===  selectedVM.uuid){
+                selectedVM.selected = false;
+                $log.info("detonation of "+ detonated_uuid +" was successful");
+              }
             });
-            $scope.setServerRequestRunning(false);
+          });
+          $scope.setServerRequestRunning(false);
         })
-      .error(function(failure){
-        $scope.setServerRequestRunning(false);
-        $scope.errorMsgs = "Unkannter Fehler";
-      });
+        .error(function(failure){
+          $scope.setServerRequestRunning(false);
+          $scope.errorMsgs = "Unkannter Fehler";
+        });
+    }, function () {
+      $log.info('Detonate modal dismissed at: ' + new Date());
+    });
+
+
+
   };
 
   AjaxCallService.get('api/vm_overview.pl',function successCallback(data){
