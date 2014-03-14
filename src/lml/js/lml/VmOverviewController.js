@@ -99,7 +99,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     $scope.items = items;
     $scope.action = action;
     $scope.ok = function () {
-      $modalInstance.close($scope.selected.item);
+      $modalInstance.close();
     };
 
     $scope.cancel = function () {
@@ -111,7 +111,16 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
     var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
         uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&") + "&action=detonate";
 
-    if (selectedVms && selectedVms.length == 0){
+
+
+    if (selectedVms.length === 0 ){
+      $scope.errorMsgs = "Anzahl VMs ist 0.";
+      window.scroll(0,0);
+      return;
+    }
+    if (selectedVms.length > 3){
+      $scope.errorMsgs = "Anzahl VM > 3";
+      window.scroll(0,0);
       return;
     }
 
@@ -128,21 +137,11 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
       }
     });
 
+    $scope.errorMsgs = "";
+
     modalInstance.result.then(function (selectedItem) {
-      $log.info("detonate: " + uuids);
-
-      if (selectedVms.length === 0 ){
-        $scope.errorMsgs = "Anzahl VMs ist 0.";
-        return;
-      }
-      if (selectedVms.length > 3){
-        $scope.errorMsgs = "Anzahl VM > 3";
-        return;
-      }
-
-      $scope.errorMsgs = "";
-
-      $scope.$apply();
+     $log.info("detonate: " + uuids);
+     $scope.$apply();
       $scope.setServerRequestRunning(true);
       $http.post("restricted/vm-control.pl?action=detonate", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
         .success(function(detonated_uuids){
@@ -154,19 +153,77 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
               }
             });
           });
+          window.scroll(0,0);
           $scope.setServerRequestRunning(false);
         })
         .error(function(failure){
           $scope.setServerRequestRunning(false);
           $scope.errorMsgs = "Unkannter Fehler";
+          window.scroll(0,0);
         });
     }, function () {
       $log.info('Detonate modal dismissed at: ' + new Date());
     });
 
-
-
   };
+
+    $scope.destroy = function(){
+      var selectedVms = $filter("filter")($scope.filteredData, { selected : true }),
+        uuids = selectedVms.map(function(vm){ return "hosts=" + vm.uuid }).join("&")+ "&action=destroy";
+
+      if (selectedVms.length === 0 ){
+        $scope.errorMsgs = "Anzahl VMs ist 0.";
+        window.scroll(0,0);
+        return;
+      }
+      if (selectedVms.length > 3){
+        $scope.errorMsgs = "Anzahl VM > 3";
+        window.scroll(0,0);
+        return;
+      }
+      $scope.errorMsgs = "";
+
+      var modalInstance = $modal.open({
+        templateUrl: 'modalContent.html',
+        controller: ModalInstanceCtrl,
+        resolve: {
+          items: function () {
+            return selectedVms;
+          },
+          action: function(){
+            return 'physikalisch löschen';
+          }
+        }
+      });
+
+      modalInstance.result.then(function (selectedItem) {
+        $log.info("destroy: " + uuids);
+        $scope.$apply();
+        $scope.setServerRequestRunning(true);
+        $http.post("restricted/vm-control.pl?action=destroy", uuids, {headers: {"Content-Type" : "application/x-www-form-urlencoded"}})
+          .success(function(detonated_uuids){
+            detonated_uuids.forEach(function(detonated_uuid){
+              selectedVms.forEach(function(selectedVM){
+                if (detonated_uuid ===  selectedVM.uuid){
+                  selectedVM.selected = false; // TODO remove from $scope.vms and $scope.?
+                  selectedVM.deleted = true; // TODO remove from $scope.vms and $scope.?
+                  $log.info("destroying of "+ detonated_uuid +" was successful");
+                }
+              });
+            });
+            window.scroll(0,0);
+            $scope.setServerRequestRunning(false);
+          })
+          .error(function(failure){
+            $scope.setServerRequestRunning(false);
+            $scope.errorMsgs = "Unkannter Fehler";
+          });
+      }, function () {
+        $log.info('Destroy modal dismissed at: ' + new Date());
+      });
+
+
+    };
 
   AjaxCallService.get('api/vm_overview.pl',function successCallback(data){
     $scope.errorMsgs = "";
