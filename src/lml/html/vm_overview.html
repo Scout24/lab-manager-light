@@ -1,69 +1,81 @@
 <div class="main_content" id="vm_overview" data-ng-controller="VmOverviewController">
 
-  <div id="dialog"></div>
-  <div class="error" id="vm_action_error" data-ng-show="errorMsgs">
-    <h3>Problems while performing action</h3>
-    <p>The following error occured: <b id="vm_action_error_message">{{errorMsgs}}</b></p>
-  </div>
-    <div data-ng-show="vmOverviewPopup.display" ng-style="vmOverviewPopup.style" class="remoteTooltip"><button data-ng-click="vmOverviewPopup.close()">Schliessen</button>
-    <pre>{{vmOverviewPopup.content}}</pre>
+    <div id="dialog"></div>
+    <div class="error" id="vm_action_error" data-ng-show="errorMsgs">
+        <h3>Problems while performing action</h3>
+
+        <p>The following error occured: <b id="vm_action_error_message">{{errorMsgs}}</b></p>
     </div>
-  <form id="vm_action_form" ng-disabled="isServerRequestRunning">
-    <div style="clear:both">
-      <div class="pull-left">
-          <div class="button" type="button" data-ng-csv="getCsvValues()" data-csv-header="['date_bad','vm_path','extra_link_enabled','extra_link_text','uuid','fullname','screenshot_enabled','contact_id','id','screenshot_url','extra_link_url','esxhost','expires']" filename="vm_overview.csv">CSV</div>
-          <div class="button" type="button" data-ng-click="print()">Print</div>
-      </div>
-
-      <div class="search pull-right">
-          <div>
-              <span class="indent">Suche:</span><input type="text" data-ng-model="searchTerm"/>
-          </div>
-          <div class="indent">
-              Ergebnis: <span data-ng-bind="filteredData.length"></span>
-              von <span data-ng-bind="vms.length"/></span>
-          </div>
-      </div>
+    <div data-ng-show="vmOverviewPopup.display" ng-style="vmOverviewPopup.style" class="remoteTooltip">
+        <button data-ng-click="vmOverviewPopup.close()">Schliessen</button>
+        <pre>{{vmOverviewPopup.content}}</pre>
     </div>
+    <form id="vm_action_form" ng-disabled="isServerRequestRunning">
+        <div style="clear:both">
+            <div class="pull-left">
+                <div class="button" type="button" data-ng-csv="getCsvValues()"
+                     data-csv-header="['date_bad','vm_path','extra_link_enabled','extra_link_text','uuid','fullname','screenshot_enabled','contact_id','id','screenshot_url','extra_link_url','esxhost','expires']"
+                     filename="vm_overview.csv">CSV
+                </div>
+                <div class="button" type="button" data-ng-click="print()">Print</div>
+            </div>
 
-    <table class="table table-striped" id="vmlist_table" cellpadding="3" cellspacing="0">
+            <div class="search pull-right">
+                <div>
+                    <span class="indent">Suche:</span><input type="text" data-ng-model="searchTerm"/>
+                </div>
+                <div class="indent">
+                    Ergebnis: <span data-ng-bind="filteredData.length"></span>
+                    von <span data-ng-bind="vms.length"/></span>
+                </div>
+            </div>
+        </div>
 
-      <thead id="vmlist">
-       <tr valign ="top">
+        <table class="table table-striped" id="vmlist_table" cellpadding="3" cellspacing="0">
 
-         <th ng-repeat="header in tableHeaders" title ="Click to sort" data-ng-click="changeSorting(header.name)">
-           {{header.title}}
-           <img ng-show="sort.column == header.name && sort.descending" src="images/sort_desc.png" />
-           <img ng-show="sort.column == header.name && !sort.descending" src="images/sort_asc.png" />
-           <img ng-show="sort.column != header.name" src="images/sort_both.png" />
-         </th>
+            <thead id="vmlist">
+            <tr valign="top">
 
-       </tr>
-     </thead>
-     <tbody>
-      <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
-        <td>
-          <input  ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected" value="{{vm.uuid}}">
-          <a remote-tooltip remote-tooltip-data="vmOverviewPopup"  vm-name="vm.fullname" vm-uuid="vm.uuid" title="Details" rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
-            {{vm.fullname}}</a>
-          <span data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot" onclick ="return false;" rel="{{vm.screenshot_url}}" class="tip">
-            <img src ="images/console_icon.png"/>
+                <th ng-repeat="header in tableHeaders" title="Click to sort" data-ng-click="changeSorting(header.name)">
+                    {{header.title}}
+                    <img ng-show="sort.column == header.name && sort.descending" src="images/sort_desc.png"/>
+                    <img ng-show="sort.column == header.name && !sort.descending" src="images/sort_asc.png"/>
+                    <img ng-show="sort.column != header.name" src="images/sort_both.png"/>
+                </th>
+
+            </tr>
+            </thead>
+            <tbody>
+            <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | orderBy:sort.column:sort.descending">
+                <td>
+                    <input ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected"
+                           value="{{vm.uuid}}">
+                    <a remote-tooltip remote-tooltip-data="vmOverviewPopup" vm-name="vm.fullname" vm-uuid="vm.uuid"
+                       title="Details" rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
+                        {{vm.fullname}}</a>
+          <span data-ng-show="vm.screenshot_enabled" href="{{vm.screenshot_url}}" title="Screenshot"
+                onclick="return false;" rel="{{vm.screenshot_url}}" class="tip">
+            <img src="images/console_icon.png"/>
           </span>
-          <a data-ng-show="vm.extra_link_enabled" href="{{vm.extra_link_url}}" title="Additional Info" rel="{{vm.extra_link_url}}" target="_blank">
-            {{vm.extra_link_text}}
-          </a>
-        </td>
-        <td>{{vm.vm_path}}</td>
-        <td>{{vm.contact_id}}</td>
-        <td>{{vm.expires}}<img class="stop_icon" data-ng-show="vm.date_bad" src="images/stop.png"/></td>
-        <td>{{vm.esxhost}}</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="vm_action_panel">
-    <a ng-click="detonate()" ng-disabled="{{detonateDisabled}}" class="button" title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
-    <a id="destroy_button"   ng-disabled="{{destroyDisabled}}"  class="button confirm" title="Delete the selected machine(s) physically" rel="Really delete the selected machines physically?"><img src="images/delete.png" class="button_image"/>&nbsp;Delete</a>
-  </div>
-</form>
+                    <a data-ng-show="vm.extra_link_enabled" href="{{vm.extra_link_url}}" title="Additional Info"
+                       rel="{{vm.extra_link_url}}" target="_blank">
+                        {{vm.extra_link_text}}
+                    </a>
+                </td>
+                <td>{{vm.vm_path}}</td>
+                <td>{{vm.contact_id}}</td>
+                <td>{{vm.expires}}<img class="stop_icon" data-ng-show="vm.date_bad" src="images/stop.png"/></td>
+                <td>{{vm.esxhost}}</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="vm_action_panel">
+            <a ng-click="detonate()" ng-disabled="{{detonateDisabled}}" class="button"
+               title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
+            <a id="destroy_button" ng-disabled="{{destroyDisabled}}" class="button confirm"
+               title="Delete the selected machine(s) physically"
+               rel="Really delete the selected machines physically?"><img src="images/delete.png" class="button_image"/>&nbsp;Delete</a>
+        </div>
+    </form>
 </div>
 

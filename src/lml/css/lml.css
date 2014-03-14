@@ -253,12 +253,11 @@ div.remoteTooltip {
   position: absolute;
   display: block;
   border: solid 1px;
+  background-color: darkred;
 }
 
 div.remoteTooltip pre {
   padding-bottom: 45px;
   z-index: 100;
   background-color: white;
-
-
 }
