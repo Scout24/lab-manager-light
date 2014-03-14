@@ -39,7 +39,7 @@ window.lml.TooltipDirective = function TooltipDirective($compile, $position, Aja
           scope.popup.display = true;
           scope.popup.content = 'Retrieving vm data...';
           console.log('sending ajax call to vmdata.pl/' + scope.vm_uuid);
-          AjaxCallService.get('/vmdata.pl/' + scope.vm_uuid,
+          AjaxCallService.get('vmdata.pl/' + scope.vm_uuid,
             function onSuccess(a, b, c, d) {
               scope.popup.content = angular.toJson(a,true);
             },
