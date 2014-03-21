@@ -14,7 +14,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
   $scope.vm_created_uuid = '';
   $scope.vm_creation_failure_message = '';
 
-  $scope.vm_name = '';
+  $scope.new_vm_name = '';
 	$scope.host = "auto_placement";
   $scope.user_name = '';
 	$scope.expiration = '';
@@ -34,7 +34,7 @@ window.lml.NewVmController = function NewVmController($scope, $log, AjaxCallServ
 
   $scope.createNewVm = function(event){
 
-    var postData = 'name='+ encodeURIComponent($scope.vm_name)
+    var postData = 'name='+ encodeURIComponent($scope.new_vm_name)
       + '&esx_host=' + encodeURIComponent($scope.host)
       + '&username='+ encodeURIComponent($scope.user_name)
       + '&expiration=' + encodeURIComponent($scope.expiration)
