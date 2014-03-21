@@ -15,7 +15,7 @@
     function failure( data, status, headers, config){
       $log.error("an error occured while sending ajax request - response status: " + status);
       if (failureHandler){
-        failureHandler();
+        failureHandler(data);
       }
     }
 
