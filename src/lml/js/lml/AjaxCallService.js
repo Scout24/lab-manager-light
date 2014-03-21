@@ -19,7 +19,7 @@
       }
     }
 
-    return $http.post(path, userQuery)
+    return $http.post(path, userQuery,{headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }})
       .success(successHandler)
       .error(failure);
   }
