@@ -19,7 +19,7 @@
       }
     }
 
-    return $http.post(path, JSON.stringify(userQuery))
+    return $http.post(path, userQuery)
       .success(successHandler)
       .error(failure);
   }

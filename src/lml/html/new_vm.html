@@ -1,13 +1,12 @@
 <div class="main_content" id="new"  ng-disabled="isServerRequestRunning">
-    <fieldset>
+    <fieldset data-ng-controller="NewVmController">
         <legend>Create new VM(s)</legend>
-        <div class="info message" id="vm_create_info">
+        <div class="info message" data-ng-show="vm_creation_in_progress">
             <table>
                 <tr>
                     <td style="width: 100%;">
-                        <h2 id="new_vm_progress_title">VM provisioning in progress <img src="images/wait.gif"/></h2>
-                        <h2 id="new_vm_success_title">VM was successfully created</h2>
-                        <p id="info_message"></p>
+                        <h2>VM provisioning in progress <img src="images/wait.gif"/></h2>
+                        <p>Please wait while the VM will be provisioned. This can take a while ...</p>
                     </td>
                     <td>
                         <img id="new_vm_screenshot" src="images/placeholder.png" height="256" style="border: 1px solid #a0a0a0; opacity: 0.9;"/>
@@ -15,15 +14,29 @@
                 </tr>
             </table>
         </div>
-        <div class="error message" id="vm_create_error">
-            <h3>Problems while VM(s) provisioning</h3>
-            <p>The following error occured: <b id="error_message"></b></p>
+        <div class="info message" data-ng-show="vm_creation_success">
+            <table>
+                <tr>
+                    <td style="width: 100%;">
+                        <h2 id="new_vm_success_title">VM was successfully created</h2>
+                        <p id="info_message">The new VM was created with the UUID {{vm_created_uuid}}</p>
+                    </td>
+                    <td>
+                        <!-- TODO insert screenshot stream of current vm -->
+                        <img id="new_vm_screenshot" src="images/placeholder.png" height="256" style="border: 1px solid #a0a0a0; opacity: 0.9;"/>
+                    </td>
+                </tr>
+            </table>
         </div>
-        <form id="create_vm_form" method="post" data-ng-controller="NewVmController" ng-disabled="isServerRequestRunning">
+        <div class="error message" data-ng-show="vm_creation_failure">
+            <h3>Problems while VM(s) provisioning</h3>
+            <p>The following error occured: <b>{{vm_creation_failure_message}}</b></p>
+        </div>
+        <form data-ng-hide="vm_creation_in_progress" ng-disabled="isServerRequestRunning">
             <table>
                 <tr>
                     <td><p>Name</p></td>
-                    <td><input type="text" name="name"/></td>
+                    <td><input type="text" data-ng-model="new_vm_name"/></td>
                 </tr>
                 <tr>
                     <td><p>ESX-Host</p></td>
@@ -35,21 +48,21 @@
                 </tr>
                 <tr>
                     <td><p>Username</p></td>
-                    <td><input type="text" name="username"/></td>
+                    <td><input type="text" data-ng-model="user_name"/></td>
                 </tr>
                 <tr>
                     <td><p>Expiration date</p></td>
-                    <td><input type="text" name="expiration" ng-model="expiration" value="{{expiration}}"/></td>
+                    <td><input type="text" ng-model="expiration"/></td>
                 </tr>
                 <tr>
                     <td><p>Target folder</p></td>
                     <td>
-                        <input type="text" name="folder" ng-model="selected" typeahead="path for path in paths | filter:$viewValue | limitTo:8" autocomplete="off"/>
+                        <input type="text" name="folder" ng-model="path" typeahead="path for path in paths | filter:$viewValue | limitTo:8" autocomplete="off"/>
                     </td>
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <input type="submit" value="Create"/>
+                        <input type="submit" data-ng-click="createNewVm()"/>
                     </td>
                 </tr>
             </table>

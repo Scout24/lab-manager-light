@@ -151,7 +151,7 @@ div.DTTT_container {
 }
 
 .message {
-  display: none;
+  display: block;
   border-radius: 5px;
   border: 1px solid;
   color: #fff;
