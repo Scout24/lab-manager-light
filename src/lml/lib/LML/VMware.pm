@@ -268,6 +268,7 @@ sub get_datastores {
             # not using properties => because we need various properties and their sub-properties.
         );
         foreach my $e ( @{$datastoreEntityViews} ) {
+            #Debug( Data::Dumper->Dump( [ $e ], [ "Datastore" ] ) );
             my $id = $e->{mo_ref}->value;
             $DATASTOREIDS{$id} = {
                 "id"    => $id,

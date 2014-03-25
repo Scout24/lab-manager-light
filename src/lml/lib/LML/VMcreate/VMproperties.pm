@@ -177,7 +177,8 @@ sub generate_vms_array {
            # Temporary deactivated (we using cmd or post data for this atm)
            #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
            target_folder => $self->{vm_folder},
-           has_frontend  => $vm_spec->{virtualMachine}->{hasFrontend},
+           # Force Network is used to manually set the network, e.g. in an integration test.
+           # Normally the network label is determined automatically via LML configuration and VM name pattern matching
            force_network => $self->{force_network},
     } );
 

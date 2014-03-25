@@ -119,7 +119,7 @@ sub create_vm {
 
     # Get all networks, which are related to this vm
     my $networks = new LML::VMnetworks( $C, $host_view );
-    my @vm_nics = $networks->find_networks( $$args{vmname}, $$args{force_network} );
+    my @vm_nics = $networks->generate_vm_nic_device_specs( $$args{vmname}, $$args{force_network} );
 
     # check the success and add the found networks
     if (@vm_nics) {

@@ -26,7 +26,7 @@ sub find_network_labels {
     return @network_labels;
 }
 
-sub find_networks {
+sub generate_vm_nic_device_specs {
     my ( $self, $vm_name, $force_network ) = @_;
 
     my @network_labels = $self->find_network_labels( $vm_name, $force_network );
@@ -106,7 +106,7 @@ sub _create_nics_by_network_labels {
         # Now look if the actual label has an pendant in the real world
         foreach my $network (@$full_network_list) {
             if ( $network->name eq $label ) {
-                push @vm_nics, _create_nic( network => $network );
+                push @vm_nics, _create_nic( $network );
                 # Because we found the network now, go over to the next label
                 last;
             }
@@ -120,17 +120,29 @@ sub _create_nics_by_network_labels {
 # generate a spec of a networkcard
 # ================================
 sub _create_nic {
-    my %args = @_;
+    my ($network_view) = @_;
 
-    # get the dv view of the actual network
-    my $dvs_view = Vim::get_view( mo_ref => $args{network}->config->distributedVirtualSwitch );
+    my $type = $network_view->{mo_ref}->type;
+    my $nic_backing_info;
 
-    # create a new "connection" to that dv switch
-    my $backing_port = DistributedVirtualSwitchPortConnection->new( portgroupKey => $args{network}->key,
-                                                                    switchUuid   => $dvs_view->uuid );
+    if ( $type eq "Network" ) {
+        $nic_backing_info = VirtualEthernetCardNetworkBackingInfo->new( deviceName => $network_view->name,
+                                                                        network    => $network_view );
+    }
+    elsif ( $type eq "DistributedVirtualPortgroup" ) {
+        # get the dv view of the actual network
+        my $dvs_view = Vim::get_view( mo_ref => $network_view->config->distributedVirtualSwitch );
 
-    # new backing info for the network card to be generated
-    my $nic_backing_info = VirtualEthernetCardDistributedVirtualPortBackingInfo->new( port => $backing_port );
+        # create a new "connection" to that dv switch
+        my $backing_port = DistributedVirtualSwitchPortConnection->new( portgroupKey => $network_view->key,
+                                                                        switchUuid   => $dvs_view->uuid );
+
+        # new backing info for the network card to be generated
+        $nic_backing_info = VirtualEthernetCardDistributedVirtualPortBackingInfo->new( port => $backing_port );
+    }
+    else {
+        die "Unknown network type: $type\nNetwork raw data:\n".Data::Dumper->Dump([$network_view],["Network_View"]);
+    }
 
     # generate basic conditions for the network card
     my $vd_connect_info = VirtualDeviceConnectInfo->new(
@@ -141,11 +153,11 @@ sub _create_nic {
 
     # now generate the network card (just a view atm)
     my $nic = VirtualVmxnet3->new(
-                                   backing     => $nic_backing_info,
-                                   key         => 0,
-                                   unitNumber  => 1,                   # 1 since 0 is used by disk
-                                   addressType => 'generated',
-                                   connectable => $vd_connect_info
+        backing => $nic_backing_info,
+        key     => 0,
+        unitNumber  => 1,          # 1 since 0 is used by disk. But we don't know why this works for the seconds network card, too.
+        addressType => 'generated',
+        connectable => $vd_connect_info
     );
 
     # convert the generated networkcard view to a spec for adding to a virtual machine
