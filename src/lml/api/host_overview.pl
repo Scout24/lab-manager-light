@@ -55,7 +55,11 @@ sub fill_host_overview_json {
     my $vm_overview = { hosts => [] };
 
     foreach my $host (@hosts) {
-        my @networks   = $LAB->get_network_names( $host->{"networks"} );
+        my $network_name_type = {};
+        foreach my $network_id (@{$host->{"networks"}}) {
+            my $network_details = $LAB->get_network($network_id);
+            $network_name_type->{$network_details->{"name"}} = $network_details->{"type"};
+        }
         my @datastores = $LAB->get_datastore_names( $host->{"datastores"} );
         my $host_info = {
                name          => $host->{name},
@@ -66,7 +70,7 @@ sub fill_host_overview_json {
                cpuUsage      => sprintf( "%.2f / %.0f", $host->{stats}->{overallCpuUsage} / 1024, $host->{hardware}->{totalCpuMhz} / 1024 ),
                memoryUsage => sprintf( "%.2f / %.0f", $host->{stats}->{overallMemoryUsage} / 1024, $host->{hardware}->{memorySize} / 1024 ),
                fairness    => hostFairness($host),
-               networks    => \@networks,
+               network_name_type => $network_name_type, 
                datastores  => \@datastores,
                hardware    => $host->{hardware}->{vendor} . " " . $host->{hardware}->{model},
                product     => $host->{product}->{fullName},

@@ -23,8 +23,8 @@
       <td>{{host.memoryUsage}}</td>
       <td>{{host.fairness}}</td>
       <td>
-        <div style="font-size: 60%"  data-ng-repeat="network in host.networks">
-          {{network}}
+        <div style="font-size: 60%" class="network_{{type}}" data-ng-repeat="(name,type) in host.network_name_type">
+          {{name}}
         </div>
       </td>
       <td>

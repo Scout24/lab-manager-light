@@ -322,6 +322,7 @@ sub get_networks {
             my $id = $e->{mo_ref}->value;
             $NETWORKIDS{$id} = {
                                  "id"    => $id,
+                                 "type"  => $e->{mo_ref}->type,
                                  "name"  => $e->{name},
                                  "hosts" => [ map { $_->{value} } @{ $e->{host} } ],
             };

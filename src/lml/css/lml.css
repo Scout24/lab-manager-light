@@ -253,6 +253,19 @@ div.DTTT_container {
   display: none;
 }
 
+.network_ {
+	color: grey;
+}
+
+.network_Network {
+	color: #0B0B61;
+}
+
+.network_DistributedVirtualPortgroup {
+	color: #21610B;
+}
+
+
 div.remoteTooltip {
   z-index: 100;
   position: absolute;
