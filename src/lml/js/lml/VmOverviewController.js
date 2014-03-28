@@ -57,7 +57,7 @@ window.lml.VmOverviewController = function VmOverviewController($scope, $log, $l
   };
 
   $scope.getCsvValues = function(){
-    return  $scope.filteredData;
+    return  vms;
   };
 
   $scope.print = function(){
