@@ -58,7 +58,8 @@
                        rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
                         {{vm.fullname}}</a>
                     <span data-ng-show="vm.screenshot_enabled">
-                        <a remote-picture-tooltip remote-tooltip-data="vmOverviewPicturePopup"  vm-uuid="vm.uuid" vm-name="vm.fullname">Screenshot</a>
+                        <a remote-picture-tooltip remote-tooltip-data="vmOverviewPicturePopup" vm-uuid="vm.uuid"
+                           vm-name="vm.fullname">Screenshot</a>
                     </span>
                     <a data-ng-show="vm.extra_link_enabled" href="{{vm.extra_link_url}}" title="Additional Info"
                        rel="{{vm.extra_link_url}}" target="_blank">
@@ -73,25 +74,25 @@
             </tbody>
         </table>
         <div class="pagination-container">
-        <div class="pagination-container2">
-        <pagination
-                items-per-page="itemsPerPage"
-                total-items="totaItems"
-                page="currentPage"
-                max-size="5"
-                class="pagination-sm"
-                boundary-links="true"
-                rotate="false"
-                num-pages="numPages">
+            <div class="pagination-container2">
+                <pagination
+                        items-per-page="itemsPerPage"
+                        total-items="totalItems"
+                        page="currentPage"
+                        max-size="5"
+                        class="pagination-sm"
+                        boundary-links="true"
+                        rotate="false"
+                        num-pages="numPages">
 
-        </pagination>
-        </div>
+                </pagination>
+            </div>
         </div>
 
         <div class="vm_action_panel">
-            <a ng-click="detonate()" ng-disabled="{{detonateDisabled}}" class="button"
+            <a ng-click="detonate()" class="button"
                title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
-            <a id="destroy_button" ng-click="destroy()" ng-disabled="{{destroyDisabled}}" class="button"
+            <a id="destroy_button" ng-click="destroy()" class="button"
                title="Delete the selected machine(s) physically"><img src="images/delete.png" class="button_image"/>&nbsp;Delete</a>
         </div>
     </form>
