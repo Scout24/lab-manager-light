@@ -1,19 +1,6 @@
 (function () {
   "use strict";
-
-  window.lml = window.lml || {};
-
-  angular.module('lml-app', ['ui.bootstrap', 'ngCsv','ui.bootstrap.position'])
-    .directive('remotePictureTooltip', lml.TooltipPictureDirective)
-    .directive('remoteTooltip', lml.TooltipDirective)
-    .controller('LmlController', lml.LmlController)
-    .controller('VmOverviewController', lml.VmOverviewController)
-    .controller('NewVmController', lml.NewVmController)
-    .controller('HostOverviewController', lml.HostOverviewController)
-    .controller('ConfigurationController', lml.ConfigurationController)
-    .controller('ToolsController', lml.ToolsController)
-    .controller('MainController', lml.MainController)
-    .service('AjaxCallService', lml.AjaxCallService)
+  angular.module('lml-app', ['ui.bootstrap', 'ngCsv', 'ui.bootstrap.position'])
     .config(function ($routeProvider) {
       $routeProvider.
         when('/vm-overview', {templateUrl: 'html/vm_overview.html'}).
