@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  angular.module('lml-app', ['ui.bootstrap', 'ngCsv', 'ui.bootstrap.position'])
+  angular.module('lml-app', ['ui.bootstrap', 'ngCsv', 'ui.bootstrap.position','ngRoute','ng'])
     .config(function ($routeProvider) {
       $routeProvider.
         when('/vm-overview', {templateUrl: 'html/vm_overview.html'}).
