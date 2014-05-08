@@ -5,23 +5,20 @@ module.exports = function (config) {
   config.set({
 
 // base path, that will be used to resolve files and exclude
-    basePath: '../.',
+    basePath: '../..',
 
     frameworks: ["jasmine"],
 
     preprocessors: {
-      '**/*.template.html': ['html2js']
+      '**/*.html': ['html2js']
     },
+
     files: karmaFiles.files,
     exclude: karmaFiles.exclude,
 
 // test results reporter to use
 // possible values: 'dots', 'progress', 'junit'
-    reporters: ['junit'],
-
-
-// web server port
-
+    reporters: ['dots','junit'],
 
 // cli runner port
     runnerPort: 9100,
@@ -30,11 +27,9 @@ module.exports = function (config) {
 // enable / disable colors in the output (reporters and logs)
     colors: false,
 
-
 // level of logging
 // possible values: LOG_DISABLE || LOG_ERROR || LOG_WARN || LOG_INFO || LOG_DEBUG
     logLevel: config.LOG_INFO,
-
 
 // enable / disable watching file and executing tests whenever any file changes
     autoWatch: false,
