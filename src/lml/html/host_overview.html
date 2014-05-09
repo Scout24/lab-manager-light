@@ -1,39 +1,70 @@
-<div class="main_content" id="host_overview" data-ng-controller="HostOverviewController" ng-disabled="isServerRequestRunning">
-  <table id="hostlist_table" border="1" cellpadding="3" cellspacing="0" class="table table-striped">
-    <thead id="hostlist">
-     <tr valign ="top">
-       <th title="Click to sort">Name</th>
-       <th title="Click to sort">State</th>
-       <th title ="Click to sort">CPU (GHz)</th>
-       <th title ="Click to sort">MEM (GB)</th>
-       <th title ="Click to sort">Fairness</th>
-       <th title ="Click to sort">Networks</th>
-       <th title ="Click to sort">Datastores</th>
-       <th title ="Click to sort">Hardware</th>
-       <th title ="Click to sort">Product</th>
-     </tr>
-   </thead>
-   <tbody>
-    <tr data-ng-repeat="host in hosts" id="{{host.id}}">
-      <td title="{{host.id}}
-      {{host.path}}">{{host.name}}</td>
-      <td class="{{host.overallStatus}}"><span ng-class="{inactive: host.active == 0}">OK</span></td>
-      <td>{{host.cpuUsage}}</td>
-      <td>{{host.memoryUsage}}</td>
-      <td>{{host.fairness}}</td>
-      <td>
-        <div style="font-size: 60%" class="network_{{type}}" data-ng-repeat="(name,type) in host.network_name_type">
-          {{name}}
+<div class="main_content" id="host_overview" data-ng-controller="HostOverviewController"
+     ng-disabled="isServerRequestRunning">
+    <div class="search pull-right">
+        <div>
+            <span class="indent">Filter:</span><input id="search_term_input" type="text" data-ng-model="searchTerm"/>
         </div>
-      </td>
-      <td>
-        <div style="font-size: 60%"  data-ng-repeat="datastore in host.datastores">
-          {{datastore}}
+        <div id="search_result_info" class="indent">
+            Results: <span data-ng-bind="filteredData.length"></span>
+            of <span data-ng-bind="totalItems"/></span>
         </div>
-      </td>
-      <td>{{host.hardware}}</td>
-      <td>{{host.product}}</td>
-    </tr>
-  </tbody>
-</table>
+    </div>
+    <table id="hostlist_table" border="1" cellpadding="3" cellspacing="0" class="table">
+        <thead id="hostlist">
+        <tr valign="top">
+            <th id="tab_header_{{header.name}}" ng-repeat="header in tableHeaders" title="Click to sort"
+                data-ng-click="changeSorting(header.name, header.sortable)">
+                {{header.title}}
+                <img ng-show="header.sortable && sort.column == header.name && sort.descending"
+                     src="images/sort_desc.png"/>
+                <img ng-show="header.sortable && sort.column == header.name && !sort.descending"
+                     src="images/sort_asc.png"/>
+                <img ng-show="header.sortable && sort.column != header.name" src="images/sort_both.png"/>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr data-ng-repeat="host in filteredData" id="{{host.id}}">
+            <td title="{{host.id}}
+      {{host.path}}">{{host.name}}
+            </td>
+            <td class="{{host.overallStatus}}"><span
+                    ng-class="{inactive: host.active == 0}">OK ({{host.overallStatus}})</span></td>
+            <td>{{host.cpuUsage}}</td>
+            <td>{{host.memoryUsage}}</td>
+            <td>{{host.fairness}}</td>
+            <td>
+                <div style="font-size: 60%" class="network_{{type}}"
+                     data-ng-repeat="(name,type) in host.network_name_type">
+                    {{name}}
+                </div>
+            </td>
+            <td>
+                <div style="font-size: 60%" data-ng-repeat="datastore in host.datastores">
+                    {{datastore}}
+                </div>
+            </td>
+            <td>{{host.hardware}}</td>
+            <td>{{host.product}}</td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="pagination-container">
+        <div id="result_pagination" class="pagination-container2">
+            <pagination
+                    items-per-page="itemsPerPage"
+                    total-items="totalItems"
+                    page="currentPage"
+                    max-size="5"
+                    class="pagination-sm"
+                    boundary-links="true"
+                    rotate="false"
+                    num-pages="numPages">
+
+            </pagination>
+        </div>
+        <div class="pull-right">
+            <span class="indent">Items per page: </span><input  type="text" data-ng-model="itemsPerPage"/>
+        </div>
+    </div>
 </div>

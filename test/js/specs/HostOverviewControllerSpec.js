@@ -37,17 +37,15 @@ describe('HostOverviewController', function () {
     it('should fill scope.hosts with response data when request to api/host_overview.pl was successful', function () {
       var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
 
-      successHandler({host_overview_json: {hosts: ['host1', 'host2']}});
+      successHandler(window.__testdata__.host_overview_json);
 
-      expect(scope.hosts.length).toBe(2);
-      expect(scope.hosts[0]).toBe('host1');
-      expect(scope.hosts[1]).toBe('host2');
+      expect(scope.filteredData.length).toBe(2);
     });
 
     it('should call setServerRequestRunning with false, when request to api/host_overview.pl was successful, so that the spinner disapears', function () {
       var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
 
-      successHandler({host_overview_json: {hosts: ['host1', 'host2']}});
+      successHandler(window.__testdata__.host_overview_json);
 
       expect(scope.setServerRequestRunning).toHaveBeenCalledWith(false);
     });
@@ -81,10 +79,10 @@ describe('HostOverviewController', function () {
       expect(uiHelper.getChildById(view_host_overview,'#host1_id').children[0].title).toEqualAfterNormalizedWhiteSpace('host1_id host1_path');
 
       expect(angular.element(uiHelper.getChildById(view_host_overview,'#host1_id')).text()) // just compare the text (so ordering and mapping is approved)
-        .toEqualAfterNormalizedWhiteSpace('host1_name OK host1_cpuUsage host1_memoryUsage host1_fairness host1_net1 host1_net2 host1_datastore1 host1_datastore2 host1_hardware1 host1_product');
+        .toEqualAfterNormalizedWhiteSpace('host1_name OK (host1_overallStatus) host1_cpuUsage host1_memoryUsage host1_fairness host1_net1 host1_net2 host1_datastore1 host1_datastore2 host1_hardware1 host1_product');
 
       expect(angular.element(uiHelper.getChildById(view_host_overview,'#host2_id')).text()) // just compare the text (so ordering and mapping is approved)
-        .toEqualAfterNormalizedWhiteSpace('host2_name OK host2_cpuUsage host2_memoryUsage host2_fairness host2_net1 host2_net2 host2_datastore1 host2_datastore2 host2_hardware1 host2_product');
+        .toEqualAfterNormalizedWhiteSpace('host2_name OK (host2_overallStatus) host2_cpuUsage host2_memoryUsage host2_fairness host2_net1 host2_net2 host2_datastore1 host2_datastore2 host2_hardware1 host2_product');
     });
   });
 });
