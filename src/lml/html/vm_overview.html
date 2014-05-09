@@ -26,7 +26,7 @@
 
             <div class="search pull-right">
                 <div>
-                    <span class="indent">Suche:</span><input type="text" data-ng-model="searchTerm"/>
+                    <span class="indent">Suche:</span><input id="search_term_input" type="text" data-ng-model="searchTerm"/>
                 </div>
                 <div id="search_result_info" class="indent">
                     Ergebnis: <span data-ng-bind="filteredData.length"></span>
@@ -40,7 +40,7 @@
             <thead id="vmlist">
             <tr valign="top">
 
-                <th ng-repeat="header in tableHeaders" title="Click to sort" data-ng-click="changeSorting(header.name)">
+                <th id="tab_header_{{header.name}}" ng-repeat="header in tableHeaders" title="Click to sort" data-ng-click="changeSorting(header.name)">
                     {{header.title}}
                     <img ng-show="sort.column == header.name && sort.descending" src="images/sort_desc.png"/>
                     <img ng-show="sort.column == header.name && !sort.descending" src="images/sort_asc.png"/>

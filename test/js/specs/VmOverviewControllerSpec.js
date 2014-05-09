@@ -1,4 +1,4 @@
-/*global jasmine, angular, describe, beforeEach, afterEach, it, expect, spyOn, module, inject */
+/*global jasmine, angular, describe, beforeEach, afterEach, it, expect, spyOn, module, inject, runs, waits */
 describe('HostOverviewController', function () {
   'use strict';
   var scope, AjaxCallService;
@@ -134,6 +134,94 @@ describe('HostOverviewController', function () {
       expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_overview_popup')).hasClass('ng-hide')).toBeTruthy();
       expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_overviev_picture_popup')).hasClass('ng-hide')).toBeTruthy();
     });
+
+    it('should show next page items with udpated result info block', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      var paginationElements = uiHelper.getChildById(view_host_overview,'#result_pagination').children[0].children;
+      var nextPageElement =paginationElements[paginationElements.length-2]; // pagination elements [0]: first, [1]: previous, ... [n-2]: next, [n-1]: last
+      uiHelper.simulateClickOn(nextPageElement.children[0]);
+
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#row_0_vm21_uuid')).text()) // just compare the text (so ordering and mapping is approved)
+        .toEqualAfterNormalizedWhiteSpace('vm21_full.name vm21_extra_link_text vm21_path mustermann 2014-10-24 vm21_esxHost');
+
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#search_result_info')).text())
+        .toEqualAfterNormalizedWhiteSpace('Ergebnis: 1 von 21'); // only one left on page 2
+    });
+
+    it('should filter search results and update result info and pagination element', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      runs(function () {
+        var searchTermInput = uiHelper.getChildById(view_host_overview,'#search_term_input');
+        uiHelper.simulateInput(searchTermInput, 'vm3_full.name');
+      });
+
+      waits(750); // we have to wait until the throttling mechanism fires the filtering
+
+      runs(function () {
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#search_result_info')).text())
+          .toEqualAfterNormalizedWhiteSpace('Ergebnis: 1 von 1');
+
+        expect(angular.element(uiHelper.getChildById(view_host_overview,'#row_0_vm3_uuid')).text()) // just compare the text (so ordering and mapping is approved)
+          .toEqualAfterNormalizedWhiteSpace('vm3_full.name vm3_extra_link_text vm3_path mustermann 2014-10-24 vm3_esxHost');
+
+        expect(angular.element(uiHelper.getChildById(view_host_overview,'#result_pagination')).text())
+          .toEqualAfterNormalizedWhiteSpace('FirstPrevious1NextLast'); // only on page left
+      });
+    });
+
+
+    it('should sort when clicking on result table header of the fullname column', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      runs(function(){
+        var tab_header_fullname = uiHelper.getChildById(view_host_overview,'#tab_header_fullname');
+        uiHelper.simulateClickOn(tab_header_fullname);
+      });
+
+      waits(50);
+
+      runs(function () {
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_0_vm10_uuid')).text()) // just compare the text (so ordering and mapping is approved)
+          .toEqualAfterNormalizedWhiteSpace('vm10_full.name vm10_extra_link_text vm10_path mustermann 2014-10-24 vm10_esxHost');
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_1_vm11_uuid')).text()) // just compare the text (so ordering and mapping is approved)
+          .toEqualAfterNormalizedWhiteSpace('vm11_full.name vm11_extra_link_text vm11_path mustermann 2014-10-24 vm11_esxHost');
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_10_vm1_uuid')).text())
+          .toEqualAfterNormalizedWhiteSpace('vm1_full.name vm1_extra_link_text vm1_path mustermann 2014-10-24 vm1_esxHost');
+      });
+
+      runs(function(){
+        var tab_header_fullname = uiHelper.getChildById(view_host_overview,'#tab_header_fullname');
+        uiHelper.simulateClickOn(tab_header_fullname);
+      });
+
+      waits(50);
+
+      runs(function () {
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_0_vm9_uuid')).text()) // just compare the text (so ordering and mapping is approved)
+          .toEqualAfterNormalizedWhiteSpace('vm9_full.name vm9_extra_link_text vm9_path mustermann 2014-10-24 vm9_esxHost');
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_1_vm8_uuid')).text()) // just compare the text (so ordering and mapping is approved)
+          .toEqualAfterNormalizedWhiteSpace('vm8_full.name vm8_extra_link_text vm8_path mustermann 2014-10-24 vm8_esxHost');
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_7_vm2_uuid')).text())
+          .toEqualAfterNormalizedWhiteSpace('vm2_full.name vm2_extra_link_text vm2_path mustermann 2014-10-24 vm2_esxHost');
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_8_vm21_uuid')).text())
+          .toEqualAfterNormalizedWhiteSpace('vm21_full.name vm21_extra_link_text vm21_path mustermann 2014-10-24 vm21_esxHost');
+        expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_10_vm1_uuid')).text())
+          .toEqualAfterNormalizedWhiteSpace('vm1_full.name vm1_extra_link_text vm1_path mustermann 2014-10-24 vm1_esxHost');
+      });
+    });
+
+
 
   });
 });

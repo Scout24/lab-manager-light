@@ -42,6 +42,19 @@
         }
       }
 
+      function simulateInput(el, input) {
+        var evt;
+        angular.element(el).val(input);
+
+        if (document.createEvent) {
+          evt = document.createEvent('Event');
+          evt.initEvent('input', true, false);
+        }
+        if (evt) {
+          el.dispatchEvent(evt);
+        }
+      }
+
       function initializeTemplate(templateName, templateLocation) {
 
         if (templateName) {
@@ -49,6 +62,7 @@
         }
 
         return {
+          simulateInput: simulateInput,
           simulateClickOn: simulateClick,
           compile: compileAndDigest,
           getChildById: getElementBySelector,
