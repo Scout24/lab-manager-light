@@ -55,7 +55,7 @@ describe('HostOverviewController', function () {
     it('should call setServerRequestRunning with false, when request to api/host_overview.pl failed, so that the spinner disapears', function () {
       var failureHandler = AjaxCallService.get.calls[0].args[2]; // the third argument when calling the AjaxCallService is the failure handler
 
-      failureHandler({host_overview_json: {hosts: ['host1', 'host2']}});
+      failureHandler({});
 
       expect(scope.setServerRequestRunning).toHaveBeenCalledWith(false);
     });

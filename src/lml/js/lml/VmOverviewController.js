@@ -138,7 +138,8 @@ angular.module('lml-app')
       rebuildVmModel();
 
       $scope.setServerRequestRunning(false);
-    }, function errorCallback() {
+    }, function errorCallback(data) {
+      $scope.errorMsgs = data;
       $scope.setServerRequestRunning(false);
     });
   });

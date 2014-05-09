@@ -6,11 +6,11 @@
 
         <p>The following error occured: <b id="vm_action_error_message">{{errorMsgs}}</b></p>
     </div>
-    <div data-ng-show="vmOverviewPopup.display" ng-style="vmOverviewPopup.style" class="remoteTooltip">
+    <div id="vm_overview_popup" data-ng-show="vmOverviewPopup.display" ng-style="vmOverviewPopup.style" class="remoteTooltip">
         <button data-ng-click="vmOverviewPopup.close()">Schliessen</button>
         <pre>{{vmOverviewPopup.content}}</pre>
     </div>
-    <div data-ng-show="vmOverviewPicturePopup.display" ng-style="vmOverviewPicturePopup.style" class="remoteTooltip">
+    <div id="vm_overviev_picture_popup" data-ng-show="vmOverviewPicturePopup.display" ng-style="vmOverviewPicturePopup.style" class="remoteTooltip">
         <button data-ng-click="vmOverviewPicturePopup.close()">Schliessen</button>
         <pre><img data-ng-src="{{vmOverviewPicturePopup.src}}" alt="Screenshot"></pre>
     </div>
@@ -28,9 +28,9 @@
                 <div>
                     <span class="indent">Suche:</span><input type="text" data-ng-model="searchTerm"/>
                 </div>
-                <div class="indent">
+                <div id="search_result_info" class="indent">
                     Ergebnis: <span data-ng-bind="filteredData.length"></span>
-                    von <span data-ng-bind="totaItems"/></span>
+                    von <span data-ng-bind="totalItems"/></span>
                 </div>
             </div>
         </div>
@@ -50,7 +50,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr id="{{vm.uuid}}" data-ng-repeat="vm in filteredData | filter:{ deleted: '!'+true}">
+            <tr id="row_{{$index}}_{{vm.uuid}}" data-ng-repeat="vm in filteredData | filter:{ deleted: '!'+true}">
                 <td>
                     <input ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected"
                            value="{{vm.uuid}}">
@@ -74,7 +74,7 @@
             </tbody>
         </table>
         <div class="pagination-container">
-            <div class="pagination-container2">
+            <div id="result_pagination" class="pagination-container2">
                 <pagination
                         items-per-page="itemsPerPage"
                         total-items="totalItems"
