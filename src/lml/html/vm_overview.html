@@ -26,11 +26,11 @@
 
             <div class="search pull-right">
                 <div>
-                    <span class="indent">Suche:</span><input id="search_term_input" type="text" data-ng-model="searchTerm"/>
+                    <span class="indent">Filter:</span><input id="search_term_input" type="text" data-ng-model="searchTerm"/>
                 </div>
                 <div id="search_result_info" class="indent">
-                    Ergebnis: <span data-ng-bind="filteredData.length"></span>
-                    von <span data-ng-bind="totalItems"/></span>
+                    Results: <span data-ng-bind="filteredData.length"></span>
+                    of <span data-ng-bind="totalItems"/></span>
                 </div>
             </div>
         </div>
@@ -52,7 +52,7 @@
             <tbody>
             <tr id="row_{{$index}}_{{vm.uuid}}" data-ng-repeat="vm in filteredData | filter:{ deleted: '!'+true}">
                 <td>
-                    <input ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected"
+                    <input id="select_{{vm.uuid}}" ng-disabled="isServerRequestRunning" type="checkbox" ng-model="vm.selected"
                            value="{{vm.uuid}}">
                     <a remote-tooltip remote-tooltip-data="vmOverviewPopup" vm-name="vm.fullname" vm-uuid="vm.uuid"
                        rel="vmdata.pl/{{vm.uuid}}" class="vmhostname">
@@ -90,7 +90,7 @@
         </div>
 
         <div class="vm_action_panel">
-            <a ng-click="detonate()" class="button"
+            <a id="detonate_button" ng-click="detonate()" class="button"
                title="Reinstall selected machines"><img src="images/bomb.png" class="button_image"/>&nbsp;Detonate</a>
             <a id="destroy_button" ng-click="destroy()" class="button"
                title="Delete the selected machine(s) physically"><img src="images/delete.png" class="button_image"/>&nbsp;Delete</a>
@@ -98,20 +98,22 @@
     </form>
 
     <script type="text/ng-template" id="modalContent.html">
-        <div class="modal-header">
-            <h3>Wollen Sie wirklich die ausgewählten VMs {{action}}?</h3>
-        </div>
-        <div class="modal-body">
-            <ul>
-                <li ng-repeat="item in items">
-                    {{ item.fullname }}
-                </li>
-            </ul>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" ng-click="ok()">OK</button>
-            <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
-        </div>
+        <div id="confirmation_dialog">
+            <div class="modal-header">
+                <h3>Do you really want to {{action}} the following vms?</h3>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li ng-repeat="item in items">
+                        {{ item.fullname }}
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm_action" class="btn btn-primary" ng-click="ok()">OK</button>
+                <button id="cancel_action" class="btn btn-warning" ng-click="cancel()">Cancel</button>
+            </div>
+      </div>
     </script>
 
 </div>

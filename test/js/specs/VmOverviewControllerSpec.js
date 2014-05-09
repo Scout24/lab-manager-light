@@ -1,5 +1,5 @@
 /*global jasmine, angular, describe, beforeEach, afterEach, it, expect, spyOn, module, inject, runs, waits */
-describe('HostOverviewController', function () {
+describe('VmOverviewController', function () {
   'use strict';
   var scope, AjaxCallService;
 
@@ -85,14 +85,14 @@ describe('HostOverviewController', function () {
         .toEqualAfterNormalizedWhiteSpace('vm20_full.name vm20_extra_link_text vm20_path mustermann 2014-10-24 vm20_esxHost');
     });
 
-    it('should show the result information "Ergebnis: x von y"', function () {
+    it('should show the result information "Results: x of y"', function () {
       var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
 
       successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
       scope.$apply();
 
       expect(angular.element(uiHelper.getChildById(view_host_overview,'#search_result_info')).text())
-        .toEqualAfterNormalizedWhiteSpace('Ergebnis: 20 von 21');
+        .toEqualAfterNormalizedWhiteSpace('Results: 20 of 21');
     });
 
     it('should show the paged result which is currently 20 items per page', function () {
@@ -149,7 +149,7 @@ describe('HostOverviewController', function () {
         .toEqualAfterNormalizedWhiteSpace('vm21_full.name vm21_extra_link_text vm21_path mustermann 2014-10-24 vm21_esxHost');
 
       expect(angular.element(uiHelper.getChildById(view_host_overview,'#search_result_info')).text())
-        .toEqualAfterNormalizedWhiteSpace('Ergebnis: 1 von 21'); // only one left on page 2
+        .toEqualAfterNormalizedWhiteSpace('Results: 1 of 21'); // only one left on page 2
     });
 
     it('should filter search results and update result info and pagination element', function () {
@@ -163,11 +163,11 @@ describe('HostOverviewController', function () {
         uiHelper.simulateInput(searchTermInput, 'vm3_full.name');
       });
 
-      waits(1250); // we have to wait until the throttling mechanism fires the filtering
+      waits(750); // we have to wait until the throttling mechanism fires the filtering
 
       runs(function () {
         expect(angular.element(uiHelper.getChildById(view_host_overview, '#search_result_info')).text())
-          .toEqualAfterNormalizedWhiteSpace('Ergebnis: 1 von 1');
+          .toEqualAfterNormalizedWhiteSpace('Results: 1 of 1');
 
         expect(angular.element(uiHelper.getChildById(view_host_overview,'#row_0_vm3_uuid')).text()) // just compare the text (so ordering and mapping is approved)
           .toEqualAfterNormalizedWhiteSpace('vm3_full.name vm3_extra_link_text vm3_path mustermann 2014-10-24 vm3_esxHost');
@@ -189,7 +189,7 @@ describe('HostOverviewController', function () {
         uiHelper.simulateClickOn(tab_header_fullname);
       });
 
-      waits(100);
+      waits(50);
 
       runs(function () {
         expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_0_vm10_uuid')).text()) // just compare the text (so ordering and mapping is approved)
@@ -205,7 +205,7 @@ describe('HostOverviewController', function () {
         uiHelper.simulateClickOn(tab_header_fullname);
       });
 
-      waits(100);
+      waits(50);
 
       runs(function () {
         expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_0_vm9_uuid')).text()) // just compare the text (so ordering and mapping is approved)
@@ -221,7 +221,132 @@ describe('HostOverviewController', function () {
       });
     });
 
+    it('should show error msg when clicking on detonate button without selecting a vm', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      var detonateButton = uiHelper.getChildById(view_host_overview,'#detonate_button');
+      uiHelper.simulateClickOn(detonateButton);
+
+
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).hasClass('ng-hide')).toBeFalsy();
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).text())
+        .toEqualAfterNormalizedWhiteSpace('Problems while performing action The following error occured: Number of selected vms must be greater than zero.');
+    });
+
+    it('should show error msg when clicking on detonate button and have more than three vms selected', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm1_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm3_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm5_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm10_uuid'));
+
+      var detonateButton = uiHelper.getChildById(view_host_overview,'#detonate_button');
+      uiHelper.simulateClickOn(detonateButton);
+
+
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).hasClass('ng-hide')).toBeFalsy();
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).text())
+        .toEqualAfterNormalizedWhiteSpace('Problems while performing action The following error occured: Number of selected vms must be lower than four.');
+    });
+
+
+    it('should show error msg when clicking on delete button without selecting a vm', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      var detonateButton = uiHelper.getChildById(view_host_overview,'#destroy_button');
+      uiHelper.simulateClickOn(detonateButton);
+
+
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).hasClass('ng-hide')).toBeFalsy();
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).text())
+        .toEqualAfterNormalizedWhiteSpace('Problems while performing action The following error occured: Number of selected vms must be greater than zero.');
+    });
+
+    it('should show error msg when clicking on delete button and have more than three vms selected', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm1_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm3_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm5_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm10_uuid'));
+
+      var detonateButton = uiHelper.getChildById(view_host_overview,'#destroy_button');
+      uiHelper.simulateClickOn(detonateButton);
+
+
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).hasClass('ng-hide')).toBeFalsy();
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).text())
+        .toEqualAfterNormalizedWhiteSpace('Problems while performing action The following error occured: Number of selected vms must be lower than four.');
+    });
+
+
+    it('should deselect all items when filtering search results', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      // select valid number of vms
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm1_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm3_uuid'));
+
+      runs(function () {
+        var searchTermInput = uiHelper.getChildById(view_host_overview,'#search_term_input');
+        uiHelper.simulateInput(searchTermInput, 'vm3_full.name');
+      });
+
+      runs(function () {
+        var searchTermInput = uiHelper.getChildById(view_host_overview,'#search_term_input');
+        uiHelper.simulateInput(searchTermInput, ''); // go to old result
+      });
+
+      waits(750); // we have to wait until the throttling mechanism fires the filtering
+
+      runs(function () {
+        var detonateButton = uiHelper.getChildById(view_host_overview,'#detonate_button');
+        uiHelper.simulateClickOn(detonateButton);
+        expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).hasClass('ng-hide')).toBeFalsy();
+        expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).text())
+          .toEqualAfterNormalizedWhiteSpace('Problems while performing action The following error occured: Number of selected vms must be greater than zero.');
+      });
+    });
+
+    it('should reset all selected vms than going to next page', function () {
+      var successHandler = AjaxCallService.get.calls[0].args[1]; // the second argument when calling the AjaxCallService is the success handler
+
+      successHandler(window.__testdata__.vm_overview_json); // see in testdata folder
+      scope.$apply();
+
+      // select valid number of vms
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm1_uuid'));
+      uiHelper.simulateClickOn(uiHelper.getChildById(view_host_overview,'#select_vm3_uuid'));
+
+      var paginationElements = uiHelper.getChildById(view_host_overview,'#result_pagination').children[0].children;
+      var nextPageElement =paginationElements[paginationElements.length-2]; // pagination elements [0]: first, [1]: previous, ... [n-2]: next, [n-1]: last
+      uiHelper.simulateClickOn(nextPageElement.children[0]);
+
+      var detonateButton = uiHelper.getChildById(view_host_overview,'#detonate_button');
+      uiHelper.simulateClickOn(detonateButton);
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).hasClass('ng-hide')).toBeFalsy();
+      expect(angular.element(uiHelper.getChildById(view_host_overview,'#vm_action_error')).text())
+        .toEqualAfterNormalizedWhiteSpace('Problems while performing action The following error occured: Number of selected vms must be greater than zero.');
+    });
 
 
   });
+
+
 });

@@ -33,12 +33,12 @@ angular.module('lml-app')
 
 
         if (selectedVms.length === 0) {
-          scope.errorMsgs = "Anzahl VMs ist 0.";
+          scope.errorMsgs = "Number of selected vms must be greater than zero.";
           window.scroll(0, 0);
           return;
         }
         if (selectedVms.length > 3) {
-          scope.errorMsgs = "Anzahl VM > 3";
+          scope.errorMsgs = "Number of selected vms must be lower than four.";
           window.scroll(0, 0);
           return;
         }
@@ -52,7 +52,7 @@ angular.module('lml-app')
               return selectedVms;
             },
             action: function () {
-              return 'neu aufsetzen';
+              return 'detonate';
             }
           }
         });
@@ -99,12 +99,12 @@ angular.module('lml-app')
           }).join("&") + "&action=destroy";
 
         if (selectedVms.length === 0) {
-          scope.errorMsgs = "Anzahl VMs ist 0.";
+          scope.errorMsgs = "Number of selected vms must be greater than zero.";
           window.scroll(0, 0);
           return;
         }
         if (selectedVms.length > 3) {
-          scope.errorMsgs = "Anzahl VM > 3";
+          scope.errorMsgs = "Number of selected vms must be lower than four.";
           window.scroll(0, 0);
           return;
         }
@@ -118,7 +118,7 @@ angular.module('lml-app')
               return selectedVms;
             },
             action: function () {
-              return 'physikalisch l\u00F6schen';
+              return 'physically delete';
             }
           }
         });
