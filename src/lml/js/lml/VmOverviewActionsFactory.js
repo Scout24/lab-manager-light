@@ -128,13 +128,13 @@ angular.module('lml-app')
           scope.$apply();
           scope.setServerRequestRunning(true);
           $http.post("restricted/vm-control.pl?action=destroy", uuids, {headers: {"Content-Type": "application/x-www-form-urlencoded"}})
-            .success(function (detonated_uuids) {
-              detonated_uuids.forEach(function (detonated_uuid) {
+            .success(function (destroyed_uuids) {
+              destroyed_uuids.forEach(function (destroyed_uuid) {
                 selectedVms.forEach(function (selectedVM) {
                   var indexOfDeletedElement = null, i;
-                  if (detonated_uuid === selectedVM.uuid) {
+                  if (destroyed_uuid === selectedVM.uuid) {
                     for (i = 0; i < vms.length; i++) {
-                      if (detonated_uuid === vms[i].uuid) {
+                      if (destroyed_uuid === vms[i].uuid) {
                         indexOfDeletedElement = i;
                         break;
                       }
@@ -143,11 +143,11 @@ angular.module('lml-app')
                       vms.splice(indexOfDeletedElement, 1);
                     }
 
-                    $log.info("destroying of " + detonated_uuid + " was successful");
+                    $log.info("destroying of " + destroyed_uuid + " was successful");
                   }
                 });
               });
-              if (detonated_uuids.length > 0) {
+              if (destroyed_uuids.length > 0) {
                 rebuildVmModel();
               }
               window.scroll(0, 0);

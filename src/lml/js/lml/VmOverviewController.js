@@ -131,9 +131,12 @@ angular.module('lml-app')
 
     // initial request to load all vms
     AjaxCallService.get('api/vm_overview.pl', function successCallback(data) {
+      var i;
       $scope.errorMsgs = "";
       $log.info("Received vm overview data: ", data);
-      vms = data.vm_overview;
+      for (i = 0; i < data.vm_overview.length;i++){
+        vms.push(data.vm_overview[i]);
+      }
       $scope.totalItems = vms.length;
       rebuildVmModel();
 
