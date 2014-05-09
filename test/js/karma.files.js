@@ -20,6 +20,9 @@ module.exports = {
     // test helper
     'test/js/helper/**/*.js',
 
+    // test data
+    'test/js/testdata/**/*.js',
+
     // test sources
     'test/js/specs/**/*Spec.js',
 

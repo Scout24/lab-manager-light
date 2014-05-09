@@ -43,7 +43,7 @@ module.exports = function (config) {
 // - Safari (only Mac)
 // - PhantomJS
 // - IE (only Windows)
-    browsers: ['PhantomJS'],
+    browsers: ['PhantomJS','Chrome','Firefox'],
 
 
 // If browser does not capture in given timeout [ms], kill it
@@ -64,6 +64,8 @@ module.exports = function (config) {
       'karma-coverage',
       'karma-junit-reporter',
       'karma-html2js-preprocessor',
-      'karma-phantomjs-launcher'
+      'karma-phantomjs-launcher',
+      'karma-chrome-launcher',
+      'karma-firefox-launcher'
     ]});
 };
