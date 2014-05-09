@@ -163,7 +163,7 @@ describe('HostOverviewController', function () {
         uiHelper.simulateInput(searchTermInput, 'vm3_full.name');
       });
 
-      waits(750); // we have to wait until the throttling mechanism fires the filtering
+      waits(1250); // we have to wait until the throttling mechanism fires the filtering
 
       runs(function () {
         expect(angular.element(uiHelper.getChildById(view_host_overview, '#search_result_info')).text())
@@ -189,7 +189,7 @@ describe('HostOverviewController', function () {
         uiHelper.simulateClickOn(tab_header_fullname);
       });
 
-      waits(50);
+      waits(100);
 
       runs(function () {
         expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_0_vm10_uuid')).text()) // just compare the text (so ordering and mapping is approved)
@@ -205,7 +205,7 @@ describe('HostOverviewController', function () {
         uiHelper.simulateClickOn(tab_header_fullname);
       });
 
-      waits(50);
+      waits(100);
 
       runs(function () {
         expect(angular.element(uiHelper.getChildById(view_host_overview, '#row_0_vm9_uuid')).text()) // just compare the text (so ordering and mapping is approved)
