@@ -2,7 +2,7 @@
      ng-disabled="isServerRequestRunning">
     <div class="search pull-right">
         <div>
-            <span class="indent">Filter:</span><input id="search_term_input" type="text" data-ng-model="searchTerm"/>
+            <span class="indent">Filter:</span><input id="search_term_input" type="search" autofocus data-ng-model="searchTerm"/>
         </div>
         <div id="search_result_info" class="indent">
             Results: <span data-ng-bind="filteredData.length"></span>
