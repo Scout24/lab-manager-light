@@ -38,7 +38,16 @@ sub host_can_vm {
         croak( "missing freespace attribute in datastore\n" . Data::Dumper->Dump( [$datastore], ["datastore"] ) . "\ngiven in " . ( caller 0 )[3] )
     }
 
-    if ($vm_res->{disks}[0]->{size} * 1024 < $datastore->{freespace}) { # disk of new vm is given in KB
+    my $vm_total_disk_size = 0;
+    foreach my $disk (@{$vm_res->{disks}}) {
+        $vm_total_disk_size+=$disk->{size} * 1024; # disk of new vm is given in GB
+    }
+    
+    if (! (defined( $vm_res->{ram}) ) ) {
+        croak( "missing ram attribute in vm_res\n" . Data::Dumper->Dump( [$vm_res], ["vm_res"] ) . "\ngiven in " . ( caller 0 )[3] )
+    }
+    my $total_required_disk_space = $vm_total_disk_size + $vm_res->{ram} + 100; # Add 100 MB extra space for VM overhead (VMX, NVRAM ...) 
+    if ( $total_required_disk_space < $datastore->{freespace}) { 
         return 1;
     }
     push @$error_ref, "Host $host->{name} does not have $vm_res->{disks}[0]->{size} byte free diskspace";
