@@ -20,6 +20,7 @@ use LML::VMware;
 use LML::VMnetworks;
 use LML::VMcreate::VMproperties;
 use LML::Lab;
+use LML::DHCP;
 
 # Only for debugging
 use Data::Dumper;
