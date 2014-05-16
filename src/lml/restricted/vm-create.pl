@@ -236,6 +236,13 @@ sub create_vm {
         # NOT dying here on purpose to give vm-create a chance to finish starting the VM.
         warn "Strangely writing LAB produced a 0-byte file.\n";
     }
+    if ( $rw_lab->vms_to_update ) {
+        # rewrite the DHCP configuration with the new data
+        my @errors = LML::DHCP::UpdateDHCP( $C, $rw_lab );
+        if (@errors) {
+            error("Could not update DHCP configuration:\n".join("\n",@errors));
+        }
+    }
 
     # set the custom fields with defined values
     set_custom_fields( custom_fields => $$args{custom_fields},
