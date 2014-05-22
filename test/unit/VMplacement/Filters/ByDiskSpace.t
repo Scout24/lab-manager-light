@@ -31,7 +31,7 @@ ok( $obj->host_can_vm(
                         new LML::VMresources( 
                                             { disks => [ 
                                                         { 
-                                                            size => 8 
+                                                            size => 8 * 1024 * 1024 # 8GB in KB units 
                                                         } 
                                                        ],
                                               ram => 1024 # in MB
@@ -48,7 +48,7 @@ ok( ! $obj->host_can_vm(
                         new LML::VMresources( 
                                             { disks => [ 
                                                         { 
-                                                            size => 12 
+                                                            size => 12 * 1024 * 1024 # 12 GB in KB units
                                                         } 
                                                        ],
                                               ram => 2048 
@@ -65,7 +65,7 @@ ok( ! $obj->host_can_vm(
                         new LML::VMresources( 
                                             { disks => [ 
                                                         { 
-                                                            size => 8 
+                                                            size => 8 * 1024 * 1024 # 8 GB in KB units
                                                         } 
                                                        ],
                                               ram => 20480 

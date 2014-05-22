@@ -40,7 +40,8 @@ sub host_can_vm {
 
     my $vm_total_disk_size = 0;
     foreach my $disk (@{$vm_res->{disks}}) {
-        $vm_total_disk_size+=$disk->{size} * 1024 * 1024 * 1024; # disk of new vm is given in GB, convert to Bytes
+        $vm_total_disk_size+=$disk->{size} * 1024 ; # disk of new vm is given in KB, convert to Bytes
+        # See lib/LML/VMcreate/VMproperties.pm for how the disk size is filled in :-(
     }
     
     if (! (defined( $vm_res->{ram}) ) ) {

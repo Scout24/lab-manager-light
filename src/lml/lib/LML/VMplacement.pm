@@ -32,7 +32,6 @@ sub new {
         }
     }
     else {
-        # todo set default filters
         $filters = [
             new LML::VMplacement::Filters::ByAssignableHost($config),    #
             new LML::VMplacement::Filters::ByActive,                     #
@@ -52,7 +51,6 @@ sub new {
         }
     }
     else {
-        # todo set default rankers
         $rankers = [
                      new LML::VMplacement::Rankers::ByOverallStatus,    #
                      new LML::VMplacement::Rankers::ByCpuUsage,         #
