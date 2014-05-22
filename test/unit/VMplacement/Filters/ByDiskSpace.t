@@ -18,7 +18,7 @@ BEGIN {
 my $lab = new LML::Lab( {
        "DATASTORES" => {
            "datastore-1111" => {
-                                 "freespace" => "10240"    # in Megabytes
+                                 "freespace" => 10 * 1024 * 1024 * 1024    # 10 GB
            } } } );
 
 my $obj = new_ok "LML::VMplacement::Filters::ByDiskSpace" => [$lab], "can create object";
@@ -34,7 +34,7 @@ ok( $obj->host_can_vm(
                                                             size => 8 
                                                         } 
                                                        ],
-                                              ram => 1024 
+                                              ram => 1024 # in MB
                                             } 
                                             ) 
                       ),

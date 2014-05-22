@@ -112,9 +112,9 @@ my $test_host_3 = {
 my $simple_lab_with_three_hosts = new LML::Lab( {
        "ESXHOSTS" => { $test_host_1->{id} => $test_host_1, $test_host_2->{id} => $test_host_2, $test_host_3->{id} => $test_host_3 },
        "DATASTORES" => {
-                       "datastore-1" => { "freespace" => "20000000"},
-                       "datastore-2" => { "freespace" => "20000000"},
-                       "datastore-3" => { "freespace" => "2000000000"}
+                       "datastore-1" => { "freespace" => "20000000000"},
+                       "datastore-2" => { "freespace" => "20000000000"},
+                       "datastore-3" => { "freespace" => "2000000000000"}
        },
        "NETWORKS" => {
                        "network-1" => {
@@ -153,7 +153,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -179,7 +179,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 2'],
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -198,7 +198,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
            ram      => 1000,
            cpu      => 2000,                                        # this is currently no filter criteria
            networks => [ 'NETWORK LABEL 1', 'NETWORK LABEL 2' ],    # all hosts support 'NETWORK LABEL 1'
-           disks    => [ { size => 16000 } ],                       # small disk
+           disks    => [ { size => 16 } ],                       # small disk
            name => 'foobar00'    # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -217,7 +217,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 3'],      # all hosts support 'NETWORK LABEL 1'
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -233,7 +233,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 2048,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -258,7 +258,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -288,7 +288,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -315,7 +315,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 16000 } ],    # small disk
+          disks    => [ { size => 16 } ],    # small disk
           name     => 'foobar00'
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);
@@ -335,7 +335,7 @@ my $vm_placement = new_ok( "LML::VMplacement" => [ $C, $simple_lab_with_three_ho
           ram      => 1000,
           cpu      => 2000,                     # this is currently no filter criteria
           networks => ['NETWORK LABEL 1'],      # all hosts support this network
-          disks    => [ { size => 160000 } ],   # huge disk 
+          disks    => [ { size => 160 } ],   # huge disk 
           name     => 'foobar00'                # the config defines no group_pattern, so this will be not a filter criteria
     } );
     my @rec = $vm_placement->get_recommendations($vm_res);

@@ -283,9 +283,9 @@ sub get_datastores {
                     } @{ $e->{host} }
                 ],
                 "vm"        => [ map { $_->{value} } @{ $e->{vm} } ],
-                "freespace" => $e->{info}->{freeSpace},
+                "freespace" => $e->{info}->{freeSpace}, # Bytes
                 "capacity"  => exists( $e->{info}->{vmfs} )
-                ? $e->{info}->{vmfs}->{capacity}
+                ? $e->{info}->{vmfs}->{capacity} # Bytes
                 : "NOT YET IMPLEMENTED for " . $e->{info}->{url},
             };
         }

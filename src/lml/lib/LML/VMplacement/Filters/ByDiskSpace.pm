@@ -40,17 +40,20 @@ sub host_can_vm {
 
     my $vm_total_disk_size = 0;
     foreach my $disk (@{$vm_res->{disks}}) {
-        $vm_total_disk_size+=$disk->{size} * 1024; # disk of new vm is given in GB
+        $vm_total_disk_size+=$disk->{size} * 1024 * 1024 * 1024; # disk of new vm is given in GB, convert to Bytes
     }
     
     if (! (defined( $vm_res->{ram}) ) ) {
         croak( "missing ram attribute in vm_res\n" . Data::Dumper->Dump( [$vm_res], ["vm_res"] ) . "\ngiven in " . ( caller 0 )[3] )
     }
-    my $total_required_disk_space = $vm_total_disk_size + $vm_res->{ram} + 100; # Add 100 MB extra space for VM overhead (VMX, NVRAM ...) 
+    my $vm_ram_size = $vm_res->{ram} * 1024 * 1024; # RAM is given in MB, convert to Bytes
+    my $vm_overhead_size = 200 * 1024 * 1024; # Add 200 MB extra space for overhead
+    my $total_required_disk_space = $vm_total_disk_size + $vm_ram_size + $vm_overhead_size; 
     if ( $total_required_disk_space < $datastore->{freespace}) { 
         return 1;
     }
-    push @$error_ref, "Host $host->{name} does not have $vm_res->{disks}[0]->{size} byte free diskspace";
+    print STDERR "DEBUG: Removed $host->{name} because $total_required_disk_space = $vm_total_disk_size + $vm_ram_size + $vm_overhead_size B and does not fit in $datastore->{freespace} Bytes free space\n" ;
+    push @$error_ref, "Host $host->{name} does not have $total_required_disk_space byte free diskspace";
     return 0;
 }
 
