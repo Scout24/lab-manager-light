@@ -58,14 +58,27 @@ sub match_ocr {
 
     my $starttime = time;
     my $test_passed;
+    my $error_data;
     my $file;
     my $screenshot_count = 0;
+    my $error_count = 0;
 
-    while ( not $test_passed and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
+    while ( ( not $test_passed or $test_passed == -1 ) and ( time() <= $starttime + $self->{vm_create_options}->{boot_timeout} ) ) {
         $screenshot_count++;
         my $last = time();
         $file = $self->_download_vm_screenshot( $self->{uuid}, $screenshot_count );
-        $test_passed = $self->_ocr_match( $file, $test_definition );
+        ($test_passed, $error_data) = $self->_ocr_match( $file, $test_definition );
+        # Revalidate the error (because packagename with
+        # error or package descriptions will match as well)
+        if ( $test_passed == -1 ) {
+            if ( $error_count ) {
+                teamcity_build_failure("OCR scan found error:\n$error_data");
+                die "OCR found failure";
+            } else {
+                teamcity_build_progress("OCR scan found first error, retrying:\n$error_data");
+                $error_count++;
+            }
+        }
         my $sleep_time = $screenshot_interval - ( time() - $last );    # the remaining time till the screenshot interval
         sleep($sleep_time) if ( $sleep_time > 0 );                     # be nice to vSphere and try again only after a few seconds
     }
@@ -154,8 +167,7 @@ sub _ocr_match {
             # kickstart errors show up in negative
             my $error_data = qx(gocr -l 160 -m 2 -a 100 -d 0 -p test/system/lib/gocr_db/ $file);
             if ( $error_data =~ qr(error|failure)i ) {
-                teamcity_build_failure("OCR scan found error:\n$error_data");
-                die "OCR found failure";
+                return (-1, $error_data)
             }
         }
         return $match;
