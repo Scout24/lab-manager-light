@@ -219,7 +219,7 @@ sub create_vm {
 
     my $vm_view = Vim::get_view( mo_ref => $vm_ref );
 
-    # first thing add VM data to lab.conf so that it can be deleted through LML even if the following operations fail.
+    # first thing add VM data to lab.conf so that it can be deleted through LML even if the following operations fails.
     my $HOSTS      = get_hosts;
     my $NETWORKS   = get_networks;
     my $DATASTORES = get_datastores;
