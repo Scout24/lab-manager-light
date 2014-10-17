@@ -182,16 +182,29 @@ sub validate_expiry {
     my @error;
     my $expires_field = $self->{Config}->get( "vsphere", "expires_field" );
     if ( exists $self->{VM}{CUSTOMFIELDS}{$expires_field} ) {
-        my $vmdate          = $self->{VM}{CUSTOMFIELDS}{$expires_field};
-        my $expires         = "THERE WAS AN ERROR";
-        my $european        = $self->{Config}->get( "vsphere", "expires_european" ) ? 1 : 0;
-        my $expires_maximum = $self->{Config}->get( "vsphere", "expires_maximum" );
+        my $vmdate              = $self->{VM}{CUSTOMFIELDS}{$expires_field};
+        my $expires             = "THERE WAS AN ERROR";
+        my $european            = $self->{Config}->get( "vsphere", "expires_european" ) ? 1 : 0;
+        my $expires_maximum     = $self->{Config}->get( "vsphere", "expires_maximum" );
+        my $net_is_in_whitelist = 0;
         eval { $expires = DateTime::Format::Flexible->parse_datetime( $vmdate, european => $european ) };
         if ($@) {
             push @error, "Cannot parse $expires_field date '" . $vmdate . "'";
         }
         elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
-            push @error, "VM expired on " . $expires;
+           #if not in whitelist 
+           for my $net ( $self->{VM}->networks ) {
+                for my $whitelisted_net ( $self->{Config}->get( "vsphere","expires_whitelist_networks" )) {
+                    Debug("Compare VM net $net with whitelisted net $whitelisted_net");
+                    if ( "$net" eq "$whitelisted_net" and "$net" ne "" ) {
+                        $net_is_in_whitelist = 1;
+                        Debug("VM is whitelisted from expiry");
+                    }
+                }
+            }
+            if ( ! $net_is_in_whitelist ) {
+                push @error, "VM expired on " . $expires;
+            }
         }
         elsif ( DateTime->compare( $expires, DateTime->now()->add( days => $expires_maximum ) ) >= 0 ) {
             push @error, "VM is not allowed to expire more than $expires_maximum days in the future";
