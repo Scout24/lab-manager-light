@@ -105,7 +105,7 @@ is_deeply( [
                                                                    "expires_field"              => "Expires",
                                                                    "expires_european"           => 1,
                                                                    "expires_maximum"            => 10,
-                                                                   "expires_whitelist_networks" => "arc.int"
+                                                                   "expires_whitelist_networks" => "arc.int\nintern2.test"
                                                     } }
                                  ),
                                   new LML::VM( {
