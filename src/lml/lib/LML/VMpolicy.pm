@@ -193,8 +193,8 @@ sub validate_expiry {
         }
         elsif ( DateTime->compare( DateTime->now(), $expires ) > 0 ) {
            #if not in whitelist 
-           for my $net ( $self->{VM}->networks ) {
-                for my $whitelisted_net ( $self->{Config}->get( "vsphere","expires_whitelist_networks" )) {
+           foreach my $net ( $self->{VM}->networks ) {
+                foreach my $whitelisted_net ( split(/\n/,$self->{Config}->get( "vsphere","expires_whitelist_networks" ) ) ) {
                     Debug("Compare VM net $net with whitelisted net $whitelisted_net");
                     if ( "$net" eq "$whitelisted_net" and "$net" ne "" ) {
                         $net_is_in_whitelist = 1;
