@@ -78,6 +78,33 @@ is_deeply( [
                                                                    "expires_field"              => "Expires",
                                                                    "expires_european"           => 1,
                                                                    "expires_maximum"            => 10,
+                                                                   "expires_whitelist_networks" => ""
+                                                    } }
+                                 ),
+                                  new LML::VM( {
+                                                 "NAME"         => "dev123",
+                                                 "NETWORKING"   => [ {
+                                                                     "MAC"     => "egal",
+                                                                     "NETWORK" => "arc.int"
+                                                                   },
+                                                                   {
+                                                                     "MAC"     => "egal",
+                                                                     "NETWORK" => "foo"
+                                                                   } ],
+                                                 "CUSTOMFIELDS" => { "Expires" => DateTime->now()->add(days=>1)->date() }
+                                               } )
+                )->validate_expiry
+           ],
+           [],
+           "should not return any error because whitelist is empty but 9999 is in the future"
+);
+is_deeply( [
+              new LML::VMpolicy(
+                                 new LML::Config( {
+                                                    "vsphere" => {
+                                                                   "expires_field"              => "Expires",
+                                                                   "expires_european"           => 1,
+                                                                   "expires_maximum"            => 10,
                                                                    "expires_whitelist_networks" => "test.net"
                                                     } }
                                  ),
@@ -105,7 +132,7 @@ is_deeply( [
                                                                    "expires_field"              => "Expires",
                                                                    "expires_european"           => 1,
                                                                    "expires_maximum"            => 10,
-                                                                   "expires_whitelist_networks" => "arc.int\nintern2.test"
+                                                                   "expires_whitelist_networks" => "arc.int"
                                                     } }
                                  ),
                                   new LML::VM( {
@@ -125,6 +152,34 @@ is_deeply( [
            ],
            [],
            "should not return error as 1000 is in the past but net is whitelisted"
+);
+is_deeply( [
+              new LML::VMpolicy(
+                                 new LML::Config( {
+                                                    "vsphere" => {
+                                                                   "expires_field"              => "Expires",
+                                                                   "expires_european"           => 1,
+                                                                   "expires_maximum"            => 10,
+                                                                   "expires_whitelist_networks" => "intern1.test\narc.int\nintern2.test"
+                                                    } }
+                                 ),
+                                  new LML::VM( {
+                                                 "NAME"         => "dev123",
+                                                 "NETWORKING"   => [ {
+                                                                     "MAC"     => "egal",
+                                                                     "NETWORK" => "arc.int"
+                                                                   },
+                                                                   {
+                                                                     "MAC"     => "egal",
+                                                                     "NETWORK" => "foo"
+                                                                   } ],
+                                                 "CUSTOMFIELDS" => { "Expires" => "01.02.1000" }
+                                               } )
+
+                )->validate_expiry
+           ],
+           [],
+           "should not return error as 1000 is in the past but net is whitelisted among others"
 );
 is_deeply( [
               new LML::VMpolicy(
