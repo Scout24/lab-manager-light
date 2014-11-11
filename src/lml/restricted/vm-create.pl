@@ -16,6 +16,8 @@ use AppUtil::HostUtil;
 use AppUtil::VMUtil;
 use LWP::Simple qw(get);
 use Getopt::Long;
+use LML::Common;
+use LML::TokenReplacer;
 use LML::VMware;
 use LML::VMnetworks;
 use LML::VMcreate::VMproperties;
@@ -225,12 +227,13 @@ sub create_vm {
     my $DATASTORES = get_datastores;
     my $FOLDERS    = get_folders;
     my $rw_lab     = new LML::Lab( $C->labfile, 1 );
+    my $VM         = new LML::VM( $vm_view->config->uuid );
     # first update the info about ESX hosts
     $rw_lab->update_hosts($HOSTS);
     $rw_lab->update_networks($NETWORKS);
     $rw_lab->update_datastores($DATASTORES);
     $rw_lab->update_folders($FOLDERS);
-    $rw_lab->update_vm( new LML::VM( $vm_view->config->uuid ) );
+    $rw_lab->update_vm( $VM );
     # Should also have set dns_domain and the custom fields from below etc., but works also without.
     # When the VM boots via pxelinux.pl we will write the correct values to lab.conf
     if ( not $rw_lab->write_file( "for just now created " . $$args{vmname} . " (" . $vm_view->config->uuid . ")" ) ) {
@@ -262,6 +265,18 @@ sub create_vm {
         }
         else {
             error("Could not power on VM:\n".Data::Dumper->Dump([$@],['$@']));
+        }
+    }
+
+    # Execute configured triggers for vm creation
+    my $triggercommand = $C->get( 'triggers', 'vmcreate' );
+    if ($triggercommand) {
+        my $tr = new LML::TokenReplacer($C->get_proxy_parameter, $VM);
+        $triggercommand = $tr->replace($triggercommand);
+        my $result = qx($triggercommand 2>&1);
+        Debug("vmcreate triggercommand '$triggercommand' said:\n$result") if ($isDebug);
+        if ( $? > 0 ) {
+            error("vmcreate trigger command '$triggercommand' failed:\n$result");
         }
     }
 

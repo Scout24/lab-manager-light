@@ -35,7 +35,7 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
     my $C = new LML::Config();
 
     my @errors  = ();                            # collect errors
-    my @removed_hosts = ();    
+    my @removed_hosts = ();
     {
         # put this into scope of its own so that this instance of LAB will be short-lived.
         my $LAB     = new LML::Lab( $C->labfile );
@@ -59,7 +59,7 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
                     $VM->destroy();
                     push @removed_hosts,$VM->uuid;
                 }
-    
+
                 my $triggercommand = $C->get( "triggers", "vm".$action );
                 if ($triggercommand) {
                     my $tr = new LML::TokenReplacer($C->get_proxy_parameter,$VM);
@@ -70,7 +70,6 @@ if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
                         warn "vm$action trigger command '$triggercommand' failed:\n$result";
                         push( @errors, "Could not run vm$action triggercommand, please call for help" );
                     }
-    
                 }
             }
             else {
