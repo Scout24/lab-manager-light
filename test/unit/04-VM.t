@@ -208,6 +208,6 @@ ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->prefernetboot,
     "should return that prefernetboot is not active for unmanaged VM" );
 
 ok( $VM->activate_prefernetboot, "should not fail activating force net boot" );
-ok( ( $extraopts_key eq "bios.bootDeviceClasses" and $extraopts_value eq "allow:net,hd" ),
+ok( ( $extraopts_key eq "bios.bootOrder" and $extraopts_value eq "ethernet0,hdd" ),
     "should have used the correct vSphere setting to actually force only net boot" );
 done_testing();
