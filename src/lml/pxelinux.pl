@@ -103,9 +103,9 @@ if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
           # as some conditions are unmet.
 
           # ensure that VM will only boot from network
-          if ( $C->get( "modifyvm", "forcenetboot" ) and not $VM->forcenetboot ) {
+          if ( $C->get( "modifyvm", "prefernetboot" ) and not $VM->prefernetboot ) {
               # modify VM if configured and current setting not as it should be (because the reconfigure VM task takes time)
-              $VM->activate_forcenetboot;
+              $VM->activate_prefernetboot;
           }
 
           # we only modify our state data if there are no errors
