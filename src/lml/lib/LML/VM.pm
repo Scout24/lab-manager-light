@@ -147,15 +147,14 @@ sub dns_domain {
     return exists($self->{dns_domain}) ? $self->{dns_domain} : undef;
 }
 
-sub prefernetboot {
+sub forcenetboot {
     my $self = shift;
-    return exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and exists $self->{EXTRAOPTIONS}{'bios.bootOrder'} and $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} eq "allow:net,hd" and $self->{EXTRAOPTIONS}{'bios.bootOrder'} eq "ethernet0,hdd";
+    return exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} eq "allow:net";
 }
 
-sub activate_prefernetboot {
+sub activate_forcenetboot {
     my $self = shift;
-    setVmExtraOptsU( $self->uuid, "bios.bootDeviceClasses", "allow:net,hd" );
-    setVmExtraOptsU( $self->uuid, "bios.bootOrder", "ethernet0,hdd" );
+    setVmExtraOptsU( $self->uuid, "bios.bootDeviceClasses", "allow:net" );
 }
 
 sub set_custom_value {

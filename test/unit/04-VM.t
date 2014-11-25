@@ -22,9 +22,7 @@ my $VM_ALL = {
                                                                               "Contact User ID" => "User1",
                                                                               "Expires"         => "31.12.2013"
                                                           },
-                                                          "EXTRAOPTIONS" => {
-                                                              "bios.bootDeviceClasses" => "allow:net,hd",
-                                                              "bios.bootOrder" => "ethernet0,hdd" },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                           "MAC"          => { "01:02:03:04:00:15"      => "arc.int" },
                                                           "NAME"         => "lochst001",
                                                           "HOST"         => "testesx01.domain",
@@ -43,9 +41,7 @@ my $VM_ALL = {
                                                                               "Expires"         => "31.01.2013",
                                                                               "Force Boot"      => ""
                                                           },
-                                                          "EXTRAOPTIONS" => {
-                                                              "bios.bootDeviceClasses" => "allow:net,hd",
-                                                              "bios.bootOrder" => "ethernet0,hdd" },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                           "MAC"          => {
                                                                      "01:02:03:04:6e:4e" => "arc.int",
                                                                      "01:02:03:04:9e:9e" => "foo"
@@ -72,9 +68,7 @@ my $VM_ALL = {
                                                                               "Force Boot"        => "garbage",
                                                                               "Force Boot Target" => "server"
                                                           },
-                                                          "EXTRAOPTIONS" => {
-                                                              "bios.bootDeviceClasses" => "allow:net,hd",
-                                                              "bios.bootOrder" => "ethernet0,hdd" },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                           "MAC"          => { "01:02:03:04:6e:5c"      => "arc.int" },
                                                           "NAME"         => "tsthst099",
                                                           "HOST"         => "testesx01.domain",
@@ -203,11 +197,10 @@ is_deeply(
 
 is_deeply([$VM->networks()],["arc.int","foo"],"should return list of network labels");
 
-ok( $VM->prefernetboot, "should return that prefernetboot is active for managed VM" );
-ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->prefernetboot,
-    "should return that prefernetboot is not active for unmanaged VM" );
-
-ok( $VM->activate_prefernetboot, "should not fail activating force net boot" );
-ok( ( $extraopts_key eq "bios.bootOrder" and $extraopts_value eq "ethernet0,hdd" ),
+ok( $VM->forcenetboot, "should return that forcenetboot is active for managed VM" );
+ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot,
+    "should return that forcenetboot is not active for unmanaged VM" );
+ok( $VM->activate_forcenetboot, "should not fail activating force net boot" );
+ok( ( $extraopts_key eq "bios.bootDeviceClasses" and $extraopts_value eq "allow:net" ),
     "should have used the correct vSphere setting to actually force only net boot" );
 done_testing();

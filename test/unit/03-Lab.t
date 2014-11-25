@@ -18,9 +18,7 @@ my $VM_ALL = {
                                                                               "Contact User ID" => "User1",
                                                                               "Expires"         => "31.12.2013"
                                                           },
-                                                          "EXTRAOPTIONS" => {
-                                                              "bios.bootDeviceClasses" => "allow:net,hd",
-                                                              "bios.bootOrder" => "ethernet0,hdd" },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                           "MAC"          => { "01:02:03:04:00:15"      => "arc.int" },
                                                           "NAME"         => "lochst001",
                                                           "HOST"         => "testesx01.domain",
@@ -97,7 +95,7 @@ my $VM = new LML::VM( {
                                             "Expires"         => "31.01.2013",
                                             "Force Boot"      => ""
                         },
-                        "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net,hd", "bios.bootOrder" => "ethernet0,hdd" },
+                        "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                         "MAC"          => {
                                    "99:02:03:04:6e:4e" => "arc.int",
                                    "99:02:03:04:9e:9e" => "foo"

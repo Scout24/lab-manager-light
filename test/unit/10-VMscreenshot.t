@@ -22,9 +22,7 @@ my $VM_ALL = {
                                                                     "Expires"         => "31.01.2013",
                                                                     "Force Boot"      => ""
                                                 },
-                                                "EXTRAOPTIONS" => {
-                                                    "bios.bootDeviceClasses" => "allow:net,hd",
-                                                    "bios.bootOrder" => "ethernet0,hdd" },
+                                                "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
                                                 "MAC"          => {
                                                            "01:02:03:04:6e:4e" => "arc.int",
                                                            "01:02:03:04:9e:9e" => "foo"
