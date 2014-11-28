@@ -21,7 +21,7 @@ sub UpdateDHCP {
     if ( my $dhcpconf = $C->get( "dhcp", "hostsfile" ) ) {
         my $dhcp_hosts = "";
         my $default_appenddomain = $C->appenddomain;
-        for my $u ( keys( %{ $LAB->{HOSTS} } ) ) {
+        for my $u ( sort keys( %{ $LAB->{HOSTS} } ) ) {
             my $count = 0;
             if ( exists( $LAB->{HOSTS}->{$u}->{MACS} ) ) {
                 for my $m ( sort( @{ $LAB->{HOSTS}->{$u}->{MACS} } ) ) {
