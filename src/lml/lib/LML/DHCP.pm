@@ -25,7 +25,7 @@ sub UpdateDHCP {
             my $count = 0;
             if ( exists( $LAB->{HOSTS}->{$u}->{MACS} ) ) {
                 for my $m ( sort( @{ $LAB->{HOSTS}->{$u}->{MACS} } ) ) {
-                    $dhcp_hosts .= "host $u" . ( $count > 0 ? "-$count" : "" ) . " { \n";
+                    $dhcp_hosts .= "host $u" . ( $count > 0 ? "-$count" : "" ) . " {\n";
                     $dhcp_hosts .= "\thardware ethernet $m;\n";
                     my $hostname = $LAB->{HOSTS}->{$u}->{HOSTNAME} . ( $count > 0 ? "-$count" : "" );
                     #Debug(Data::Dumper->Dump([$LAB->{HOSTS}->{$u}],["LAB->{HOSTS}->{$u}"]));
