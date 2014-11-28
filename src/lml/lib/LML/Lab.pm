@@ -15,6 +15,7 @@ use File::NFSLock;
 use Clone 'clone';
 use Time::HiRes qw(time gettimeofday);
 use Sys::Syslog;
+use Array::Compare;
 
 # new object, takes LAB hash or filename to read from.
 sub new {
@@ -357,11 +358,13 @@ sub update_vm {
     # ~~ compares array since perl 5.10!!
     #
     # NOTE: Hostname and MACs are relevant for DHCP servers
+    my $comp = Array::Compare->new;
     my $update_dhcp = (
                         not(     exists( $self->{HOSTS}->{$uuid}->{HOSTNAME} )
                              and exists( $self->{HOSTS}->{$uuid}->{MACS} ) )
                           or not $name eq $self->{HOSTS}->{$uuid}->{HOSTNAME}
-                          or not @vm_lab_macs ~~ @{ $self->{HOSTS}->{$uuid}->{MACS} } ) ? 1 : 0;    # set to 0 or 1
+                          or not $comp->simple_compare(\@vm_lab_macs,$self->{HOSTS}->{$uuid}->{MACS} )
+                      ) ? 1 : 0;    # set to 0 or 1
     if ($update_dhcp) {
         push( @{ $self->{vms_to_update} }, $uuid );
     }
