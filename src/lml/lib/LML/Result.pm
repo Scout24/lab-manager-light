@@ -29,7 +29,7 @@ sub new {
 
 sub add_error {
     my $self = shift;
-    push( @{ $self->{errors} }, @_ ) if (defined @_ and defined $_[0]);
+    push( @{ $self->{errors} }, @_ ) if (@_ and $_[0]);
     return @_;
 }
 
