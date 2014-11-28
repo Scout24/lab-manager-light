@@ -148,8 +148,8 @@ is( $VM->name, "tsthst001", "name method should return VM name" );
 
 is( $VM->vm_id, "vm-1000", "should return vm_id of VM" );
 
-is_deeply( [ $VM->get_macs() ],
-           [ '01:02:03:04:6e:4e', '01:02:03:04:9e:9e' ],
+is_deeply( [ sort $VM->get_macs() ],
+           [ sort @{[ '01:02:03:04:6e:4e', '01:02:03:04:9e:9e' ]} ],
            "Get_macs should return a list of mac addresses" );
 
 is_deeply( [ $VM->get_filtered_macs() ],
