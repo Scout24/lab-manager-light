@@ -67,13 +67,22 @@ my $C = new LML::Config(@conffiles);
 $ENV{VI_SERVER} = "file://" . cwd() . "/test/data";
 my $screenshot = new_ok( "LML::VMscreenshot" => [ $C, "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf" ],
                          "Should return object" );
-my $png_re = qr(\211PNG\r\n\32\n\0\0\0\rIHDR.*\202)s;
+my $png_re = qr(\o{211}PNG\r\n\o{032}\n\0\0\0\rIHDR.*\o{202})s;
 like( $screenshot->png, $png_re, "Should return something like png" );
-like( $screenshot->render( new CGI, -1 ),
-      qr(Expires:.*Date.*Content-length:.*Content-Type: image/png; charset=ISO-8859-1\r\n\r\n${png_re})s,
-      "should return HTTP response with PNG like in it" );
+
+my $first_page_render_response = $screenshot->render( new CGI, -1 );
+like ($first_page_render_response, qr(Expires:.*\r\n\r\n)s,"first page should set Expires header");
+like ($first_page_render_response, qr(Date:.*\r\n\r\n)s,"first page should set Date header");
+like ($first_page_render_response, qr(Content-length: \d+.*\r\n\r\n)s,"first page should set Content-length header with a number");
+like ($first_page_render_response, qr(Content-Type: image/png.*\r\n\r\n)s,"first page should set Content-Type: image/png header");
+like( $first_page_render_response, qr(${png_re})s, "first page should contain PNG image");
+
 is( $screenshot->render( new CGI, 100000 ), undef, "render should return undef if requested page is larger that push_max" );
-like( $screenshot->render( new CGI, 25 ),
-      qr(Expires:.*Date.*Content-length:.*Lml-page: last\r\nContent-Type: image/png; charset=ISO-8859-1\r\n\r\n${png_re})s,
-      "should return  last HTTP response with png in it" );
+
+my $last_page_render_response = $screenshot->render( new CGI, 25 );
+like ($last_page_render_response, qr(Expires:.*\r\n\r\n)s,"last page should set Expires header");
+like ($last_page_render_response, qr(Lml-page: last.*\r\n\r\n)s,"last page should set Lml-page: last header");
+like ($last_page_render_response, qr(Content-Type: image/png.*\r\n\r\n)s,"last page should set Content-Type: image/png header");
+like ($last_page_render_response, qr(${png_re})s, "last page should contain PNG image");
+
 done_testing();
