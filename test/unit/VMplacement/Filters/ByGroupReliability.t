@@ -31,6 +31,10 @@ my $test_host_2 = {
       # other attributes are unimportant
 };
 
+sub hostsort {
+    return $a->{id} cmp $b->{id};
+}
+
 # Our Lab contains the following scenario:
 #   We have two esx hosts and three groups of vms (foo, bar, gii).
 #   Esx host 1 owns one foo vm, one bar vm and two gii vms.
@@ -96,7 +100,7 @@ my @hosts = $lab->get_hosts();
     is_deeply( 
         [$filter->filter_hosts( [], $vm_res, @hosts)],
         [$test_host_2], 
-        "host id-2  is the only choice for " . $vm_res->{name} 
+        "host id-2 is the only choice for " . $vm_res->{name} 
     );
 }
 
@@ -104,8 +108,8 @@ my @hosts = $lab->get_hosts();
 {
     $vm_res = new LML::VMresources( { name => 'barbar90' } );
     is_deeply( 
-        [$filter->filter_hosts( [], $vm_res, @hosts)],
-        [$test_host_1,$test_host_2], 
+        [sort hostsort $filter->filter_hosts( [], $vm_res, @hosts)],
+        [sort hostsort $test_host_1,$test_host_2], 
         "hosts id-1 and id-2 are candidates for " . $vm_res->{name} 
     );
 }
@@ -126,8 +130,8 @@ my @hosts = $lab->get_hosts();
     my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
     is_deeply( 
-        [$filter->filter_hosts( [], $vm_res, @hosts)],
-        [$test_host_1,$test_host_2], 
+        [sort hostsort $filter->filter_hosts( [], $vm_res, @hosts)],
+        [sort hostsort $test_host_1,$test_host_2], 
         "hosts id-1 and id-2 are candidates for " . $vm_res->{name} 
     );
 }
@@ -139,8 +143,8 @@ my @hosts = $lab->get_hosts();
     my $filter = new LML::VMplacement::Filters::ByGroupReliability( $lab, $C );
     $vm_res = new LML::VMresources( { name => 'foobar90' } );
     is_deeply( 
-        [$filter->filter_hosts( [], $vm_res, @hosts)],
-        [$test_host_1,$test_host_2], 
+        [sort hostsort $filter->filter_hosts( [], $vm_res, @hosts)],
+        [sort hostsort $test_host_1,$test_host_2], 
         "hosts id-1 and id-2 are candidates for " . $vm_res->{name} 
     );
 }
