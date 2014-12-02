@@ -18,6 +18,7 @@ my $extraopts_key   = undef;
 my $extraopts_value = undef;
 my $VM_ALL = {
                     "42130272-a509-8010-6e85-4e01cb1b7284" => {
+                                                          "BOOTORDER" => [],
                                                           "CUSTOMFIELDS" => {
                                                                               "Contact User ID" => "User1",
                                                                               "Expires"         => "31.12.2013"
@@ -36,12 +37,13 @@ my $VM_ALL = {
                                                           "UUID"  => "42130272-a509-8010-6e85-4e01cb1b7284"
                     },
                     "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf" => {
+                                                          "BOOTORDER" => [ "net" ],
                                                           "CUSTOMFIELDS" => {
                                                                               "Contact User ID" => "User2",
                                                                               "Expires"         => "31.01.2013",
                                                                               "Force Boot"      => ""
                                                           },
-                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net" },
+                                                          "EXTRAOPTIONS" => { "bios.bootDeviceClasses" => "allow:net,hd" },
                                                           "MAC"          => {
                                                                      "01:02:03:04:6e:4e" => "arc.int",
                                                                      "01:02:03:04:9e:9e" => "foo"
@@ -120,15 +122,6 @@ $mock->mock(
         return 1;
     } );
 
-$mock->mock(
-    'setVmExtraOptsU',
-    sub {
-        my $uuid;
-        ( $uuid, $extraopts_key, $extraopts_value ) = @_;
-        #diag("Mock setVmExtraOptsU($uuid,$extraopts_key,$extraopts_value)\n");
-        return 1;
-    } );
-
 use_ok "LML::VM";
 
 my $VM;
@@ -198,9 +191,8 @@ is_deeply(
 is_deeply([$VM->networks()],["arc.int","foo"],"should return list of network labels");
 
 ok( $VM->forcenetboot, "should return that forcenetboot is active for managed VM" );
+ok( ! LML::VM->new("42130272-a509-8010-6e85-4e01cb1b7284")->forcenetboot,
+    "should return that forcenetboot is not active for VM with old forcenetboot settings");
 ok( !LML::VM->new("4213c435-a176-a533-e07e-38644cf43390")->forcenetboot,
     "should return that forcenetboot is not active for unmanaged VM" );
-ok( $VM->activate_forcenetboot, "should not fail activating force net boot" );
-ok( ( $extraopts_key eq "bios.bootDeviceClasses" and $extraopts_value eq "allow:net" ),
-    "should have used the correct vSphere setting to actually force only net boot" );
 done_testing();
