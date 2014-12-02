@@ -15,7 +15,7 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(get_vi_connection get_all_vm_data get_vm_data get_folders get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmCustomValue _setVmCustomValue perform_destroy perform_poweroff perform_reboot perform_reset get_uuid_by_name);
+  qw(get_vi_connection get_all_vm_data get_vm_data get_folders get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmBootOpsToNetworkU setVmCustomValue _setVmCustomValue perform_destroy perform_poweroff perform_reboot_guest perform_reset perform_poweron get_uuid_by_name);
 
 use VMware::VIRuntime;
 use LML::Common;
@@ -740,10 +740,11 @@ sub setVmExtraOptsM {
 
 ############################### sub #################
 ##
-## setVmBootOptsU (<uuid of VM>)
+## setVmBootOpsToNetworkU (<uuid of VM>)
 ##
+## Set config.bootOptions.bootOrder to the first network card
 ##
-sub setVmBootOptsU {
+sub setVmBootOpsToNetworkU {
     my $uuid  = shift;
     my @bootOptions = ();
     my $nickey;
@@ -783,6 +784,9 @@ sub setVmBootOptsU {
             }
             elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
                 Util::trace( 0, "\nOperation failed because file already exists" );
+            }
+            elsif ( ref( $@->detail ) eq 'InvalidPowerState' ) {
+                Util::trace( 0, "\nOperation failed because VM is not powered off" );
             }
             else {
                 Util::trace( 0, "\n" . $@ . "\n" );
@@ -860,7 +864,7 @@ sub setVmCustomValue {
     }
 }
 
-sub perform_reboot {
+sub perform_reboot_guest {
     my ($uuid) = @_;
     get_vi_connection();
 
@@ -873,11 +877,11 @@ sub perform_reboot {
 
     # Did we get an view?
     if ($vm_view) {
-        # Reboot the VM
+        # Reboot the VM guest
         eval { $vm_view->RebootGuest(); };
 
         if ($@) {
-            Debug("SDK RebootGuest command exited abnormally");
+            Debug("SDK RebootGuest command exited abnormally:\n$@");
             return 0;
         }
 
@@ -904,7 +908,7 @@ sub perform_reset {
         eval { $vm_view->ResetVM(); };
 
         if ($@) {
-            Debug("SDK ResetVM command exited abnormally");
+            Debug("SDK ResetVM command exited abnormally:\n$@");
             return 0;
         }
 
@@ -930,10 +934,14 @@ sub perform_destroy {
         # Destroy the VM
         eval { $vm_view->Destroy(); };
         # Check the success
-        croak("VM destroy failed with $@") if ($@);
-        return 1;                                   # signal success
+        Debug("SDK Destroy VM command failed:\n$@") if ($@);
+        return 0;
     }
-    return 0;
+    else {
+        Debug("Could not retrieve vm view for uuid $uuid");
+        return 0;
+    }
+
 }
 
 sub perform_poweroff {
@@ -949,12 +957,12 @@ sub perform_poweroff {
 
     # Did we get an view?
     if ($vm_view) {
-        # Reboot the VM
+        # Poweroff the VM
         eval { $vm_view->PowerOffVM(); };
 
         # Check the success
         if ($@) {
-            Debug("SDK PowerOffVM command exited abnormally");
+            Debug("SDK PowerOffVM command exited abnormally:\n$@");
             return 0;
         }
     }
@@ -977,12 +985,12 @@ sub perform_poweron {
 
     # Did we get an view?
     if ($vm_view) {
-        # PoweOn the VM
+        # PowerOn the VM
         eval { $vm_view->PowerOnVM(); };
 
         # Check the success
         if ($@) {
-            Debug("SDK PowerOnVM command exited abnormally");
+            Debug("SDK PowerOnVM command exited abnormally:\n$@");
             return 0;
         }
     }

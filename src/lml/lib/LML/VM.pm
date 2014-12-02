@@ -13,6 +13,7 @@ use LML::Common;
 use Data::Dumper;;
 use Carp;
 use Clone 'clone';
+use Array::Compare;
 
 # new object, takes uuid
 sub new {
@@ -155,37 +156,53 @@ sub dns_domain {
 
 sub forcenetboot {
     my $self = shift;
-    return exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} eq "allow:net";
+    my $result = 0;
+    if (exists $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} and 
+        $self->{EXTRAOPTIONS}{'bios.bootDeviceClasses'} eq "allow:net,hd") {
+        if (Array::Compare->new->simple_compare($self->{BOOTORDER},["net"])) {
+            $result = 1;
+        }
+    }
+    Debug("forcenetboot(".$self->name.")=".($result ? "TRUE" : "FALSE"));
+    return $result;
 }
 
 sub activate_forcenetboot {
     my $self = shift;
-    setVmExtraOptsU( $self->uuid, "bios.bootDeviceClasses", "allow:net" );
+    $self->poweroff;
+    setVmExtraOptsU( $self->uuid, "bios.bootDeviceClasses", "allow:net,hd" );
+    setVmBootOpsToNetworkU( $self->uuid );
+    $self->poweron;
 }
 
 sub set_custom_value {
     my ($self,$key,$value) = @_;
-    return LML::VMware::setVmCustomValue( $self->uuid, $key, $value );
+    return setVmCustomValue( $self->uuid, $key, $value );
 }
 
-sub reboot {
+sub reboot_guest {
     my $self = shift;
-    return LML::VMware::perform_reboot( $self->uuid );
+    return perform_reboot_guest( $self->uuid );
 }
 
 sub reset {
     my $self = shift;
-    return LML::VMware::perform_reset( $self->uuid );
+    return perform_reset( $self->uuid );
 }
 
 sub poweroff {
     my $self = shift;
-    return LML::VMware::perform_poweroff( $self->uuid );
+    return perform_poweroff( $self->uuid );
+}
+
+sub poweron {
+    my $self = shift;
+    return perform_poweron( $self->uuid );
 }
 
 sub destroy {
     my $self = shift;
-    return LML::VMware::perform_destroy( $self->uuid);
+    return perform_destroy( $self->uuid);
 }
 
 1;
