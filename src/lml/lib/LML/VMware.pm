@@ -42,9 +42,9 @@ my %FOLDERIDS;
 # these properties are relevant for us and should be used in get_view / find_*_view calls as a properties argument to speed up
 # the API calls. See http://www.virtuin.com/2012/11/best-practices-for-faster-vsphere-sdk.html and the SDK docs for explanations
 my $VM_PROPERTIES = [
-                      "name",            "config.name",            "config.uuid", "config.extraConfig",
-                      "config.template", "config.hardware.device", "customValue", "runtime.host",
-                      "parent", "runtime.powerState",
+                      "name",            "config.name",            "config.uuid", "config.extraConfig", 
+                      "config.bootOptions.bootOrder", "config.template", "config.hardware.device", 
+                      "customValue", "runtime.host", "parent", "runtime.powerState",
 ];
 
 # return if arg looks like a UUID
@@ -166,18 +166,40 @@ sub retrieve_vm_details ($) {
     # keep entire VM object
     # don't need it at the moment
     if ($isDebug) {
-        $VM_DATA{OBJECT} = $vm;
+        $VM_DATA{"OBJECT"} = $vm;
     }
     # store relevant extraConfig
     for my $extraConfig ( @{ $vm->get_property("config.extraConfig") } ) {
-        $VM_DATA{EXTRAOPTIONS}{ $extraConfig->key } = $extraConfig->value
+        $VM_DATA{"EXTRAOPTIONS"}{ $extraConfig->key } = $extraConfig->value
           if ( $extraConfig->key eq "bios.bootDeviceClasses" );
     }
+=pod
+# bootOrder contains a list that looks like this:
+[
+   bless( {
+             "deviceKey" => 4000
+          }, 'VirtualMachineBootOptionsBootableEthernetDevice' )
+]
+See https://www.vmware.com/support/developer/converter-sdk/conv50_apireference/vim.vm.BootOptions.BootableDevice.html
+for details about these classes. Here we only care about the class type and ignore the device key info.
+=cut
+    my @bootOrder = $vm->get_property("config.bootOptions.bootOrder") ? @{$vm->get_property("config.bootOptions.bootOrder")} : ();
 
+    @bootOrder = map {
+            my %class_name_mapping = (
+                "VirtualMachineBootOptionsBootableEthernetDevice","net",
+                "VirtualMachineBootOptionsBootableCdromDevice","cdrom",
+                "VirtualMachineBootOptionsBootableDiskDevice","disk",
+                "VirtualMachineBootOptionsBootableFloppyDevice","floppy"
+                );
+            my $class = ref;
+            $class_name_mapping{$class};
+        } @bootOrder;
+    $VM_DATA{"BOOTORDER"} = \@bootOrder;
     # store ESX host
     my $host_id = $vm->get_property("runtime.host")->value;
-    $VM_DATA{HOST} = defined $HOSTS{$host_id} ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
-
+    $VM_DATA{"HOST"} = defined $HOSTS{$host_id} ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
+    print STDERR Data::Dumper->Dump([\%VM_DATA],[qw(VM_DATA)]);
     return \%VM_DATA;
 }
 

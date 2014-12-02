@@ -382,6 +382,7 @@ sub update_vm {
         CUSTOMFIELDS    => $VM->customfields,
         PATH            => $VM->path,
         HOST            => $VM->host,
+        BOOTORDER       => $VM->bootorder,
         # update client ip if we have one, otherwise keep previous data
         CLIENT_IP       => defined $ENV{REMOTE_ADDR} ? $ENV{REMOTE_ADDR} : $old_ip,
     };

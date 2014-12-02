@@ -32,7 +32,7 @@ sub check_value {
 my %opts = (
     format => {
                 type     => "=s",
-                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET, %STATUS). ",
+                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET, %STATUS, %BOOTORDER). ",
                 required => 0,
                 default  => "%UUID%NAME%PATH%STATUS"
     }
@@ -126,6 +126,9 @@ foreach my $uuid ( keys %{$VM} ) {
         # Is the VM powered on or off
         elsif ( $_ eq "STATUS" ) {
             push @output, $VM->{$uuid}{POWERSTATE};
+        }
+        elsif ( $_ eq "BOOTORDER" ) {
+            push @output, join(",",@{$VM->{$uuid}{BOOTORDER}});
         }
         # Just push the hash value to output array
         else {

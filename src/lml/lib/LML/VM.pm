@@ -109,6 +109,12 @@ sub customfields {
     return $self->{"CUSTOMFIELDS"};
 }
 
+sub bootorder {
+    my $self = shift;
+    return undef unless (exists $self->{"BOOTORDER"} );
+    return $self->{"BOOTORDER"};
+}
+
 sub get_macs {
     my $self = shift;
     return undef unless ( exists $self->{"MAC"} and ref( $self->{"MAC"} ) eq "HASH" );

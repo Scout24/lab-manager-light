@@ -69,6 +69,7 @@ sub display_vm_data {
                   "",      exists $VM->{VM_ID} ? ( "VM ID:", $VM->{VM_ID} ) : (),
                   "",      exists $VM->{HOST} ? ( "VM Host:", $VM->{HOST} ) : (),
                   "",      exists $VM->{LMLHOST} ? ( "LML Server:", $VM->{LMLHOST} ) : (),
+                  "",      exists $VM->{BOOTORDER} ? ("Boot Order:", join(",",@{$VM->{BOOTORDER}})) : (),
           )
         {
             #Debug("Writing $_");
