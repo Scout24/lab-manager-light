@@ -718,6 +718,64 @@ sub setVmExtraOptsM {
 
 ############################### sub #################
 ##
+## setVmBootOptsU (<uuid of VM>)
+##
+##
+sub setVmBootOptsU {
+    my $uuid  = shift;
+    my @bootOptions = ();
+    my $nickey;
+
+    get_vi_connection();
+
+    eval {
+        my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine', filter => { "config.uuid" => $uuid } );
+
+        my $devices = $vm_view->config->hardware->device;
+        foreach(@$devices) {
+            if($_->isa('VirtualEthernetCard')) {
+                $nickey = $_->key;
+                last;
+            }
+        }
+
+        if(defined($nickey)) {
+            push @bootOptions, VirtualMachineBootOptionsBootableEthernetDevice->new(deviceKey => $nickey);
+
+            my $bootOptions = VirtualMachineBootOptions->new(bootOrder => \@bootOptions);
+            my $spec = VirtualMachineConfigSpec->new(bootOptions => $bootOptions);
+            if ($vm_view) {
+                $vm_view->ReconfigVM( spec => $spec );
+            }
+        }
+    };
+    if ($@) {
+        Util::trace( 0, "\nReconfiguration failed: " );
+        if ( ref($@) eq 'SoapFault' ) {
+            if ( ref( $@->detail ) eq 'TooManyDevices' ) {
+                Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
+            }
+            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
+                Util::trace( 0, "The Device configuration is not valid\n" );
+                Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
+            }
+            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
+                Util::trace( 0, "\nOperation failed because file already exists" );
+            }
+            else {
+                Util::trace( 0, "\n" . $@ . "\n" );
+            }
+        }
+        else {
+            Util::trace( 0, "\n" . $@ . "\n" );
+        }
+        return 0;
+    }
+    return 1;
+}
+
+############################### sub #################
+##
 ## setVmCustomValue (<VM object>,<option key>,<option value>)
 ##
 ##
@@ -877,7 +935,34 @@ sub perform_poweroff {
             Debug("SDK PowerOffVM command exited abnormally");
             return 0;
         }
+    }
+    else {
+        Debug("Could not retrieve vm view for uuid $uuid");
+        return 0;
+    }
+}
 
+sub perform_poweron {
+    my ($uuid) = @_;
+    get_vi_connection();
+
+    # Get vm view
+    my $vm_view = Vim::find_entity_view(
+                                         view_type  => 'VirtualMachine',
+                                         filter     => { "config.uuid" => $uuid },
+                                         properties => [] # don't need any properties to set custom value
+    );
+
+    # Did we get an view?
+    if ($vm_view) {
+        # PoweOn the VM
+        eval { $vm_view->PowerOnVM(); };
+
+        # Check the success
+        if ($@) {
+            Debug("SDK PowerOnVM command exited abnormally");
+            return 0;
+        }
     }
     else {
         Debug("Could not retrieve vm view for uuid $uuid");
