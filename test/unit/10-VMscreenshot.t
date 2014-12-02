@@ -67,7 +67,7 @@ my $C = new LML::Config(@conffiles);
 $ENV{VI_SERVER} = "file://" . cwd() . "/test/data";
 my $screenshot = new_ok( "LML::VMscreenshot" => [ $C, "4213038e-9203-3a2b-ce9d-c6dac1f2dbbf" ],
                          "Should return object" );
-my $png_re = qr(\o{211}PNG\r\n\o{032}\n\0\0\0\rIHDR.*\o{202})s;
+my $png_re = qr(\211PNG\r\n\032\n\0\0\0\rIHDR.*\202)s;
 like( $screenshot->png, $png_re, "Should return something like png" );
 
 my $first_page_render_response = $screenshot->render( new CGI, -1 );
