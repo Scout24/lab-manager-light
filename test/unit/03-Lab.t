@@ -14,6 +14,7 @@ use LML::Common;
 
 my $VM_ALL = {
                     "42130272-a509-8010-6e85-4e01cb1b7284" => {
+                                                          "BOOTORDER" => [],
                                                           "CUSTOMFIELDS" => {
                                                                               "Contact User ID" => "User1",
                                                                               "Expires"         => "31.12.2013"
@@ -90,6 +91,7 @@ my $LAB = new_ok( "LML::Lab" => [ $C->labfile, "1" ], "should create new readwri
 is( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{HOSTNAME},
     "tsthst001", "LAB should contain hostname from test data" );
 my $VM = new LML::VM( {
+                        "BOOTORDER" => [],
                         "CUSTOMFIELDS" => {
                                             "Contact User ID" => "User2",
                                             "Expires"         => "31.01.2013",
@@ -129,7 +131,7 @@ is_deeply( $LAB->{HOSTS}{"4213038e-9203-3a2b-ce9d-c6dac1f2dbbf"}{MACS},
 $LAB->set_filename("test/temp/new_lab.conf");
 is(
     $LAB->write_file( "by " . __FILE__, "test" ),
-    3257,
+    3342,
 "Writing to 'test/temp/new_lab.conf' should write 3169 bytes and it would be better to analyse the content but at least we notice change"
 );
 
