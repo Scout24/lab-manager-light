@@ -199,7 +199,6 @@ for details about these classes. Here we only care about the class type and igno
     # store ESX host
     my $host_id = $vm->get_property("runtime.host")->value;
     $VM_DATA{"HOST"} = defined $HOSTS{$host_id} ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
-    print STDERR Data::Dumper->Dump([\%VM_DATA],[qw(VM_DATA)]);
     return \%VM_DATA;
 }
 
