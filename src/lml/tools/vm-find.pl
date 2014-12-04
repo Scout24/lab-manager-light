@@ -142,4 +142,5 @@ foreach my $uuid ( keys %{$VM} ) {
 
 print "\n";
 printf "Found %d VMs\n", scalar( keys %{$VM} );
+local $Data::Dumper::Deparse = 1;
 Debug( Data::Dumper->Dump( [$VM], [qw(VM)] ) );

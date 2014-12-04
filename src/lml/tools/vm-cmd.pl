@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-
-use lib "/usr/lib/lml/lib";
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 
 use LML::Config;
 use LML::VMware;

@@ -48,6 +48,11 @@ sub new {
     return $self;
 }
 
+sub _vm_view_or_uuid {
+    my ($self) = @_;
+    return $self->vm_view ? $self->vm_view : $self->uuid;
+}
+
 sub uuid {
     my $self = shift;
     return undef unless ( exists $self->{"UUID"} );
@@ -64,6 +69,12 @@ sub vm_id {
     my $self = shift;
     return undef unless ( exists $self->{"VM_ID"} );
     return $self->{"VM_ID"};
+}
+
+sub vm_view {
+    my $self = shift;
+    return undef unless ( exists $self->{"OBJECT"} );
+    return $self->{"OBJECT"};
 }
 
 sub networks {
@@ -170,39 +181,39 @@ sub forcenetboot {
 sub activate_forcenetboot {
     my $self = shift;
     $self->poweroff;
-    setVmExtraOptsU( $self->uuid, "bios.bootDeviceClasses", "allow:net,hd" );
-    setVmBootOpsToNetworkU( $self->uuid );
+    setVmExtraOpts( $self->_vm_view_or_uuid, "bios.bootDeviceClasses", "allow:net,hd" );
+    setVmBootOrderToNetwork( $self->_vm_view_or_uuid );
     $self->poweron;
 }
 
 sub set_custom_value {
     my ($self,$key,$value) = @_;
-    return setVmCustomValue( $self->uuid, $key, $value );
+    return setVmCustomValue( $self->_vm_view_or_uuid, $key, $value );
 }
 
 sub reboot_guest {
     my $self = shift;
-    return perform_reboot_guest( $self->uuid );
+    return perform_reboot_guest( $self->_vm_view_or_uuid );
 }
 
 sub reset {
     my $self = shift;
-    return perform_reset( $self->uuid );
+    return perform_reset( $self->_vm_view_or_uuid );
 }
 
 sub poweroff {
     my $self = shift;
-    return perform_poweroff( $self->uuid );
+    return perform_poweroff( $self->_vm_view_or_uuid );
 }
 
 sub poweron {
     my $self = shift;
-    return perform_poweron( $self->uuid );
+    return perform_poweron( $self->_vm_view_or_uuid );
 }
 
 sub destroy {
     my $self = shift;
-    return perform_destroy( $self->uuid);
+    return perform_destroy( $self->_vm_view_or_uuid);
 }
 
 1;

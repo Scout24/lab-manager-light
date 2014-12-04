@@ -15,12 +15,12 @@ use vars qw(
 
 our @ISA = qw(Exporter);
 our @EXPORT =
-  qw(get_vi_connection get_all_vm_data get_vm_data get_folders get_datastores get_networks get_hosts get_custom_fields setVmExtraOptsU setVmExtraOptsM setVmBootOpsToNetworkU setVmCustomValue _setVmCustomValue perform_destroy perform_poweroff perform_reboot_guest perform_reset perform_poweron get_uuid_by_name);
+  qw(get_vi_connection get_all_vm_data get_vm_data get_folders get_datastores get_networks get_hosts get_custom_fields setVmExtraOpts setVmBootOrderToNetwork clearVmBootOrder setVmCustomValue perform_destroy perform_poweroff perform_reboot_guest perform_reset perform_poweron);
 
 use VMware::VIRuntime;
 use LML::Common;
 use Carp;
-
+use Switch;
 use Sys::Syslog;
 
 ################ Old Interface #############
@@ -47,13 +47,100 @@ my $VM_PROPERTIES = [
                       "customValue", "runtime.host", "parent", "runtime.powerState",
 ];
 
+################ helpers
+
+# get VirtualMachine view
+# Arg 1 can be 
+# * VirtualMachine object (VI SDK), fastest as it avoids extra lookup
+# * VM Managed Object Reference as string (e.g. vm-1234)
+# * VM UUID, slowest as it does an index search
+# Remaining args are properties to retrieve, defaults to empty list.
+
+
+sub _get_vm_view {
+    my ($search_vm,@properties) = @_;
+    get_vi_connection();
+
+    # search for uuid if uuid is given or assume that we got a moref
+    # TODO: Check that the moref is actually a moref object
+    my $vm_view;
+    if (ref($search_vm) eq "VirtualMachine") {
+        $vm_view = $search_vm;
+    }
+    elsif ( _is_uuid($search_vm) ) {
+        $vm_view = Vim::find_entity_view(
+                                          view_type  => 'VirtualMachine',
+                                          filter     => { "config.uuid" => $search_vm },
+                                          properties => \@properties # this is empty by default
+        );
+    }
+    else {
+        $vm_view = Vim::get_view( mo_ref => $search_vm );
+    }
+    return $vm_view;
+}
+
+# run VI SDK code in first arg and parse errors.
+# Croaks error message with hint from second arg
+
+sub _check_success (&@) {
+    # See http://stackoverflow.com/questions/6101005/how-to-create-a-perl-subroutine-that-accepts-a-block-of-code
+    my $code = \&{shift @_};
+    my ($message) = @_;
+    eval { 
+        delete local $SIG{'__DIE__'}; # ignore other die handlers, see perldoc -f eval
+        $code->();
+    };
+    if ($@) {
+        my $err = $@;
+        $message .= " FAILED at " . join( ":", ( caller(1) )[ 1, 2 ] ) . ":\n";
+        if ( ref($err) eq 'SoapFault' ) {
+            my $soapfault = $err;
+            my $soapfaultclass = ref $soapfault->detail;
+            my $soapfaultstring = $soapfault->fault_string;
+            switch ($soapfaultclass) {
+                Debug(Data::Dumper->Dump([$soapfault->detail]));
+                case 'TooManyDevices' {
+                    $message .= "Number of virtual devices exceeds the maximum for a given controller.\n" ;
+                }
+                case 'InvalidDeviceSpec' {
+                    $message .= "The Device configuration is not valid\n";
+                }
+                case 'FileAlreadyExists' {
+                    $message .= "Operation failed because file already exists\n";
+                }
+                case 'InvalidPowerState' {
+                    my $requestedState = $soapfault->detail->requestedState->val;
+                    my $existingState = $soapfault->detail->existingState->val;
+                    $message .= "Operation failed because VM is $existingState while it should be $requestedState\n";
+                }
+                case 'ToolsUnavailable' {
+                    $message .= "Operation failed because VMware Tools are not running in the VM\n";
+                }
+                else {
+                    $message .= "Operation failed because of $soapfaultclass ($soapfaultstring)\n";
+                }
+            }
+        } else {
+            $message .= $@;
+        }
+        warn($message);
+        return 0;
+    }
+    return 1;
+}
+
 # return if arg looks like a UUID
-sub is_uuid {
-    my $text = shift;
-    my $hex  = qr([A-Fa-f0-9]);
-    # If you name your VMs with something that looks like a UUID but is not the UUID of the VM then
-    # you successfully shot yourself in the foot. This sub will never find your VMS.
-    return $text =~ qr(^$hex{8}-$hex{4}-$hex{4}-$hex{4}-$hex{12}$);
+sub _is_uuid {
+    my ($text) = @_;
+    if ($text) {
+        my $hex  = qr([A-Fa-f0-9]);
+        # If you name your VMs with something that looks like a UUID but is not the UUID of the VM then
+        # you successfully shot yourself in the foot. This sub will never find your VMS.
+        return $text =~ qr(^$hex{8}-$hex{4}-$hex{4}-$hex{4}-$hex{12}$);
+    } else {
+        return 0;
+    }
 }
 
 ################################ sub #################
@@ -164,10 +251,8 @@ sub retrieve_vm_details ($) {
     }
 
     # keep entire VM object
-    # don't need it at the moment
-    if ($isDebug) {
-        $VM_DATA{"OBJECT"} = $vm;
-    }
+    $VM_DATA{"OBJECT"} = $vm;
+    
     # store relevant extraConfig
     for my $extraConfig ( @{ $vm->get_property("config.extraConfig") } ) {
         $VM_DATA{"EXTRAOPTIONS"}{ $extraConfig->key } = $extraConfig->value
@@ -199,6 +284,7 @@ for details about these classes. Here we only care about the class type and igno
     # store ESX host
     my $host_id = $vm->get_property("runtime.host")->value;
     $VM_DATA{"HOST"} = defined $HOSTS{$host_id} ? $HOSTS{ $vm->get_property("runtime.host")->value }->{name} : "INVALID HOST";
+    #print STDERR Data::Dumper->Dump([\%VM_DATA],[qw(VM_DATA)]);
     return \%VM_DATA;
 }
 
@@ -581,22 +667,6 @@ sub get_hosts {
     return \%HOSTS;
 }
 
-# Get the uuid of an vm by a given vm name
-sub get_uuid_by_name {
-    my $vm_name = shift;
-    get_vi_connection();
-
-    # Try to get an view for the given vm name
-    my $object = Vim::find_entity_view(
-                                        view_type  => 'VirtualMachine',
-                                        filter     => { 'config.name' => $vm_name },
-                                        properties => ["config.uuid"],
-    );
-
-    # Return the retrieved uuid
-    return $object->{"config.uuid"};
-}
-
 ################################ sub #################
 ##
 ## get_vm_data (<uuid|name>)
@@ -608,7 +678,7 @@ sub get_vm_data {
     my $search_vm = shift;
     get_vi_connection();
     # search by uuid if we are given something that looks like a uuid
-    my $filter = is_uuid($search_vm) ? 'config.uuid' : 'config.name';
+    my $filter = _is_uuid($search_vm) ? 'config.uuid' : 'config.name';
     my $result = Vim::find_entity_view(
                                         view_type  => 'VirtualMachine',
                                         filter     => { $filter => $search_vm },
@@ -656,356 +726,136 @@ sub get_all_vm_data {
 #
 ############################### sub #################
 ##
-## setVmExtraOptsU (<uuid of VM>,<option key>,<option value>)
+## setVmExtraOpts (<VM-ish>,<option key>,<option value>)
 ##
 ##
-sub setVmExtraOptsU {
-    my $uuid  = shift;
-    my $key   = shift;
-    my $value = shift;
-    get_vi_connection();
-    eval {
-        my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine',
-                                             filter    => { "config.uuid" => $uuid } );
-        if ($vm_view) {
-            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
+sub setVmExtraOpts {
+    my ($search_vm,$key,$value) = @_;
+    my $vm_view = _get_vm_view($search_vm);
+    if ($vm_view) {
+        return _check_success {
+            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ 
+                OptionValue->new( key => $key, value => $value ), 
+            ] );
             $vm_view->ReconfigVM( spec => $vm_config_spec );
-        }
-    };
-    if ($@) {
-        Util::trace( 0, "\nReconfiguration failed: " );
-        if ( ref($@) eq 'SoapFault' ) {
-            if ( ref( $@->detail ) eq 'TooManyDevices' ) {
-                Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            }
-            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
-                Util::trace( 0, "The Device configuration is not valid\n" );
-                Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            }
-            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
-                Util::trace( 0, "\nOperation failed because file already exists" );
-            }
-            else {
-                Util::trace( 0, "\n" . $@ . "\n" );
-            }
-        }
-        else {
-            Util::trace( 0, "\n" . $@ . "\n" );
-        }
+        } "Setting VM Extra Opts $key=$value";
     }
-}
-
-############################### sub #################
-##
-## setVmExtraOptsM (<moref of VM>,<option key>,<option value>)
-##
-##
-sub setVmExtraOptsM {
-    my $mo_ref = shift;
-    my $key    = shift;
-    my $value  = shift;
-    get_vi_connection();
-    eval {
-        my $vm_view = Vim::get_view( mo_ref => $mo_ref );
-        if ($vm_view) {
-            my $vm_config_spec = VirtualMachineConfigSpec->new( extraConfig => [ OptionValue->new( key => $key, value => $value ), ] );
-            $vm_view->ReconfigVM( spec => $vm_config_spec );
-        }
-    };
-    if ($@) {
-        Util::trace( 0, "\nReconfiguration failed: " );
-        if ( ref($@) eq 'SoapFault' ) {
-            if ( ref( $@->detail ) eq 'TooManyDevices' ) {
-                Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            }
-            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
-                Util::trace( 0, "The Device configuration is not valid\n" );
-                Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            }
-            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
-                Util::trace( 0, "\nOperation failed because file already exists" );
-            }
-            else {
-                Util::trace( 0, "\n" . $@ . "\n" );
-            }
-        }
-        else {
-            Util::trace( 0, "\n" . $@ . "\n" );
-        }
+    else {
         return 0;
     }
-    return 1;
 }
+
 
 ############################### sub #################
 ##
-## setVmBootOpsToNetworkU (<uuid of VM>)
+## setVmBootOrderToNetwork (<VM-ish>)
 ##
 ## Set config.bootOptions.bootOrder to the first network card
 ##
-sub setVmBootOpsToNetworkU {
-    my $uuid  = shift;
-    my @bootOptions = ();
-    my $nickey;
+sub setVmBootOrderToNetwork {
+    my ($search_vm)  = @_;
+    my $vm_view = _get_vm_view($search_vm,"config.hardware.device");
+    if ($vm_view) {
+        return _check_success {
+                my $nickey;
+                my @devices = @{ $vm_view->get_property("config.hardware.device") };
+                foreach(@devices) {
+                    if($_->isa('VirtualEthernetCard')) {
+                        $nickey = $_->key;
+                        last;
+                    }
+                }
 
-    get_vi_connection();
+                if (defined($nickey)) {
+                    my @bootOrder = (
+                        VirtualMachineBootOptionsBootableEthernetDevice->new(deviceKey => $nickey)
+                    );
 
-    eval {
-        my $vm_view = Vim::find_entity_view( view_type => 'VirtualMachine', filter => { "config.uuid" => $uuid } );
+                    my $bootOptions = VirtualMachineBootOptions->new(bootOrder => \@bootOrder);
+                    my $spec = VirtualMachineConfigSpec->new(bootOptions => $bootOptions);
+                    $vm_view->ReconfigVM( spec => $spec );
+                } else {
+                    die "Could not find any Network card";
+                }
+            } "Setting Boot Order";
+    }
+    else {
+        return 0;
+    }
+}
 
-        my $devices = $vm_view->config->hardware->device;
-        foreach(@$devices) {
-            if($_->isa('VirtualEthernetCard')) {
-                $nickey = $_->key;
-                last;
-            }
-        }
-
-        if(defined($nickey)) {
-            push @bootOptions, VirtualMachineBootOptionsBootableEthernetDevice->new(deviceKey => $nickey);
-
-            my $bootOptions = VirtualMachineBootOptions->new(bootOrder => \@bootOptions);
-            my $spec = VirtualMachineConfigSpec->new(bootOptions => $bootOptions);
-            if ($vm_view) {
+sub clearVmBootOrder {
+    my ($search_vm)  = @_;
+    my $vm_view = _get_vm_view($search_vm);
+    if ($vm_view) {
+        return _check_success {
+                
+                my $bootOptions = VirtualMachineBootOptions->new(bootOrder => [
+                    VirtualMachineBootOptionsBootableDevice->new()
+                ]);
+                my $spec = VirtualMachineConfigSpec->new(bootOptions => $bootOptions);
                 $vm_view->ReconfigVM( spec => $spec );
-            }
-        }
-    };
-    if ($@) {
-        Util::trace( 0, "\nReconfiguration failed: " );
-        if ( ref($@) eq 'SoapFault' ) {
-            if ( ref( $@->detail ) eq 'TooManyDevices' ) {
-                Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            }
-            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
-                Util::trace( 0, "The Device configuration is not valid\n" );
-                Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            }
-            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
-                Util::trace( 0, "\nOperation failed because file already exists" );
-            }
-            elsif ( ref( $@->detail ) eq 'InvalidPowerState' ) {
-                Util::trace( 0, "\nOperation failed because VM is not powered off" );
-            }
-            else {
-                Util::trace( 0, "\n" . $@ . "\n" );
-            }
-        }
-        else {
-            Util::trace( 0, "\n" . $@ . "\n" );
-        }
+            } "Clearing Boot Order";
+    }
+    else {
         return 0;
     }
-    return 1;
 }
 
 ############################### sub #################
 ##
-## setVmCustomValue (<VM object>,<option key>,<option value>)
-##
-##
-sub _setVmCustomValue {
-    my $vm = shift;
-    get_vi_connection();
-    croak("vm argument was not a VirtualMachine object!") unless ( ref($vm) eq "VirtualMachine" );
-    my $key   = shift;
-    my $value = shift;
-    eval { $vm->setCustomValue( key => $key, value => $value ) };
-    if ($@) {
-        Util::trace( 0, "\nsetCustomValue($key,$value) failed: " );
-        if ( ref($@) eq 'SoapFault' ) {
-            if ( ref( $@->detail ) eq 'TooManyDevices' ) {
-                Util::trace( 0, "\nNumber of virtual devices exceeds " . "the maximum for a given controller.\n" );
-            }
-            elsif ( ref( $@->detail ) eq 'InvalidDeviceSpec' ) {
-                Util::trace( 0, "The Device configuration is not valid\n" );
-                Util::trace( 0, "\nFollowing is the detailed error: \n\n$@" );
-            }
-            elsif ( ref( $@->detail ) eq 'FileAlreadyExists' ) {
-                Util::trace( 0, "\nOperation failed because file already exists" );
-            }
-            else {
-                Util::trace( 0, "\n" . $@ . "\n" );
-            }
-        }
-        else {
-            croak($@);
-        }
-        return 0;
-    }
-    return 1;
-}
-
-############################### sub #################
-##
-## setVmCustomValueM (<moref|uuid of VM>,<option key>,<option value>)
+## setVmCustomValue (<VM like thing>,<option key>,<option value>)
 ##
 ##
 sub setVmCustomValue {
-    my ( $search_vm, $key, $value ) = @_;
-    get_vi_connection();
-
-    # search for uuid if uuid is given or assume that we got a moref
-    # TODO: Check that the moref is actually a moref object
-    my $vm_view;
-    if ( is_uuid($search_vm) ) {
-        $vm_view = Vim::find_entity_view(
-                                          view_type  => 'VirtualMachine',
-                                          filter     => { "config.uuid" => $search_vm },
-                                          properties => []                                 # don't need any properties to set custom value
-        );
-    }
-    else {
-        $vm_view = Vim::get_view( mo_ref => $search_vm );
-    }
+    my ($search_vm,$key,$value) = @_;
+    my $vm_view = _get_vm_view($search_vm);
     if ($vm_view) {
-        return _setVmCustomValue( $vm_view, $key, $value );
-    }
-}
-
-sub perform_reboot_guest {
-    my ($uuid) = @_;
-    get_vi_connection();
-
-    # Get vm view
-    my $vm_view = Vim::find_entity_view(
-                                         view_type  => 'VirtualMachine',
-                                         filter     => { "config.uuid" => $uuid },
-                                         properties => []                            # don't need any properties to set custom value
-    );
-
-    # Did we get an view?
-    if ($vm_view) {
-        # Reboot the VM guest
-        eval { $vm_view->RebootGuest(); };
-
-        if ($@) {
-            Debug("SDK RebootGuest command exited abnormally:\n$@");
-            return 0;
-        }
-
+        return _check_success { 
+                $vm_view->setCustomValue( key => $key, value => $value ) 
+            } "Setting Custom Value $key=$value";
     }
     else {
         return 0;
     }
+}
+
+
+sub perform_reboot_guest {
+    my ($vm) = @_;
+    my $vm_view = _get_vm_view($vm);
+    return $vm_view ? _check_success { $vm_view->RebootGuest(); } "Rebooting Guest" : 0;
 }
 
 sub perform_reset {
-    my ($uuid) = @_;
-    get_vi_connection();
-
-    # Get vm view
-    my $vm_view = Vim::find_entity_view(
-                                         view_type  => 'VirtualMachine',
-                                         filter     => { "config.uuid" => $uuid },
-                                         properties => []                            # don't need any properties to set custom value
-    );
-
-    # Did we get an view?
-    if ($vm_view) {
-        # Reboot the VM
-        eval { $vm_view->ResetVM(); };
-
-        if ($@) {
-            Debug("SDK ResetVM command exited abnormally:\n$@");
-            return 0;
-        }
-
-    }
-    else {
-        return 0;
-    }
+    my ($vm) = @_;
+    my $vm_view = _get_vm_view($vm);
+    return $vm_view ? _check_success { $vm_view->ResetVM(); } "Hard Restarting VM" : 0;
 }
 
 sub perform_destroy {
-    my ($uuid) = @_;
-    get_vi_connection();
-
-    # Get vm view
-    my $vm_view = Vim::find_entity_view(
-                                         view_type  => 'VirtualMachine',
-                                         filter     => { "config.uuid" => $uuid },
-                                         properties => []                            # don't need any properties to set custom value
-    );
-
-    # Did we get an view?
-    if ($vm_view) {
-        # Destroy the VM
-        eval { $vm_view->Destroy(); };
-        # Check the success
-        Debug("SDK Destroy VM command failed:\n$@") if ($@);
-        return 0;
-    }
-    else {
-        Debug("Could not retrieve vm view for uuid $uuid");
-        return 0;
-    }
-
+    my ($vm) = @_;
+    my $vm_view = _get_vm_view($vm);
+    return $vm_view ? _check_success { $vm_view->Destroy(); } "Destroying VM" : 0;
 }
 
 sub perform_poweroff {
-    my ($uuid) = @_;
-    get_vi_connection();
-
-    # Get vm view
-    my $vm_view = Vim::find_entity_view(
-                                         view_type  => 'VirtualMachine',
-                                         filter     => { "config.uuid" => $uuid },
-                                         properties => []                            # don't need any properties to set custom value
-    );
-
-    # Did we get an view?
+    my ($vm) = @_;
+    my $vm_view = _get_vm_view($vm);
     if ($vm_view) {
-        # Poweroff the VM
-        eval { $vm_view->PowerOffVM(); };
-
-        # Check the success
-        if ($@) {
-            Debug("SDK PowerOffVM command exited abnormally:\n$@");
-            return 0;
-        }
-    }
-    else {
-        Debug("Could not retrieve vm view for uuid $uuid");
+        my $result = _check_success { $vm_view->PowerOffVM(); } "Powering Off VM";
+        return $result;
+    } else {
         return 0;
     }
 }
 
 sub perform_poweron {
-    my ($uuid) = @_;
-    get_vi_connection();
-
-    # Get vm view
-    my $vm_view = Vim::find_entity_view(
-                                         view_type  => 'VirtualMachine',
-                                         filter     => { "config.uuid" => $uuid },
-                                         properties => [] # don't need any properties to set custom value
-    );
-
-    # Did we get an view?
-    if ($vm_view) {
-        # PowerOn the VM
-        eval { $vm_view->PowerOnVM(); };
-
-        # Check the success
-        if ($@) {
-            Debug("SDK PowerOnVM command exited abnormally:\n$@");
-            return 0;
-        }
-    }
-    else {
-        Debug("Could not retrieve vm view for uuid $uuid");
-        return 0;
-    }
+    my ($vm) = @_;
+    my $vm_view = _get_vm_view($vm);
+    return $vm_view ? _check_success { $vm_view->PowerOnVM(); } "Powering On VM" : 0;
 }
 
-################ helpers
-
-sub unbless_hash {
-    # take a blessed hashref and return the hashref without blessing
-    # TODO: Recursively walk through the hash and unbless also deeper structures
-    return { %{ shift() } };
-}
 
 END {
     if ( defined &Util::disconnect ) {

@@ -36,7 +36,7 @@ if ( defined $key and defined $value ) {
             if ( defined $vms and ref($vms) eq "ARRAY" ) {
                 printf  "Found %d VMs\nSetting Custom Field: ",scalar(@$vms);
                 foreach my $vm (@$vms) {
-                    if ( _setVmCustomValue( $vm, $key, $value ) ) {
+                    if ( setVmCustomValue( $vm, $key, $value ) ) {
                         push @good, $vm->{name};
                         print "+";
                     }

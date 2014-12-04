@@ -63,7 +63,7 @@ my $result = new LML::Result( $C, url() );
 my @body;    # body to return to HTTP client
 
 # if there are VMs and if we find the VM we are looking for:
-if ( defined $VM and %{$VM} and $VM->uuid and $search_uuid eq $VM->uuid ) {
+if ( $VM ) {
     $vm_name = $VM->name;
 
     # check if we should handle this VM
