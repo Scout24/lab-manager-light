@@ -24,23 +24,6 @@ use LML::VM;
 use Data::Dumper;
 use Carp;
 
-sub write_vm_file {
-    # Purpose: Takes an hashref with vm data and dump it to
-    #          the appropriate file
-    # Returns: TRUE if ok, FALSE if errors occured
-
-    # get the parameter
-    my $VM = shift;
-
-    # open and write
-    my $vmfile = Config( "lml", "datadir" ) . "/vm.conf";
-    open( VM_CONF, ">", $vmfile ) || die "Could not open '$vmfile' for writing\n";
-    flock( VM_CONF, 2 ) || die;
-    print VM_CONF "# " . __FILE__ . " " . POSIX::strftime( "%Y-%m-%d %H:%M:%S\n", localtime() ) . "\n";
-    print VM_CONF Data::Dumper->Dump( [$VM], [qw(VM)] );
-    close(VM_CONF);
-}
-
 sub maintain_labfile($$$$$$) {
     # initialize needed variables
     my ($C, $VM_ALL, $HOSTS, $NETWORKS, $DATASTORES, $FOLDERS)  = @_;
@@ -107,9 +90,6 @@ unless (caller) {
     # get a complete dump from vSphere - this is expensive and takes some time
     my $VM = get_all_vm_data();
     
-    # dump %VM to file, ATM we don't use this information any more.
-    write_vm_file($VM);
-
     # $LAB describes our internal view of the lab that lml manages
     # used mainly to react to renamed VMs or VMs with changed MAC adresses
     push( @error, maintain_labfile( $C, $VM, $HOSTS, $NETWORKS, $DATASTORES, $FOLDERS ) );
