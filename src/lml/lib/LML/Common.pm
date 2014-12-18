@@ -43,6 +43,22 @@ sub Debug {
 }
 Debug("Our \@INC list looks like this:",@INC);
 
+my $has_io_socket_ssl = eval {
+    # if IO::Socket:SSL is available force vSphere SDK to use it
+    require IO::Socket::SSL;
+    # This overrides a wrong settings in the vSphere SDK VICommon.pm, see Net::HTTPS documentation
+    $Net::HTTPS::SSL_SOCKET_CLASS="IO::Socket::SSL";
+    Debug("Forcing SDK to use IO::Socket:SSL");
+    return 1;
+};
+if ($@) {
+    # without IO::Socket::SSL LWP will use Net::SSL which does not support SSL verification
+    # therefore we MUST disable SSL verification in this case.
+    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+    Debug("SDK uses Net::SSL, disabling SSL verification");
+}
+
+
 our @CONFIGFILES;
 our %CONFIG;
 
@@ -98,7 +114,10 @@ sub LoadConfig {
     $ENV{VI_PASSWORD}        = Config( "vsphere", "password" )        if ( Config( "vsphere", "password" ) );
     $ENV{VI_SERVER}          = Config( "vsphere", "server" )          if ( Config( "vsphere", "server" ) );
     $ENV{VI_PASSTHROUGHAUTH} = Config( "vsphere", "passthroughauth" ) if ( Config( "vsphere", "passthroughauth" ) );
-    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0 if ( Config( "vsphere", "disablecertificatevalidation" ) );
+    if ($has_io_socket_ssl) {
+        # SSL verification is only possible in IO::Socket::SSL
+        IO::Socket::SSL::set_client_defaults(SSL_verify_mode => $IO::Socket::SSL::SSL_VERIFY_NONE) if ( Config( "vsphere", "disablecertificatevalidation" ) );
+    }
     if ( Config ("lml","disableproxy") ) {
         $ENV{HTTPS_PROXY} = $ENV{HTTP_PROXY} = $ENV{http_proxy} = $ENV{https_proxy} = "";
     }
