@@ -38,6 +38,7 @@ $SIG{__DIE__} = sub {
     print header( -status => '200 Fatal Error', -type => 'text/plain' );
     my $body = $C->get( "pxelinux", "fatalerror_template" ) . "\n";
     $body =~ s/MESSAGE/$message/;
+    $body =~ s/TIMEOUT/int(rand(240)+61)*10/e;
     print $body;
 };
 
