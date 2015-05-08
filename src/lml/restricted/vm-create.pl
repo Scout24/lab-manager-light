@@ -278,11 +278,12 @@ sub create_vm {
 }
 
 sub run_trigger {
-    my ($triggername, @data_hash_refs) = @_;
+    my $triggername = shift;
+    my $information = shift;
     my $triggercommand = $C->get( 'triggers', $triggername );
 
     if ($triggercommand) {
-        my $tr = new LML::TokenReplacer($C->get_proxy_parameter, $VM);
+        my $tr = new LML::TokenReplacer($C->get_proxy_parameter, $information);
         $triggercommand = $tr->replace($triggercommand);
         my $result = qx($triggercommand 2>&1);
         Debug("vmcreate triggercommand '$triggercommand' said:\n$result") if ($isDebug);
