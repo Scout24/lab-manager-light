@@ -272,13 +272,13 @@ sub create_vm {
         }
     }
 
-    run_trigger('vmcreate');
+    run_trigger('vmcreate', $VM);
 
     success( $vm_view->config->uuid );
 }
 
 sub run_trigger {
-    my ($triggername,@data_hash_refs) = @_;
+    my ($triggername, @data_hash_refs) = @_;
     my $triggercommand = $C->get( 'triggers', $triggername );
 
     if ($triggercommand) {
