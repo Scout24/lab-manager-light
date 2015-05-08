@@ -89,11 +89,11 @@ sub create_vm {
     my @vm_devices;
 
     if (defined $lab->get_vm($$args{vmname})) {
-        error("The VM with name \"$$args{vmname}\" already exist.");
+        error("The VM with name \"$$args{vmname}\" already exists.");
     }
 
-    # connect to VMware
     get_vi_connection();
+    run_trigger('pre_vmcreate');
 
     my $host_view = Vim::find_entity_view( view_type => 'HostSystem',
                                            filter    => { 'name' => $$args{vmhost} } );
@@ -268,8 +268,15 @@ sub create_vm {
         }
     }
 
-    # Execute configured triggers for vm creation
-    my $triggercommand = $C->get( 'triggers', 'vmcreate' );
+    run_trigger('vmcreate');
+
+    success( $vm_view->config->uuid );
+}
+
+sub run_trigger {
+    my $triggername = shift;
+    my $triggercommand = $C->get( 'triggers', $triggername );
+
     if ($triggercommand) {
         my $tr = new LML::TokenReplacer($C->get_proxy_parameter, $VM);
         $triggercommand = $tr->replace($triggercommand);
@@ -279,17 +286,7 @@ sub create_vm {
             error("vmcreate trigger command '$triggercommand' failed:\n$result");
         }
     }
-
-    # if everything went find give an success status
-    success( $vm_view->config->uuid );
 }
-
-#sub create_folder {
-#    my %args = @_;
-#
-#    my $folder      = $args{folder};
-#    #$datacenter_vm_folder->CreateFolder( name => $args{target_folder} );
-#}
 
 # iterate through folders of datacenter
 sub get_folder {
