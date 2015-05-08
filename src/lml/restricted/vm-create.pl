@@ -93,7 +93,11 @@ sub create_vm {
     }
 
     get_vi_connection();
-    run_trigger('pre_vmcreate');
+    run_trigger('pre_vmcreate', {
+        'PATH' => $$args{target_folder},
+        'NAME' => $$args{vmname},
+        'HOST' => $$args{vmhost},
+    });
 
     my $host_view = Vim::find_entity_view( view_type => 'HostSystem',
                                            filter    => { 'name' => $$args{vmhost} } );
@@ -274,7 +278,7 @@ sub create_vm {
 }
 
 sub run_trigger {
-    my $triggername = shift;
+    my ($triggername,@data_hash_refs) = @_;
     my $triggercommand = $C->get( 'triggers', $triggername );
 
     if ($triggercommand) {
