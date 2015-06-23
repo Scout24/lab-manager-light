@@ -210,7 +210,7 @@ sub create_vm {
                     error("Virtual machine '$$args{vmname}' already exists in folder '$$args{target_folder}'");
                 }
                 else {
-                    error("CreateVM failed:\n".Data::Dumper([$@],['$@']));
+                    error("CreateVM failed:\n".Data::Dumper->Dump([$@],['$@']));
                 }
             }
             else {
