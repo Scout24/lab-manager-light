@@ -38,8 +38,8 @@ sub new {
         $vm_folder         = param('folder');
         $force_boot_target = param('force_boot_target') || "default";
         $force_network     = param('force_network');
-        # or are we called via commandline
     }
+    # or are we called via commandline
     elsif ( @ARGV > 0 ) {
         # get the long commandline options
         if ( ! GetOptions(
@@ -77,9 +77,9 @@ sub new {
         vm_name         => $vm_name,
         username        => $username,
         expiration_date => $expiration_date,
-        #                                   esx_host          => $esx_host,
-        #                                   force_boot_target => $force_boot_target,
-        #                                   vm_folder         => $vm_folder
+        # esx_host          => $esx_host,
+        # force_boot_target => $force_boot_target,
+        # vm_folder         => $vm_folder
     );
 
     if ( defined($test_args) && ref($test_args) eq "HASH" ) {
@@ -125,10 +125,10 @@ sub generate_vms_array {
 
     # assemble custom fields hash, field names come from configuration
     my %custom_fields = (
-                          $self->{config}->get( "vsphere", "contactuserid_field" )    => $self->{username},
-                          $self->{config}->get( "vsphere", "expires_field" )          => $self->{expiration_date},
-                          $self->{config}->get( "vsphere", "forceboot_field" )        => 'ON',
-                          $self->{config}->get( "vsphere", "forceboot_target_field" ) => $self->{force_boot_target},
+        $self->{config}->get( "vsphere", "contactuserid_field" )    => $self->{username},
+        $self->{config}->get( "vsphere", "expires_field" )          => $self->{expiration_date},
+        $self->{config}->get( "vsphere", "forceboot_field" )        => 'ON',
+        $self->{config}->get( "vsphere", "forceboot_target_field" ) => $self->{force_boot_target},
     );
 
     # because it is possible that a machine don't exist in subversion we call
@@ -149,12 +149,14 @@ sub generate_vms_array {
     my $vm_spec = decode_json($answer);
 
     my $parsed_disk_size = parse_bytes( $vm_spec->{virtualMachine}->{diskSize} );
-    # parsed_size is always in Byte, but if there was no unit given, then historically this was actually in KB.
+    # parsed_size is always in Byte, but if there was no unit given, then
+    # historically this was actually in KB.
     # In any case we need KB, so here we handle the legacy.
     my $disk_size_in_kb = $parsed_disk_size eq $vm_spec->{virtualMachine}->{diskSize} ? $parsed_disk_size : int( $parsed_disk_size / 1024 );
 
     my $parsed_memory_size = parse_bytes( $vm_spec->{virtualMachine}->{memory} );
-    # parsed_memory_size is always in Byte, but if there was no unit given, then historically this was actually in MB.
+    # parsed_memory_size is always in Byte, but if there was no unit given, then
+    # historically this was actually in MB.
     # In any case we need KB, so here we handle the legacy.
     my $memory_size_in_mb =
       $parsed_memory_size eq $vm_spec->{virtualMachine}->{memory} ? $parsed_memory_size : int( $parsed_memory_size / 1024 / 1024 );
@@ -164,23 +166,24 @@ sub generate_vms_array {
 
     my $esx_host_and_datastore = $self->_get_esx_host_and_datastore($vm_spec);
 
-    my @vms = ( {
-           vmname        => $self->{vm_name},
-           vmhost        => $esx_host_and_datastore->{esx_host},
-           datacenter    => $self->{config}->get( "vsphere", "datacenter" ),
-           guestid       => $self->{guestid},
-           datastore     => $esx_host_and_datastore->{esx_host_datastore},
-           disksize      => $disk_size_in_kb,
-           memory        => $memory_size_in_mb,
-           num_cpus      => int( $vm_spec->{virtualMachine}->{numberOfProcessors} ),
-           custom_fields => \%custom_fields,
-           # Temporary deactivated (we using cmd or post data for this atm)
-           #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
-           target_folder => $self->{vm_folder},
-           # Force Network is used to manually set the network, e.g. in an integration test.
-           # Normally the network label is determined automatically via LML configuration and VM name pattern matching
-           force_network => $self->{force_network},
-    } );
+    my @vms = ({
+        vmname        => $self->{vm_name},
+        vmhost        => $esx_host_and_datastore->{esx_host},
+        datacenter    => $self->{config}->get( "vsphere", "datacenter" ),
+        guestid       => $self->{guestid},
+        datastore     => $esx_host_and_datastore->{esx_host_datastore},
+        disksize      => $disk_size_in_kb,
+        memory        => $memory_size_in_mb,
+        num_cpus      => int( $vm_spec->{virtualMachine}->{numberOfProcessors} ),
+        custom_fields => \%custom_fields,
+        # Temporary deactivated (we using cmd or post data for this atm)
+        #target_folder => $vm_spec->{virtualMachine}->{targetFolder},
+        target_folder => $self->{vm_folder},
+        # Force Network is used to manually set the network, e.g. in an
+        # integration test. Normally the network label is determined
+        # automatically via LML configuration and VM name pattern matching
+        force_network => $self->{force_network},
+    });
 
     #print STDERR "DEBUG - VMproperties->generate_vms_array " . Data::Dumper->Dump( [ \@vms ] ) . "\n";
 
@@ -191,13 +194,9 @@ sub print_usage {
     print _getUsageMessage();
 }
 
-#########################################
-#########################################
-#########################################
-# private methods
-#########################################
-#########################################
-#########################################
+################################################################################
+# private methods                                                              #
+################################################################################
 
 sub _get_esx_host_and_datastore {
     my ( $self, $resources ) = @_;
