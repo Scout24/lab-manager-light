@@ -36,7 +36,7 @@ sub new {
         $expiration_date   = param('expiration');
         $esx_host          = param('esx_host');
         $vm_folder         = param('folder');
-        $force_boot_target = param('force_boot_target') || "default";
+        $force_boot_target = param('force_boot_target');
         $force_network     = param('force_network');
     }
     # or are we called via commandline
@@ -55,17 +55,15 @@ sub new {
             print_usage();
             exit 1;
         }
-
     }
     elsif ( defined($test_args) && ref($test_args) eq "HASH" ) {
         # for testing purpose
-
         $vm_name           = $test_args->{name};
         $username          = $test_args->{username};
         $expiration_date   = $test_args->{expiration};
         $esx_host          = $test_args->{esx_host};
         $vm_folder         = $test_args->{folder};
-        $force_boot_target = $test_args->{force_boot_target} || "default";
+        $force_boot_target = $test_args->{force_boot_target};
         $force_network     = $test_args->{force_network};
     }
     # We have nothing, print help
@@ -123,14 +121,6 @@ sub new {
 sub generate_vms_array {
     my ($self) = @_;
 
-    # assemble custom fields hash, field names come from configuration
-    my %custom_fields = (
-        $self->{config}->get( "vsphere", "contactuserid_field" )    => $self->{username},
-        $self->{config}->get( "vsphere", "expires_field" )          => $self->{expiration_date},
-        $self->{config}->get( "vsphere", "forceboot_field" )        => 'ON',
-        $self->{config}->get( "vsphere", "forceboot_target_field" ) => $self->{force_boot_target},
-    );
-
     # because it is possible that a machine don't exist in subversion we call
     # the generation now (temporary disabled)
     get sprintf $self->{config}->get( "vm_spec", "host_announcement" ), $self->{vm_name};
@@ -164,7 +154,23 @@ sub generate_vms_array {
     $vm_spec->{virtualMachine}->{diskSize} = $disk_size_in_kb;
     $vm_spec->{virtualMachine}->{memory}   = $memory_size_in_mb;
 
+    if ( !defined($self->{force_boot_target}) ) {
+        if ( !defined($vm_spec->{virtualMachine}->{forceBootTarget}) ) {
+            $self->{force_boot_target} = "default";
+        } else {
+            $self->{force_boot_target} = $vm_spec->{virtualMachine}->{forceBootTarget};
+        }
+    }
+
     my $esx_host_and_datastore = $self->_get_esx_host_and_datastore($vm_spec);
+
+    # assemble custom fields hash, field names come from configuration
+    my %custom_fields = (
+        $self->{config}->get( "vsphere", "contactuserid_field" )    => $self->{username},
+        $self->{config}->get( "vsphere", "expires_field" )          => $self->{expiration_date},
+        $self->{config}->get( "vsphere", "forceboot_field" )        => 'ON',
+        $self->{config}->get( "vsphere", "forceboot_target_field" ) => $self->{force_boot_target},
+    );
 
     my @vms = ({
         vmname        => $self->{vm_name},
