@@ -32,7 +32,7 @@ sub check_value {
 my %opts = (
     format => {
                 type     => "=s",
-                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCEBOOT_TARGET, %STATUS, %BOOTORDER). ",
+                help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCETARGET, %STATUS, %BOOTORDER). ",
                 required => 0,
                 default  => "%UUID%NAME%PATH%STATUS"
     }
@@ -107,9 +107,9 @@ foreach my $uuid ( keys %{$VM} ) {
         elsif ( $_ eq "FORCEBOOT" ) {
             push @output, check_value( $VM->{$uuid}{CUSTOMFIELDS}->{'Force Boot'} );
         }
-        # Custom value 'Force Boot Target' is mapped to %FORCEBOOT_TARGET
-        elsif ( $_ eq "FORCEBOOT_TARGET" ) {
-            push @output, check_value( $VM->{$uuid}{CUSTOMFIELDS}->{'Force Boot Target'} );
+        # Custom value 'Force Target' is mapped to %FORCETARGET
+        elsif ( $_ eq "FORCETARGET" ) {
+            push @output, check_value( $VM->{$uuid}{CUSTOMFIELDS}->{'Force Target'} );
         }
         # Raw path
         elsif ( $_ eq "PATH" ) {
