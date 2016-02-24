@@ -28,6 +28,17 @@ sub check_value {
     }
 }
 
+sub output {
+    if (!Opts::option_is_set("terse")) {
+        if ( @_ > 1 ) {
+            printf @_;
+        } else {
+            print $_[0];
+        }
+    }
+}
+
+
 # define the --format option, default is UUID,PATH
 my %opts = (
     format => {
@@ -35,6 +46,11 @@ my %opts = (
                 help     => "Output format for found VMs (use %UUID, %PATH, %DISPLAYPATH, %USER, %HOST, %NAME, %EXPIRE, %FORCEBOOT, %FORCETARGET, %STATUS, %BOOTORDER). ",
                 required => 0,
                 default  => "%UUID%NAME%PATH%STATUS"
+    },
+    terse => {
+                type     => "",
+                help     => "Output only the list of VMs",
+                required => 0
     }
 );
 
@@ -47,24 +63,24 @@ my $C = new LML::Config();
 
 # display custom fields
 if ( my @customfields = keys %{ get_custom_fields() } ) {
-    print "Custom Attributes:\n\t" . join( "\n\t", @customfields ) . "\n";
+    output("Custom Attributes:\n\t" . join( "\n\t", @customfields ) . "\n");
 } else {
-    print "No Custom Attributes defined - You will not have much fun using LML without them.\n";
+    output("No Custom Attributes defined - You will not have much fun using LML without them.\n");
 }
 
 # display hosts
 my $HOSTS = get_hosts();
 if (keys %$HOSTS ) {
-    printf "\nESX Hosts:\n%-40s%-40s%-40s\n","UUID","NAME","PATH";
+    output("\nESX Hosts:\n%-40s%-40s%-40s\n","UUID","NAME","PATH");
     foreach my $host (values %$HOSTS ) {
-        printf "%-40s%-40s%-40s\n",$host->{uuid},$host->{name},$host->{path};
+        output("%-40s%-40s%-40s\n",$host->{uuid},$host->{name},$host->{path});
     }
-    print "\n";
+    output("\n");
 } else {
-    print "No ESX Hosts found - You will not have much fun using LML without them.\n";
+    output("No ESX Hosts found - You will not have much fun using LML without them.\n");
 }
 
-print "Searching for VMs" . "\n";
+output("Searching for VMs" . "\n");
 my $VM = get_all_vm_data( @ARGV ? ( "config.name" => qr($ARGV[0])xi ) : () );
 # bail out if no VMs found
 die( "No VMs found " . ( @ARGV ? "matching '" . $ARGV[0] . "'  - check your search criteria" : "to work with" ) . " !\n" )
@@ -81,9 +97,9 @@ shift @output_formats;
 my $format = ( "%-40s" x @output_formats );
 
 # print the header
-print "\n";
-printf $format, @output_formats;
-print "\n\n";
+output("\n");
+output($format, @output_formats);
+output("\n\n");
 
 # get the display filter settings from configuration
 my $display_filter_vm_path = $C->get( "gui", "display_filter_vm_path" );
@@ -140,7 +156,7 @@ foreach my $uuid ( keys %{$VM} ) {
     printf $format . "\n", @output;
 }
 
-print "\n";
-printf "Found %d VMs\n", scalar( keys %{$VM} );
+output("\n");
+output("Found %d VMs\n", scalar( keys %{$VM} ));
 local $Data::Dumper::Deparse = 1;
 Debug( Data::Dumper->Dump( [$VM], [qw(VM)] ) );
