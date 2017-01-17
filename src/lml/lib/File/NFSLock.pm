@@ -2,7 +2,7 @@
 #
 #  File::NFSLock - bdpO - NFS compatible (safe) locking utility
 #
-#  $Id: NFSLock.pm,v 1.34 2003/05/13 18:06:41 hookbot Exp $
+#  $Id: NFSLock.pm,v 1.27 2014/11/10 14:00:00 hookbot Exp $
 #
 #  Copyright (C) 2002, Paul T Seamons
 #                      paul@seamons.com
@@ -32,7 +32,7 @@ our $errstr;
 use base 'Exporter';
 our @EXPORT_OK = qw(uncache);
 
-our $VERSION = '1.21';
+our $VERSION = '1.27';
 
 #Get constants, but without the bloat of
 #use Fcntl qw(LOCK_SH LOCK_EX LOCK_NB);
@@ -63,7 +63,7 @@ my $graceful_sig = sub {
   print STDERR "Received SIG$_[0]\n" if @_;
   # Perl's exit should safely DESTROY any objects
   # still "alive" before calling the real _exit().
-  exit;
+  exit 1;
 };
 
 our @CATCH_SIGS = qw(TERM INT);
@@ -172,7 +172,7 @@ sub new {
       my $try_lock_exclusive = !($self->{lock_type} & LOCK_SH);
 
       while(defined(my $line=<$fh>)){
-        if ($line =~ /^$HOSTNAME (-?\d+) /) {
+        if ($line =~ /^\Q$HOSTNAME\E (-?\d+) /) {
           my $pid = $1;
           if ($pid == $$) {       # This is me.
             push @mine, $line;
@@ -202,7 +202,7 @@ sub new {
         seek ($fh, 0, 0);
         my $content = '';
         while(defined(my $line=<$fh>)){
-          if ($line =~ /^$HOSTNAME (-?\d+) /) {
+          if ($line =~ /^\Q$HOSTNAME\E (-?\d+) /) {
             my $pid = $1;
             next if (!kill 0, $pid);  # Skip dead locks from this host
           }
@@ -258,7 +258,7 @@ sub new {
   ### clear up the NFS cache
   $self->uncache;
 
-  ### Yes, the lock has been aquired.
+  ### Yes, the lock has been acquired.
   delete $self->{unlocked};
 
   return $self;
@@ -273,9 +273,9 @@ sub unlock ($) {
   if (!$self->{unlocked}) {
     unlink( $self->{rand_file} ) if -e $self->{rand_file};
     if( $self->{lock_type} & LOCK_SH ){
-      return $self->do_unlock_shared;
+      $self->do_unlock_shared;
     }else{
-      return $self->do_unlock;
+      $self->do_unlock;
     }
     $self->{unlocked} = 1;
     foreach my $signal (@CATCH_SIGS) {
@@ -456,26 +456,42 @@ sub newpid {
       select(undef,undef,undef,0.1);
     }
 
-    # Fake the parent into thinking it is already
-    # unlocked because the child will take care of it.
-    $self->{unlocked} = 1;
+    # Child finished running newpid() and acquired shared lock
+    # So now we're safe to continue without risk of
+    # blowing away the lock prematurely.
+    unless ( $self->{lock_type} & LOCK_SH ) {
+      # If it's not already a SHared lock, then
+      # just switch it from EXclusive to SHared
+      # from this process's point of view.
+      # Then the child will still hold the lock
+      # if the parent releases it first.
+      # (Don't chmod the lock file.)
+      $self->{lock_type} |= LOCK_SH;
+    }
   } else {
     # This is the new child
 
-    # The lock_line found in the lock_file contents
-    # must be modified to reflect the new pid.
-
     # Fix lock_pid to the new pid.
     $self->{lock_pid} = $$;
-    # Backup the old lock_line.
-    my $old_line = $self->{lock_line};
+
+    # We can leave the old lock_line in the lock_file
+    # But we need to add the new lock_line for this pid.
+
     # Clear lock_line to create a fresh one.
     delete $self->{lock_line};
     # Append a new lock_line to the lock_file.
     $self->create_magic($self->{lock_file});
-    # Remove the old lock_line from lock_file.
-    local $self->{lock_line} = $old_line;
-    $self->do_unlock_shared;
+
+    unless ( $self->{lock_type} & LOCK_SH ) {
+      # If it's not already a SHared lock, then
+      # just switch it from EXclusive to SHared
+      # from this process's point of view.
+      # Then the parent will still hold the lock
+      # if this child releases it first.
+      # (Don't chmod the lock file.)
+      $self->{lock_type} |= LOCK_SH;
+    }
+
     # Create signal file to notify parent that
     # the lock_line entry has been delegated.
     open (my $fh, '>', "$self->{lock_file}.fork");
@@ -483,8 +499,23 @@ sub newpid {
   }
 }
 
+sub fork {
+  my $self = shift;
+  # Store fork response.
+  my $pid = CORE::fork();
+  if (defined $pid and !$self->{unlocked}) {
+    # Fork worked and we really have a lock to deal with
+    # So upgrade to shared lock across both parent and child
+    $self->newpid;
+  }
+  # Return original fork response
+  return $pid;
+}
+
 1;
 
+
+=pod
 
 =head1 NAME
 
@@ -621,6 +652,8 @@ recursion load could exist so do_lock will only recurse 10 times (this is only
 a problem if the stale_lock_timeout is set too low -- on the order of one or two
 seconds).
 
+=back
+
 =head1 METHODS
 
 After the $lock object is instantiated with new,
@@ -632,7 +665,7 @@ additional functionality.
   $lock->unlock;
 
 This method may be used to explicitly release a lock
-that is aquired.  In most cases, it is not necessary
+that is acquired.  In most cases, it is not necessary
 to call unlock directly since it will implicitly be
 called when the object leaves whatever scope it is in.
 
@@ -649,29 +682,45 @@ the new constructor on the file that the lock is
 being attempted.  uncache may be used as either an
 object method or as a stand alone subroutine.
 
+=head2 fork
+
+  my $pid = $lock->fork;
+  if (!defined $pid) {
+    # Fork Failed
+  } elsif ($pid) {
+    # Parent ...
+  } else {
+    # Child ...
+  }
+
+fork() is a convenience method that acts just like the normal
+CORE::fork() except it safely ensures the lock is retained
+within both parent and child processes. WITHOUT this, then when
+either the parent or child process releases the lock, then the
+entire lock will be lost, allowing external processes to
+re-acquire a lock on the same file, even if the other process
+still has the lock object in scope. This can cause corruption
+since both processes might think they have exclusive access to
+the file.
+
 =head2 newpid
 
   my $pid = fork;
-  if (defined $pid) {
+  if (!defined $pid) {
     # Fork Failed
   } elsif ($pid) {
-    $lock->newpid; # Parent
+    $lock->newpid;
+    # Parent ...
   } else {
-    $lock->newpid; # Child
+    $lock->newpid;
+    # Child ...
   }
 
-If fork() is called after a lock has been aquired,
-then when the lock object leaves scope in either
-the parent or child, it will be released.  This
-behavior may be inappropriate for your application.
-To delegate ownership of the lock from the parent
-to the child, both the parent and child process
-must call the newpid() method after a successful
-fork() call.  This will prevent the parent from
-releasing the lock when unlock is called or when
-the lock object leaves scope.  This is also
-useful to allow the parent to fail on subsequent
-lock attempts if the child lock is still aquired.
+The newpid() synopsis shown above is equivalent to the
+one used for the fork() method, but it's not intended
+to be called directly. It is called internally by the
+fork() method. To be safe, it is recommended to use
+$lock->fork() from now on.
 
 =head1 FAILURE
 
@@ -680,20 +729,27 @@ contain the cause for the failure to get a lock.  Useful primarily for debugging
 
 =head1 LOCK_EXTENSION
 
-By default File::NFSLock will use a lock file extenstion of ".NFSLock".  This is
+By default File::NFSLock will use a lock file extension of ".NFSLock".  This is
 in a global variable $File::NFSLock::LOCK_EXTENSION that may be changed to
 suit other purposes (such as compatibility in mail systems).
 
+=head1 REPO
+
+The source is now on github:
+
+git clone https://github.com/hookbot/File-NFSLock
+
 =head1 BUGS
 
-Notify paul@seamons.com or bbb@cpan.org if you spot anything.
+If you spot anything, please submit a pull request on
+github and/or submit a ticket with RT:
+https://rt.cpan.org/Dist/Display.html?Queue=File-NFSLock
 
 =head2 FIFO
 
 Locks are not necessarily obtained on a first come first serve basis.
 Not only does this not seem fair to new processes trying to obtain a lock,
 but it may cause a process starvation condition on heavily locked files.
-
 
 =head2 DIRECTORIES
 
@@ -742,7 +798,7 @@ from which Mark Overmeer based Mail::Box::Locker.
   paul@seamons.com
   http://seamons.com/
 
-  Copyright (C) 2002-2003,
+  Copyright (C) 2002-2014,
   Rob B Brown
   bbb@cpan.org
 
