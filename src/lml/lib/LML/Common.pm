@@ -119,7 +119,10 @@ sub LoadConfig {
         IO::Socket::SSL::set_client_defaults(SSL_verify_mode => $IO::Socket::SSL::SSL_VERIFY_NONE) if ( Config( "vsphere", "disablecertificatevalidation" ) );
     }
     if ( Config ("lml","disableproxy") ) {
-        $ENV{HTTPS_PROXY} = $ENV{HTTP_PROXY} = $ENV{http_proxy} = $ENV{https_proxy} = "";
+        delete $ENV{HTTPS_PROXY};
+        delete $ENV{HTTP_PROXY};
+        delete $ENV{http_proxy};
+        delete $ENV{https_proxy};
     }
 
     return %CONFIG;
