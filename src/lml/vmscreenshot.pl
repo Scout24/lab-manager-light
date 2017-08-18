@@ -20,8 +20,9 @@ unless (caller) {
     my $q = new CGI::Push;
     if ( $C->get( "vmscreenshot", "enabled" ) ) {
         # input parameter, UUID of a VM
-        if ( my $search_uuid = $q->param('uuid') ) {
-            $search_uuid = lc( $q->param('uuid') );
+        $search_uuid = lc( $q->param('uuid') || '' );
+        $search_uuid =~ s/[^0-9a-f\-]//g;
+        if ( $search_uuid ) { # might still be invalid UUID, but at least no XSS possible
             if ( my $screenshot = new LML::VMscreenshot( $C, $search_uuid ) ) {
                 # we could load the VM data from LAB, return image data or HTML document
                 if ( $q->Accept("image/webp") >= 0.9 or $q->Accept("image/png") >= 0.9 or $q->param('image') ) {
@@ -54,7 +55,6 @@ unless (caller) {
                        $q->h1("LML Error"), $q->p("No data found for $search_uuid."),
                        $q->end_html );
             }
-
         } else {
             # no uuid parameter given
             print( $q->header( -status => "404 No uuid given" ),
