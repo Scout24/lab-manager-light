@@ -10,9 +10,21 @@ use Getopt::Long;
 use DateTime::Format::Flexible;
 use JSON;
 use Number::Bytes::Human qw(parse_bytes);
+
 use LML::VMnetworks;
 use LML::VMresources;
 use LML::VMplacement;
+
+use LML::Validation qw/
+  validate_with
+  validate_with_any
+  $VALIDATE_FQDN
+  $VALIDATE_GER_DATE
+  $VALIDATE_HOSTNAME
+  $VALIDATE_ONE_LINE
+  $VALIDATE_NO_PARENT_LINKS
+  $VALIDATE_USERNAME
+/;
 
 sub new {
     my ( $class, $config, $lab, $test_args ) = @_;
@@ -31,13 +43,22 @@ sub new {
 
     # are we called via webui?
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
-        $vm_name           = param('name');
-        $username          = param('username');
-        $expiration_date   = param('expiration');
-        $esx_host          = param('esx_host');
-        $vm_folder         = param('folder');
-        $force_boot_target = param('force_boot_target');
-        $force_network     = param('force_network');
+        $vm_name           = validate_with(param('name'), $VALIDATE_HOSTNAME)
+          // croak("Provided VM name is invalid hostname");
+        $username          = validate_with(param('username'), $VALIDATE_USERNAME)
+          // croak("Provided username is invalid");
+        $expiration_date   = validate_with(param('expiration'), $VALIDATE_GER_DATE)
+          // croak("Provided expiration date is not in german date format (DD.MM.YYYY)");
+        $esx_host          = validate_with_any(param('esx_host'), $VALIDATE_FQDN, "auto_placement")
+          // croak("Provided ESX host invalid");
+        $vm_folder         = validate_with(param('folder'), $VALIDATE_ONE_LINE)
+          // croak("Provided folder invalid");
+        validate_with($vm_folder, qr~^/~)
+          // croak("Provided folder must start with \"/\"");
+        validate_with($vm_folder, $VALIDATE_NO_PARENT_LINKS)
+          // croak("Provided folder must not contain parent links");
+        $force_boot_target = param('force_boot_target'); # << TODO: determine value range -> write validator
+        $force_network     = param('force_network');     # << TODO: determine value range -> write validator
     }
     # or are we called via commandline
     elsif ( @ARGV > 0 ) {
