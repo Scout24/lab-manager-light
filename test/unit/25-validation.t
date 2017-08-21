@@ -36,23 +36,25 @@ my %EXPECTATIONS = (
 );
 
 
-ok(LML::Validation::validate_with("foo", "foo"), "Scalar validation works");
-ok(!LML::Validation::validate_with("foo", "bar"), "Inverted scalar validation works");
+ok(defined LML::Validation::validate_with("foo", "foo"), "Scalar validation works");
+ok(!defined LML::Validation::validate_with("foo", "bar"), "Inverted scalar validation works");
 
-ok(LML::Validation::validate_with("foo", qr/oo/), "Regexp validation works");
-ok(!LML::Validation::validate_with("foo", qr/aa/), "Inverted regexp validation works");
+ok(defined LML::Validation::validate_with("foo", qr/oo/), "Regexp validation works");
+ok(!defined LML::Validation::validate_with("foo", qr/aa/), "Inverted regexp validation works");
 
-ok(LML::Validation::validate_with("foo", sub {return shift eq "foo"}), "Code validation works");
-ok(!LML::Validation::validate_with("bar", sub {return shift eq "foo"}), "Inverted code validation works");
+ok(defined LML::Validation::validate_with("foo", sub {return shift eq "foo"}), "Code validation works");
+ok(!defined LML::Validation::validate_with("bar", sub {return shift eq "foo"}), "Inverted code validation works");
 
-ok(LML::Validation::validate_with("foo", ["foo", "bar"]), "Array validation works");
-ok(!LML::Validation::validate_with("baz", ["foo", "bar"]), "Inverted array validation works");
+ok(defined LML::Validation::validate_with("foo", ["foo", "bar"]), "Array validation works");
+ok(!defined LML::Validation::validate_with("baz", ["foo", "bar"]), "Inverted array validation works");
 
-ok(LML::Validation::validate_with_all("foo", qr/f/, qr/o/, qr/foo/), "OK if ALL validators match");
-ok(!LML::Validation::validate_with_all("foo", qr/f/, qr/o/, qr/a/), "Not ok if ANY validators do not match");
+ok(defined LML::Validation::validate_with_all("foo", qr/f/, qr/o/, qr/foo/), "OK if ALL validators match");
+ok(!defined LML::Validation::validate_with_all("foo", qr/f/, qr/o/, qr/a/), "Not ok if ANY validators do not match");
 
-ok(LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, qr/foo/), "OK if any validator matches");
-ok(!LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, qr/bla/), "Not OK if no validators matches");
+ok(defined LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, qr/foo/), "OK if any validator matches");
+ok(!defined LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, qr/bla/), "Not OK if no validators matches");
+
+ok(defined LML::Validation::validate_with(undef, ''), "Undef is empty");
 
 
 foreach my $value(sort keys %EXPECTATIONS) {

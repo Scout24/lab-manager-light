@@ -114,6 +114,7 @@ sub validate {
 # returns value itself or undef if validation failed.
 sub validate_with {
   my ($value, $validator) = @_;
+  $value //= "";
   my $type = ref($validator);
 
   if ($type =~ /^CODE/) {
