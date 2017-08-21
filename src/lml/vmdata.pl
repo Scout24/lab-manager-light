@@ -109,8 +109,12 @@ unless (caller) {
     } elsif ( path_info() ) {
         # or from path_info
         ( $search_uuid, $suffix ) = path_info() =~ m#/([^.]+)\.?(.*)#;
-        $suffix = "" unless (defined $suffix);
-        $search_uuid = "" unless (defined $search_uuid);
+        $suffix = ""
+            unless (defined $suffix);
+        $search_uuid = validate_with($search_uuid, $VALIDATE_UUID)
+            if defined $search_uuid;
+        $search_uuid = ""
+            unless (defined $search_uuid);
         $suffix = lc($suffix);
     } else {
         # or default to nothing
