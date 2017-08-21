@@ -15,13 +15,13 @@ use CGI ':standard';
 use LML::Common;
 use LML::VMware;
 use LML::DHCP;
-use LML::Validation qw/validate_with/;
+use LML::Validation qw/validate_with $VALIDATE_UUID/;
 
 LoadConfig();
 
 # input parameter, UUID of a VM
 my $search_uuid = param('uuid')
-  ? validate_with(lc(param('uuid')), qr/^[0-9a-f\-]+$/)
+  ? validate_with(lc(param('uuid')), $VALIDATE_UUID)
   : lc($ARGV[0]);
 my $key         = param('key')
   ? validate_with(param('key'), qr/^[^\r\n]+$/),

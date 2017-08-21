@@ -19,7 +19,7 @@ use LML::VMpolicy;
 use LML::DHCP;
 use LML::Result;
 use LML::Lab;
-use LML::Validation qw/validate_with/;
+use LML::Validation qw/validate_with $VALIDATE_UUID/;
 use Data::Dumper;
 use JSON;
 
@@ -44,7 +44,7 @@ $SIG{__DIE__} = sub {
 };
 
 # get it from CGI context
-if (my $uuid = validate_with(lc(param('uuid')), qr/^[0-9a-f\-]+$/)) {
+if (my $uuid = validate_with(lc(param('uuid')), $VALIDATE_UUID)) {
     $search_uuid = $uuid;
 
     # or if we called via commandline
