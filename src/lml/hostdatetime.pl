@@ -11,6 +11,7 @@ use CGI ':standard';
 use LML::Common;
 use LML::Config;
 use LML::VMware;
+use LML::Validation qw/validate_with $VALIDATE_INTEGER/;
 use Data::Dumper;
 use Date::Parse;
 use DateTime;
@@ -29,7 +30,9 @@ if ( my $matchhosts = param("matchhosts") ) {
     $filter = { "name" => qr($matchhosts)i };
 }
 
-my $alloweddeviation = param("alloweddeviation") ? param("alloweddeviation") : 5;    # in seconds
+my $alloweddeviation = param("alloweddeviation")
+    ? (validate_with(param("alloweddeviation"), $VALIDATE_INTEGER) ?: 5)
+    : 5;    # in seconds
 
 my @hostlist = @{
     Vim::find_entity_views(

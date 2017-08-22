@@ -13,9 +13,10 @@ use JSON;
 use LML::Config;
 use LML::Common;
 use LML::Lab;
+use LML::Validation qw/validate_with $VALIDATE_UUID/;
 use GD::Barcode::QRcode;
 use GD::Image;
-use Carp;
+use Carp qw/croak/;
 
 use Sys::Hostname;
 
@@ -103,12 +104,17 @@ unless (caller) {
     # for which VM to display data
     if ( param('uuid') ) {
         # parameter from request parameter
-        $search_uuid = param('uuid');
+        $search_uuid = validate_with(lc(param('uuid')), $VALIDATE_UUID)
+          // croak("Invalid UUID provided");
     } elsif ( path_info() ) {
         # or from path_info
         ( $search_uuid, $suffix ) = path_info() =~ m#/([^.]+)\.?(.*)#;
-        $suffix = "" unless (defined $suffix);
-        $search_uuid = "" unless (defined $search_uuid);
+        $suffix = ""
+            unless (defined $suffix);
+        $search_uuid = validate_with(lc($search_uuid), $VALIDATE_UUID)
+            if defined $search_uuid;
+        $search_uuid = ""
+            unless (defined $search_uuid);
         $suffix = lc($suffix);
     } else {
         # or default to nothing

@@ -23,14 +23,20 @@ use LML::VM;
 use LML::VMware;
 use LML::Lab;
 use LML::DHCP;
+use LML::Validation qw/validate_with $VALIDATE_HOSTNAME $VALIDATE_FQDN/;
 
 # Initialization
 my $header_sent = 0;
 my $action      = param("action") ? param("action") : undef;
 my @hosts       = param("hosts") ? param("hosts") : ();
+my @valid_hosts = grep {validate_with($_, $VALIDATE_HOSTNAME) || validate_with($_, $VALIDATE_FQDN)} @hosts;
 
 
-if ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
+if (scalar @valid_hosts != scalar @hosts) {
+    print header( -status => "400 Bad request", -type => 'text/plain' );
+    print "Invalid Hostname(s) provided\n";
+
+} elsif ( ( $action eq "detonate" or $action eq "destroy" ) and @hosts ) {
     # Get the lml configuration
     my $C = new LML::Config();
 

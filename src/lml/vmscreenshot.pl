@@ -10,6 +10,7 @@ use lib "$FindBin::RealBin/lib";
 
 use CGI::Push;
 use LML::Config;
+use LML::Validation qw/validate_with $VALIDATE_UUID/;
 use LML::VMscreenshot;
 use LWP::UserAgent;
 
@@ -20,8 +21,8 @@ unless (caller) {
     my $q = new CGI::Push;
     if ( $C->get( "vmscreenshot", "enabled" ) ) {
         # input parameter, UUID of a VM
-        if ( my $search_uuid = $q->param('uuid') ) {
-            $search_uuid = lc( $q->param('uuid') );
+        my $search_uuid = validate_with(lc($q->param('uuid') || ''), $VALIDATE_UUID);
+        if ($search_uuid) {
             if ( my $screenshot = new LML::VMscreenshot( $C, $search_uuid ) ) {
                 # we could load the VM data from LAB, return image data or HTML document
                 if ( $q->Accept("image/webp") >= 0.9 or $q->Accept("image/png") >= 0.9 or $q->param('image') ) {
@@ -54,6 +55,12 @@ unless (caller) {
                        $q->h1("LML Error"), $q->p("No data found for $search_uuid."),
                        $q->end_html );
             }
+        } elsif ($q->param('uuid')) {
+            # invalid UUId
+            print( $q->header( -status => "400 Bad request" ),
+                   $q->start_html("LML Error"),
+                   $q->h1("LML Error"), $q->p("Invalid UUID provided."),
+                   $q->end_html );
 
         } else {
             # no uuid parameter given
