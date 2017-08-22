@@ -10,14 +10,15 @@ use lib "$FindBin::RealBin/lib";
 use CGI ':standard';
 use LML::Common;
 use LML::Config;
-use LML::Validation qw/validate_with $VALIDATE_UUID/;
+use LML::Validation qw/validate_with_any $VALIDATE_UUID $VALIDATE_HOSTNAME/;
 use LML::VMmodify;
 
 # load the configuration. Is provided by %CONFIG then
 my $C = new LML::Config;
 
 # input parameter, UUID of a VM
-my $search_uuid = validate_with(param('uuid') ? lc( param('uuid') ) : "", $VALIDATE_UUID);
+# NOTE: !!! This is NOT an UUID, but a hostname !!!
+my $search_uuid = validate_with_any(param('uuid') ? lc( param('uuid') ) : "", $VALIDATE_UUID, $VALIDATE_HOSTNAME);
 
 if ($search_uuid) {
     # Deactivate forceboot
