@@ -49,7 +49,7 @@ sub new {
           // croak("Provided username is invalid");
         $expiration_date   = validate_with(param('expiration'), $VALIDATE_GER_DATE)
           // croak("Provided expiration date is not in german date format (DD.MM.YYYY)");
-        $esx_host          = validate_with_any(param('esx_host'), $VALIDATE_FQDN, "auto_placement")
+        $esx_host          = validate_with_any(param('esx_host') || '', $VALIDATE_FQDN, 'auto_placement', '')
           // croak("Provided ESX host invalid");
         $vm_folder         = validate_with(param('folder'), $VALIDATE_ONE_LINE)
           // croak("Provided folder invalid");
@@ -231,7 +231,7 @@ sub _get_esx_host_and_datastore {
     my $esx_host = $self->{esx_host};
     my $esx_host_datastore;
 
-    if ( !defined($esx_host) || $esx_host =~ qr(^auto_placement$) ) {
+    if ( !(defined $esx_host) || $esx_host eq '' || $esx_host eq 'auto_placement' ) {
         my $result = $self->_get_esx_host_and_datastore_via_auto_placement($resources);
         $esx_host           = $result->{esx_host};
         $esx_host_datastore = $result->{esx_host_datastore};

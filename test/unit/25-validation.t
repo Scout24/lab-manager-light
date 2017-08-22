@@ -52,6 +52,9 @@ ok(defined LML::Validation::validate_with_all("foo", qr/f/, qr/o/, qr/foo/), "OK
 ok(!defined LML::Validation::validate_with_all("foo", qr/f/, qr/o/, qr/a/), "Not ok if ANY validators do not match");
 
 ok(defined LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, qr/foo/), "OK if any validator matches");
+ok(defined LML::Validation::validate_with_any("foo", 'baz', 'bar', 'foo'), "OK if any validator matches (scalars)");
+ok(defined LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, 'foo'), "OK if any validator matches (mixed)");
+ok(defined LML::Validation::validate_with_any("", qr/baz/, qr/bar/, ''), "OK if any validator matches (empty)");
 ok(!defined LML::Validation::validate_with_any("foo", qr/baz/, qr/bar/, qr/bla/), "Not OK if no validators matches");
 
 ok(defined LML::Validation::validate_with(undef, ''), "Undef is empty");
