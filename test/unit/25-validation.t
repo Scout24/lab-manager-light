@@ -170,4 +170,11 @@ ok($_ =~ $LML::Validation::VALIDATE_GER_DATE, "Recognize \"$_\" as German date")
 ok($_ !~ $LML::Validation::VALIDATE_GER_DATE, "Do not recognize \"$_\" as German date")
   for qw{2015-03-10 5.2000 99.10.2000 10.20.2000};
 
+
+ok($LML::Validation::VALIDATE_EUR_DATE->($_), "Recognize \"$_\" as European date")
+  for qw{31.12.2017 08.10.2015 2017-12-31 2017.12.31};
+ok(!$LML::Validation::VALIDATE_EUR_DATE->($_), "Do not recognize \"$_\" as European date")
+  for qw{2017-20-30 35.06.2013 05.31.2017};
+
+
 done_testing();

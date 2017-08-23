@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use CGI qw/param/;
+use DateTime::Format::Flexible;
 
 use Exporter;
 use vars qw(
@@ -56,6 +57,14 @@ our $VALIDATE_IPV4     = qr/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
 our $VALIDATE_CIDR     = qr/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\/[0-9]{1,2}$/;
 our $VALIDATE_UUID     = qr/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}$/;
 our $VALIDATE_GER_DATE = qr/^[0123]?[0-9]\.[01]?[0-9]\.(?:19|20)[0-9]{2}$/;
+our $VALIDATE_EUR_DATE = sub {
+  my ($value) = @_;
+  {
+    local $@;
+    eval {DateTime::Format::Flexible->parse_datetime($value, european => 1)};
+    return !$@;
+  }
+};
 
 
 # validate_params extracts all params specified in validation specification
