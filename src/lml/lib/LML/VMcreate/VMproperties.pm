@@ -19,7 +19,7 @@ use LML::Validation qw/
   validate_with
   validate_with_any
   $VALIDATE_FQDN
-  $VALIDATE_GER_DATE
+  $VALIDATE_EUR_DATE
   $VALIDATE_HOSTNAME
   $VALIDATE_ONE_LINE
   $VALIDATE_NO_PARENT_LINKS
@@ -47,8 +47,8 @@ sub new {
           // croak("Provided VM name is invalid hostname");
         $username          = validate_with(param('username'), $VALIDATE_USERNAME)
           // croak("Provided username is invalid");
-        $expiration_date   = validate_with(param('expiration'), $VALIDATE_GER_DATE)
-          // croak("Provided expiration date is not in german date format (DD.MM.YYYY)");
+        $expiration_date   = validate_with(param('expiration'), $VALIDATE_EUR_DATE)
+          // croak("Provided expiration date is not in European date format (DD.MM.YYYY ... YYYY-MM-DD)");
         $esx_host          = validate_with_any(param('esx_host') || '', $VALIDATE_FQDN, 'auto_placement', '')
           // croak("Provided ESX host invalid");
         $vm_folder         = validate_with(param('folder'), $VALIDATE_ONE_LINE)
