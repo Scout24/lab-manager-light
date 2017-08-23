@@ -14,6 +14,7 @@ use Number::Bytes::Human qw(parse_bytes);
 use LML::VMnetworks;
 use LML::VMresources;
 use LML::VMplacement;
+use LML::Debug;
 
 use LML::Validation qw/
   validate_with
@@ -44,19 +45,19 @@ sub new {
     # are we called via webui?
     if ( exists $ENV{GATEWAY_INTERFACE} ) {
         $vm_name           = validate_with(param('name'), $VALIDATE_HOSTNAME)
-          // croak("Provided VM name is invalid hostname");
+          // do {log_validation_fail(name => param('name')); croak("Provided VM name is invalid hostname")};
         $username          = validate_with(param('username'), $VALIDATE_USERNAME)
-          // croak("Provided username is invalid");
+          // do {log_validation_fail(username => param('username')); croak("Provided username is invalid")};
         $expiration_date   = validate_with(param('expiration'), $VALIDATE_EUR_DATE)
-          // croak("Provided expiration date is not in European date format (DD.MM.YYYY ... YYYY-MM-DD)");
+          // do {log_validation_fail(expiration => param('expiration')); croak("Provided expiration date is not in European date format (DD.MM.YYYY ... YYYY-MM-DD)")};
         $esx_host          = validate_with_any(param('esx_host') || '', $VALIDATE_FQDN, 'auto_placement', '')
-          // croak("Provided ESX host invalid");
+          // do {log_validation_fail(esx_host => param('esx_host')); croak("Provided ESX host invalid")};
         $vm_folder         = validate_with(param('folder'), $VALIDATE_ONE_LINE)
-          // croak("Provided folder invalid");
+          // do {log_validation_fail(folder => param('folder')); croak("Provided folder invalid")};
         validate_with($vm_folder, qr~^/~)
-          // croak("Provided folder must start with \"/\"");
+          // do {log_validation_fail(folder => param('folder')); croak("Provided folder must start with \"/\"")};
         validate_with($vm_folder, $VALIDATE_NO_PARENT_LINKS)
-          // croak("Provided folder must not contain parent links");
+          // do {log_validation_fail(folder => param('folder')); croak("Provided folder must not contain parent links")};
         $force_boot_target = param('force_boot_target'); # << TODO: determine value range -> write validator
         $force_network     = param('force_network');     # << TODO: determine value range -> write validator
     }
