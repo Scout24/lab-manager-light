@@ -24,7 +24,7 @@ my $search_uuid = param('uuid')
   ? validate_with(lc(param('uuid')), $VALIDATE_UUID)
   : lc($ARGV[0]);
 my $key         = param('key')
-  ? validate_with(param('key'), qr/^[^\r\n]+$/),
+  ? validate_with(param('key'), qr/^[^\r\n]+$/)
   : $ARGV[1];
 my $value       = param('value')
   ? param('value')
